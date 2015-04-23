@@ -1,0 +1,250 @@
+{
+    "files": [
+        {
+            "pattern": [],
+            "file": "/boot/grub/grub.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/cluster/cluster.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/fstab"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/hosts"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/httpd/conf.d/nss.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/httpd/conf.d/ssl.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/httpd/conf/httpd.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/kdump.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/lvm/lvm.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/nscd.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/rc.d/rc.local"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/redhat-release"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/redhat_access_proactive/.*"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/redhat_access_proactive/machine-id"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/rsyslog.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/selinux/config"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/ssh/sshd_config"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/sysconfig/dirsrv"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/sysconfig/netconsole"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/sysconfig/network-scripts/ifcfg-.*"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/sysctl.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/etc/vsftpd/vsftpd.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/proc/cmdline"
+        },
+        {
+            "pattern": [],
+            "file": "/proc/cpuinfo"
+        },
+        {
+            "pattern": [],
+            "file": "/proc/driver/cciss/cciss.*"
+        },
+        {
+            "pattern": [],
+            "file": "/proc/interrupts"
+        },
+        {
+            "pattern": [],
+            "file": "/proc/meminfo"
+        },
+        {
+            "pattern": [],
+            "file": "/proc/net/bonding/bond.*"
+        },
+        {
+            "pattern": [],
+            "file": "/sys/devices/system/clocksource/clocksource0/current_clocksource"
+        },
+        {
+            "pattern": [
+                "Abort command issued",
+                "dev_watchdog",
+                "swapper: page allocation failure",
+                "Out of MCCQ wrbs",
+                "tg3_start_xmit",
+                "abrtd: Package",
+                "abrtd: Executable",
+                "invoked oom-killer",
+                "Machine",
+                "skb_copy",
+                "mode:0x20",
+                "Dazed and confused, but trying to continue",
+                "soft lockup",
+                "WATCHDOG",
+                "page allocation failure",
+                "Northbridge Error",
+                "be2net",
+                "Uhhuh. NMI received for unknown reason",
+                "kernel: audit: backlog limit exceeded",
+                "udevd"
+            ],
+            "file": "/var/log/messages"
+        },
+        {
+            "pattern": [],
+            "file": "/var/log/redhat_access_proactive/redhat_access_proactive.log"
+        }
+    ],
+    "commands": [
+        {
+            "pattern": [
+                "crashkernel reservation failed",
+                "Linux version",
+                "P220i",
+                "HP HPSA",
+                "Dropping TSO",
+                "P420i",
+                "CSUM",
+                "lo:",
+                "NUMA: "
+            ],
+            "command": "/bin/dmesg"
+        },
+        {
+            "pattern": [],
+            "command": "/bin/hostname"
+        },
+        {
+            "pattern": [],
+            "command": "/bin/netstat -neopa"
+        },
+        {
+            "pattern": [],
+            "command": "/bin/netstat -s"
+        },
+        {
+            "pattern": [],
+            "command": "/bin/ps auxwwww"
+        },
+        {
+            "pattern": [],
+            "command": "/bin/rpm -qa --qf='%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH} %{INSTALLTIME:date}\n'"
+        },
+        {
+            "pattern": [],
+            "command": "/bin/uname -a"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/chkconfig --list"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/ethtool"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/ethtool -S"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/ethtool -g"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/ethtool -i"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/ethtool -k"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/ifconfig -a"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/ip route show table all"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/lsmod"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/lspci"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/sysctl -a"
+        },
+        {
+            "pattern": [],
+            "command": "/usr/bin/free"
+        },
+        {
+            "pattern": [],
+            "command": "/usr/bin/mount"
+        },
+        {
+            "pattern": [],
+            "command": "/usr/sbin/blkid -c /dev/null"
+        },
+        {
+            "pattern": [],
+            "command": "/usr/sbin/dmidecode"
+        }
+    ],
+    "version": "3"
+}

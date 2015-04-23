@@ -1,0 +1,10 @@
+#!/usr/bin/python
+
+__requires__ = 'redhat_access_insights'
+import sys
+from pkg_resources import load_entry_point
+
+if __name__ == '__main__':
+    sys.exit(
+        load_entry_point('redhat_access_insights', 'console_scripts', 'redhat_access_insights')()
+    )

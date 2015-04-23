@@ -1,0 +1,7 @@
+include etc/redhat-access-insights.spec
+include etc/redhat-access-insights.cron
+include etc/redhat-access-insights.conf
+include etc/.fallback.json
+include etc/.fallback.json.asc
+include etc/redhattools.pub.gpg
+include etc/api.access.redhat.com.pem

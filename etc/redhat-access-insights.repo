@@ -1,0 +1,5 @@
+[redhat-access-insights]
+name=redhat-access-insights repo - noarch
+baseurl=http://people.redhat.com/~dvarga/projects/redhat-access-insights/$releasever/
+enabled=1
+gpgcheck=0

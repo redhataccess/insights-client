@@ -1,0 +1,10 @@
+MANIFEST
+.idea
+dist
+.ropeproject
+*pyc
+*.egg-info
+*~
+*#
+tests.log
+

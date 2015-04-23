@@ -1,0 +1,8 @@
+{
+    "files": [
+       "/etc/ssh/sshd_config"
+    ],
+    "commands": [
+        "/bin/hostname" 
+    ]
+} 
