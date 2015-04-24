@@ -80,20 +80,21 @@ class DataCollector(object):
         dirty = False
 
         if exclude is not None:
-            pattern_file = NamedTemporaryFile()
-            pattern_file.write("\n".join(exclude))
-            pattern_file.flush()
-            cmd = "/bin/grep -F -v -f %s" % pattern_file.name
+            logger.warn("!! Excluding data from %s !!" % self._mangle_command(command))
+            exclude_file = NamedTemporaryFile()
+            exclude_file.write("\n".join(exclude))
+            exclude_file.flush()
+            cmd = "/bin/grep -F -v -f %s" % exclude_file.name
             proc1 = Popen(shlex.split(cmd.encode("utf-8")),
                           stdin=proc0.stdout,
                           stdout=PIPE)
             proc0.stdout.close()
-            if filters is None:
+            if filters is None or len(filters) == 0:
                 stdout, stderr = proc1.communicate()
             proc0 = proc1
             dirty = True
 
-        if filters is not None:
+        if filters is not None and len(filters):
             pattern_file = NamedTemporaryFile()
             pattern_file.write("\n".join(filters))
             pattern_file.flush()
@@ -127,22 +128,16 @@ class DataCollector(object):
         Run through the list of commands and add them to the archive
         """
         logger.debug("Beginning to execute commands")
-        dontrun = None
         commands = conf['commands']
-        try:
-            dontrun = conf['dontrun']
-            logger.debug("Skip list: %s", dontrun)
-            good_commands = []
-            for command in commands:
-                if command['command'] in dontrun:
-                    logger.debug("Skipping %s", command['command'])
-                else:
-                    good_commands.append(command)
-            commands = good_commands
-        except KeyError:
-            logger.debug("Could not find dont run list")
-
         for command in commands:
+            try:
+                exclude = command['exclusion_pattern']
+                if len(exclude) == 0:
+                    logger.warn("!! Skipping command %s !!", command['command'])
+                    continue
+            except LookupError:
+                exclude = None
+
             if 'ethtool' in command['command']:
                 # Get the ethtool flag
                 flag = None
@@ -155,10 +150,10 @@ class DataCollector(object):
                 self._handle_hostname(command['command'])
             elif 'modinfo' in command['command']:
                 self._handle_modinfo()
-            elif len(command['pattern']):
+            elif len(command['pattern']) or exclude:
                 cmd = command['command']
                 filters = command['pattern']
-                output = self.run_command_get_output(cmd, filters=filters)
+                output = self.run_command_get_output(cmd, filters=filters, exclude=exclude)
                 self.archive.add_command_output(output)
             else:
                 self.archive.add_command_output(
@@ -217,21 +212,26 @@ class DataCollector(object):
         Run through the list of files and copy them
         """
         logger.debug("Beginning to copy files")
-        delete = None
         files = conf['files']
-        try:
-            delete = conf['delete']
-        except LookupError:
-            pass
 
         for _file in files:
-            if not delete or (delete and _file['file'] not in delete):
-                if len(_file['pattern']) == 0:
-                    self.archive.copy_file(_file['file'])
-                else:
-                    self.copy_file_with_pattern(_file['file'], _file['pattern'])
+            file_name = _file['file']
+            try:
+                exclude = _file['exclusion_pattern']
+                if len(exclude) ==  0:
+                    logger.warn("!! Skipping %s !!", _file['file'])
+                    continue
+            except LookupError:
+                exclude = None
+
+            pattern = None
+            if len(_file['pattern']) > 0:
+                pattern = _file['pattern']
+
+            if pattern is None and exclude is None:
+                    self.archive.copy_file(file_name)
             else:
-                logger.debug("Skipping %s", _file['file'])
+                    self.copy_file_with_pattern(file_name, pattern, exclude)
         logger.debug("File copy complete")
 
     def write_branch_info(self, branch_info):
@@ -242,7 +242,7 @@ class DataCollector(object):
         full_path = self.archive.get_full_archive_path('/branch_info')
         write_file_with_text(full_path, json.dumps(branch_info))
 
-    def _copy_file_with_pattern(self, path, patterns):
+    def _copy_file_with_pattern(self, path, patterns, exclude):
         """
         Copy file, selecting only lines we are interested in
         """
@@ -251,15 +251,37 @@ class DataCollector(object):
             logger.debug("File %s does not exist", path)
             return
         logger.debug("Copying %s to %s with filters %s", path, full_path, str(patterns))
-        with NamedTemporaryFile() as pattern_file:
+        stdin = None
+        if exclude is not None:
+            logger.warn("!! Excluding data from %s !!", path)
+            exclude_file = NamedTemporaryFile()
+            exclude_file.write("\n".join(exclude))
+            exclude_file.flush()
+
+            cmd = "/bin/grep -v -F -f %s %s" % (exclude_file.name, path)
+            args = shlex.split(cmd.encode("utf-8"))
+            proc = Popen(args, stdout=PIPE)
+            stdin = proc.stdout
+            if patterns is None:
+                output, stderr = proc.communicate()
+
+        if patterns is not None:
+            pattern_file = NamedTemporaryFile()
             pattern_file.write("\n".join(patterns))
             pattern_file.flush()
-            cmd = "/bin/grep -F -f %s %s" % (pattern_file.name, path)
-            output = Popen(
-                shlex.split(cmd.encode("utf-8")), stdout=PIPE).communicate()[0]
-            write_file_with_text(full_path, output)
 
-    def copy_file_with_pattern(self, path, patterns):
+            cmd = "/bin/grep -F -f %s" % pattern_file.name
+            args = shlex.split(cmd.encode("utf-8"))
+            proc1 = Popen(args, stdin=stdin, stdout=PIPE)
+
+            if exclude is not None:
+                stdin.close()
+
+            output, stderr = proc1.communicate()
+
+        write_file_with_text(full_path, output)
+
+    def copy_file_with_pattern(self, path, patterns, exclude):
         """
         Copy a single file or regex, creating the necessary directories
         But grepping for pattern(s)
@@ -267,18 +289,20 @@ class DataCollector(object):
         if "*" in path:
             paths = _expand_paths(path)
             for path in paths:
-                self._copy_file_with_pattern(path, patterns)
+                self._copy_file_with_pattern(path, patterns, exclude)
         else:
-            self._copy_file_with_pattern(path, patterns)
+            self._copy_file_with_pattern(path, patterns, exclude)
 
-    def done(self, config):
+    def done(self, config, dynamic_config):
         """
         Do finalization stuff
         """
         if config.getboolean(APP_NAME, "obfuscate"):
             cleaner = SOSCleaner(quiet=True)
-            clean_opts = CleanOptions(self.archive.tmp_dir, config)
+            clean_opts = CleanOptions(self.archive.tmp_dir, config, dynamic_config)
             fresh = cleaner.clean_report(clean_opts, self.archive.archive_dir)
+            if clean_opts.keyword_file is not None:
+                os.remove(clean_opts.keyword_file.name)
             return fresh[0]
         return self.archive.create_tar_file()
 
@@ -288,12 +312,24 @@ class CleanOptions(object):
     Options for soscleaner
     """
 
-    def __init__(self, tmp_dir, config):
+    def __init__(self, tmp_dir, config, dyn_conf):
         self.report_dir = tmp_dir
         self.domains = []
         self.files = []
         self.quiet = True
-        self.keywords = [constants.default_conf_dir + 'keywords']
+        self.keyword_file = None
+        self.keywords = None
+
+        try:
+            keywords = dyn_conf['keywords']
+            self.keyword_file = NamedTemporaryFile(delete=False)
+            self.keyword_file.write("\n".join(keywords))
+            self.keyword_file.flush()
+            self.keyword_file.close()
+            self.keywords = [self.keyword_file.name]
+        except LookupError:
+            pass
+
         if config.getboolean(APP_NAME, "obfuscate_hostname"):
             self.hostname_path = "insights_commands/hostname"
         else:

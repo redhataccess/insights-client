@@ -50,11 +50,7 @@
         },
         {
             "pattern": [],
-            "file": "/etc/redhat_access_proactive/.*"
-        },
-        {
-            "pattern": [],
-            "file": "/etc/redhat_access_proactive/machine-id"
+            "file": "/etc/redhat-access-insights/machine-id"
         },
         {
             "pattern": [],
@@ -143,7 +139,7 @@
         },
         {
             "pattern": [],
-            "file": "/var/log/redhat_access_proactive/redhat_access_proactive.log"
+            "file": "/var/log/redhat-access-insights/redhat-access-insights.log"
         }
     ],
     "commands": [
@@ -246,5 +242,5 @@
             "command": "/usr/sbin/dmidecode"
         }
     ],
-    "version": "3"
+    "version": "5"
 }

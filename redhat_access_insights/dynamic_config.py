@@ -78,6 +78,34 @@ class InsightsConfig(object):
                 logger.warn("WARNING: %s was an empty file", path)
                 return
 
+    def merge_config(self, conf, rm_conf):
+        """
+        Merge configuration with remove configuration
+        """
+        logger.debug("Merging remove configuration into config")
+        for rm_files in rm_conf['files']:
+            for files in conf['files']:
+                if rm_files['file'] == files['file']:
+                    try:
+                        files['exclusion_pattern'] = rm_files['exclusion_pattern']
+                    except KeyError:
+                        files['exclusion_pattern'] = []
+
+        for rm_cmds in rm_conf['commands']:
+            for cmds in conf['commands']:
+                if rm_cmds['command'] == cmds['command']:
+                    try:
+                        cmds['exclusion_pattern'] = rm_cmds['exclusion_pattern']
+                    except KeyError:
+                        cmds['exclusion_pattern'] = []
+
+        try:
+            conf['keywords'] = rm_conf['keywords']
+        except KeyError:
+            conf['keywords'] = None
+
+        return conf
+
     def get_conf(self, update):
         """
         Get the config
@@ -124,12 +152,10 @@ class InsightsConfig(object):
                         dyn_conf_sig_file.write(config_sig.text)
                         dyn_conf_sig_file.close()
                         dyn_conf['file'] = self.dynamic_config_file
-                        if rm_conf:
-                            logger.debug("Appending to delete list %s", json.dumps(rm_conf))
-
-                            dyn_conf['delete'] = rm_conf['files']
-                            dyn_conf['dontrun'] = rm_conf['commands']
+                        logger.debug("Success reading config")
                         logger.debug(json.dumps(dyn_conf))
+                        if rm_conf:
+                            dyn_conf = self.merge_config(dyn_conf, rm_conf)
                         return dyn_conf
                     except LookupError:
                         logger.error("Could not parse json from remote host")
@@ -146,11 +172,9 @@ class InsightsConfig(object):
                     conf['version']
                     conf['file'] = conf_file
                     logger.debug("Success reading config")
-                    if rm_conf:
-                        logger.debug("Appending to delete list %s", json.dumps(rm_conf))
-                        conf['delete'] = rm_conf['files']
-                        conf['dontrun'] = rm_conf['commands']
                     logger.debug(json.dumps(conf))
+                    if rm_conf:
+                        conf = self.merge_config(conf, rm_conf)
                     return conf
                 except LookupError:
                     logger.debug("Failed to find version")

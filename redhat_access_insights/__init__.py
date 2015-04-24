@@ -154,7 +154,7 @@ def collect_data_and_upload(config, options):
     obfuscate = config.getboolean(APP_NAME, "obfuscate")
 
     if not options.no_tar_file:
-        tar_file = dc.done(config)
+        tar_file = dc.done(config, dynamic_config)
         if not options.no_upload:
             logger.info('Uploading Insights data,'
                         ' this may take a few minutes')
@@ -301,8 +301,8 @@ def try_auto_configuration(config):
     """
     Try to auto-configure if we are attached to a sat5/6
     """
-    _try_satellite6_configuration(config)
-    _try_satellite5_configuration(config)
+    if not _try_satellite6_configuration(config):
+        _try_satellite5_configuration(config)
 
 
 def set_up_options(parser):
