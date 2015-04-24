@@ -14,6 +14,7 @@ import getpass
 import optparse
 import time
 from utilities import (get_satellite_group,
+                       validate_remove_file,
                        generate_machine_id)
 from cert_auth import rhsmCertificate
 from dynamic_config import InsightsConfig
@@ -320,6 +321,11 @@ def set_up_options(parser):
                       action="store_true",
                       dest="update",
                       default=False)
+    parser.add_option('--validate',
+                      help='Validate remove.json',
+                      action="store_true",
+                      dest="validate",
+                      default=False)
     parser.add_option('--schedule',
                       help=("Set Red Hat Access Insights's schedule only "
                             "(no upload).  Must be used with --daily "
@@ -413,6 +419,10 @@ def _main():
 
     if options.version:
         print constants.version
+        sys.exit()
+
+    if options.validate:
+        validate_remove_file()
         sys.exit()
 
     if options.daily and options.weekly:

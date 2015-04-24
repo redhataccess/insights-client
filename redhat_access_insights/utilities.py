@@ -7,6 +7,7 @@ import os
 import sys
 import logging
 import uuid
+import json
 from subprocess import Popen, PIPE
 from constants import InsightsConstants as constants
 
@@ -184,3 +185,21 @@ def write_file_with_text(path, text):
     file_from_text = open(path, 'w')
     file_from_text.write(text.encode('utf8'))
     file_from_text.close()
+
+
+def validate_remove_file():
+    """
+    Validate the remove file
+    """
+    import stat
+    # Make sure permissions are 600
+    mode = stat.S_IMODE(os.stat(constants.dynamic_remove_file).st_mode)
+    if not mode == 0o600:
+        sys.exit("Invalid remove file permissions"
+                 "Expected 0600 got %s" % oct(mode))
+    else:
+        logger.info("Correct file permissions")
+
+    rem_json = json.loads(file(constants.dynamic_remove_file, 'r').read())
+    print json.dumps(rem_json, sort_keys=True, indent=4, separators=(',', ': '))
+    logger.info("JSON parsed correctly")
