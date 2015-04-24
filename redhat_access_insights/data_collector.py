@@ -80,7 +80,7 @@ class DataCollector(object):
         dirty = False
 
         if exclude is not None:
-            logger.warn("!! Excluding data from %s !!" % self._mangle_command(command))
+            logger.warn("!! Excluding data from %s !!", self._mangle_command(command))
             exclude_file = NamedTemporaryFile()
             exclude_file.write("\n".join(exclude))
             exclude_file.flush()
@@ -218,7 +218,7 @@ class DataCollector(object):
             file_name = _file['file']
             try:
                 exclude = _file['exclusion_pattern']
-                if len(exclude) ==  0:
+                if len(exclude) == 0:
                     logger.warn("!! Skipping %s !!", _file['file'])
                     continue
             except LookupError:
@@ -229,9 +229,9 @@ class DataCollector(object):
                 pattern = _file['pattern']
 
             if pattern is None and exclude is None:
-                    self.archive.copy_file(file_name)
+                self.archive.copy_file(file_name)
             else:
-                    self.copy_file_with_pattern(file_name, pattern, exclude)
+                self.copy_file_with_pattern(file_name, pattern, exclude)
         logger.debug("File copy complete")
 
     def write_branch_info(self, branch_info):
@@ -263,7 +263,7 @@ class DataCollector(object):
             proc = Popen(args, stdout=PIPE)
             stdin = proc.stdout
             if patterns is None:
-                output, stderr = proc.communicate()
+                output = proc.communicate()[0]
 
         if patterns is not None:
             pattern_file = NamedTemporaryFile()
@@ -277,7 +277,7 @@ class DataCollector(object):
             if exclude is not None:
                 stdin.close()
 
-            output, stderr = proc1.communicate()
+            output = proc1.communicate()[0]
 
         write_file_with_text(full_path, output)
 
