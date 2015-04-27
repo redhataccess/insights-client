@@ -4,7 +4,7 @@
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                1.0.0
-Release:                0%{?dist}
+Release:                1%{?dist}
 Source0:                https://github.com/redhataccess/redhat-access-insights/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -75,5 +75,8 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %doc
 
 %changelog
+* Mon Apr 27 2015 Dan Varga <dvarga@redhat.com> - 1.0.0-1
+- Add LICENSE file
+
 * Thu Apr 23 2015 Dan Varga <dvarga@redhat.com> - 1.0.0-0
 - Initial build
