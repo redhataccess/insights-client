@@ -270,7 +270,10 @@ class DataCollector(object):
             pattern_file.write("\n".join(patterns))
             pattern_file.flush()
 
-            cmd = "/bin/grep -F -f %s" % pattern_file.name
+            if exclude is None:
+                cmd = "/bin/grep -F -f %s %s" % (pattern_file.name, path)
+            else:
+                cmd = "/bin/grep -F -f %s" % pattern_file.name
             args = shlex.split(cmd.encode("utf-8"))
             proc1 = Popen(args, stdin=stdin, stdout=PIPE)
 
