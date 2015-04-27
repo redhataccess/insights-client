@@ -77,6 +77,8 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %changelog
 * Mon Apr 27 2015 Dan Varga <dvarga@redhat.com> - 1.0.0-1
 - Add LICENSE file
+- Resolves: bz1215002
 
 * Thu Apr 23 2015 Dan Varga <dvarga@redhat.com> - 1.0.0-0
 - Initial build
+- Resolves: bz1176237
