@@ -4,7 +4,7 @@
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                1.0.0
-Release:                1%{?dist}
+Release:                2%{?dist}
 Source0:                https://github.com/redhataccess/redhat-access-insights/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -75,6 +75,9 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %doc
 
 %changelog
+* Wed Apr 29 2015 Dan Varga <dvarga@redhat.com> - 1.0.0-2
+- Drop min python-requests version to 2.4
+
 * Mon Apr 27 2015 Dan Varga <dvarga@redhat.com> - 1.0.0-1
 - Add LICENSE file
 - Resolves: bz1215002
