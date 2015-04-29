@@ -155,9 +155,10 @@ class InsightsConnection(object):
             try:
                 # Ensure we have something in the scheme and netloc
                 if proxy_url.scheme == "" or proxy_url.netloc == "":
+                    logger.error("Proxies: %s", self.proxies)
                     raise Exception("Invalid Proxy!  "
                                     "Please verify the proxy setting"
-                                    "in " + constants.app_name + ".conf")
+                                    " in " + constants.app_name + ".conf")
                 proxy_addr = socket.gethostbyname(
                     proxy_url.netloc.split(':')[0])
                 logger.debug("Proxy hostname: %s ip: %s", proxy_url.netloc, proxy_addr)
