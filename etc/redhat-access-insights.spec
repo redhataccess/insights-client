@@ -16,7 +16,7 @@ Obsoletes: redhat-access-proactive
 
 Requires: python
 Requires: python-setuptools
-Requires: python-requests >= 2.6
+Requires: python-requests >= 2.4
 Requires: python-magic
 Requires: libcgroup
 Requires: pciutils
