@@ -55,6 +55,7 @@ class InsightsConfig(object):
         if proc.returncode:
             sys.exit("Unable to validate gpg signature! Exiting!")
         else:
+            logger.info("gpg signature verified")
             return True
 
     def try_disk(self, path, gpg=True):

@@ -80,7 +80,7 @@ class DataCollector(object):
         dirty = False
 
         if exclude is not None:
-            logger.warn("!! Excluding data from %s !!", self._mangle_command(command))
+            logger.warn("WARNING: Excluding data from %s", self._mangle_command(command))
             exclude_file = NamedTemporaryFile()
             exclude_file.write("\n".join(exclude))
             exclude_file.flush()
@@ -133,7 +133,7 @@ class DataCollector(object):
             try:
                 exclude = command['exclusion_pattern']
                 if len(exclude) == 0:
-                    logger.warn("!! Skipping command %s !!", command['command'])
+                    logger.warn("WARNING: Skipping command %s", command['command'])
                     continue
             except LookupError:
                 exclude = None
@@ -219,7 +219,7 @@ class DataCollector(object):
             try:
                 exclude = _file['exclusion_pattern']
                 if len(exclude) == 0:
-                    logger.warn("!! Skipping %s !!", _file['file'])
+                    logger.warn("WARNING: Skipping %s", _file['file'])
                     continue
             except LookupError:
                 exclude = None
@@ -253,7 +253,7 @@ class DataCollector(object):
         logger.debug("Copying %s to %s with filters %s", path, full_path, str(patterns))
         stdin = None
         if exclude is not None:
-            logger.warn("!! Excluding data from %s !!", path)
+            logger.warn("WARNING: Excluding data from %s", path)
             exclude_file = NamedTemporaryFile()
             exclude_file.write("\n".join(exclude))
             exclude_file.flush()
