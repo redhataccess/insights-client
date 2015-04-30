@@ -113,9 +113,9 @@ class InsightsConnection(object):
         conf_proxy = config.get(APP_NAME, 'proxy')
         logger.debug("proxy string: %s", conf_proxy)
 
-        if ((conf_proxy is not None
-             and conf_proxy.lower() != 'None'.lower()
-             and conf_proxy != "")):
+        if ((conf_proxy is not None and
+             conf_proxy.lower() != 'None'.lower() and
+             conf_proxy != "")):
             if '@' in conf_proxy:
                 scheme = conf_proxy.split(':')[0] + '://'
                 logger.debug("Proxy Scheme: %s", scheme)
