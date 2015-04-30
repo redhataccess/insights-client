@@ -111,10 +111,11 @@ class InsightsConnection(object):
             proxies = {"https": env_proxy}
 
         conf_proxy = config.get(APP_NAME, 'proxy')
+        logger.debug("proxy string: %s", conf_proxy)
 
-        if ((conf_proxy is not 'None' and
-             conf_proxy is not None and
-             conf_proxy is not "")):
+        if ((conf_proxy is not None
+             and conf_proxy.lower() != 'None'.lower()
+             and conf_proxy != "")):
             if '@' in conf_proxy:
                 scheme = conf_proxy.split(':')[0] + '://'
                 logger.debug("Proxy Scheme: %s", scheme)
@@ -141,10 +142,12 @@ class InsightsConnection(object):
         try:
             # Ensure we have something in the scheme and netloc
             if endpoint_url.scheme == "" or endpoint_url.netloc == "":
-                raise Exception("Invalid Upload Path: "
-                                "Be sure to include a protocol "
-                                "(e.g. https://) and a "
-                                "fully qualified domain name.")
+                logger.error("Invalid upload_url: " + self.upload_url + "\n"
+                             "Be sure to include a protocol "
+                             "(e.g. https://) and a "
+                             "fully qualified domain name in " +
+                             constants.default_conf_file)
+                sys.exit()
             endpoint_addr = socket.gethostbyname(
                 endpoint_url.netloc.split(':')[0])
             logger.debug("hostname: %s ip: %s", endpoint_url.netloc, endpoint_addr)
@@ -156,9 +159,10 @@ class InsightsConnection(object):
                 # Ensure we have something in the scheme and netloc
                 if proxy_url.scheme == "" or proxy_url.netloc == "":
                     logger.error("Proxies: %s", self.proxies)
-                    raise Exception("Invalid Proxy!  "
-                                    "Please verify the proxy setting"
-                                    " in " + constants.app_name + ".conf")
+                    logger.error("Invalid proxy!"
+                                 "Please verify the proxy setting"
+                                 " in " + constants.default_conf_file)
+                    sys.exit()
                 proxy_addr = socket.gethostbyname(
                     proxy_url.netloc.split(':')[0])
                 logger.debug("Proxy hostname: %s ip: %s", proxy_url.netloc, proxy_addr)

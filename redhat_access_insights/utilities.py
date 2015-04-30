@@ -105,9 +105,9 @@ def generate_machine_id(new=False):
         machine_id = machine_id_file.read()
         machine_id_file.close()
         _write_machine_id(machine_id)
-    elif ((not os.path.isfile('/etc/machine-id')
-           and not os.path.isfile(constants.machine_id_file))
-          or new):
+    elif ((not os.path.isfile('/etc/machine-id') and not
+           os.path.isfile(constants.machine_id_file)) or
+          new):
         logger.debug('Could not find machine-id file, creating')
         machine_id = str(uuid.uuid4())
         _write_machine_id(machine_id)
@@ -141,7 +141,7 @@ def generate_dmidecode():
     # Run xpath expressions
     for k in keys:
         data = dmixp.xpathEval(k)
-        for element in  data:
+        for element in data:
             logger.log(logging.DEBUG, "%s: %s", k, element.get_content())
             # Update the hash as we find the fields we are looking for
             machine_id.update(element.get_content())

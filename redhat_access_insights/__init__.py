@@ -449,7 +449,7 @@ def _main():
     # and proxy as it might have a pw as well
     for item, value in config.items(APP_NAME):
         if item != 'password' and item != 'proxy':
-            logger.debug("%s:%s",  item, value)
+            logger.debug("%s:%s", item, value)
 
     if config.getboolean(APP_NAME, 'auto_update'):
         options.update = True
