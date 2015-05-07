@@ -7,12 +7,12 @@ class InsightsConstants():
     default_conf_dir = '/etc/' + app_name + '/'
     log_dir = '/var/log/' + app_name
     default_conf_file = default_conf_dir + app_name + '.conf'
-    default_ca_file = default_conf_dir + 'api.access.redhat.com.pem'
-    dynamic_conf_url = ('https://api.access.redhat.com/'
+    default_ca_file = default_conf_dir + 'cert-api.access.redhat.com.pem'
+    dynamic_conf_url = ('https://cert-api.access.redhat.com/'
                         'rs/telemetry/api/v1/static/uploader.json')
-    upload_url = 'https://api.access.redhat.com/rs/telemetry'
-    api_url = 'https://api.access.redhat.com/rs/telemetry/api'
-    branch_info_url = ('https://api.access.redhat.com/'
+    upload_url = 'https://cert-api.access.redhat.com/rs/telemetry'
+    api_url = 'https://cert-api.access.redhat.com/rs/telemetry/api'
+    branch_info_url = ('https://cert-api.access.redhat.com/'
                        'rs/telemetry/api/v1/branch_info')
     dynamic_conf_file = default_conf_dir + '.cache.json'
     dynamic_fallback_file = default_conf_dir + '.fallback.json'
