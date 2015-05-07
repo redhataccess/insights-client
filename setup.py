@@ -22,6 +22,8 @@ if __name__ == "__main__":
     # where stuff lands
     confpath = "/etc/redhat-access-insights"
 
+    docspath = "/usr/share/man/man8/"
+
     setup(
         name="redhat-access-insights",
         version=VERSION,
@@ -43,6 +45,10 @@ if __name__ == "__main__":
                         'etc/redhattools.pub.gpg',
                         'etc/api.access.redhat.com.pem',
                         'etc/redhat-access-insights.cron']),
+
+            # man pages
+            (docspath, ['docs/redhat-access-insights.8',
+                        'docs/redhat-access-insights.conf.8']),
 
             (logpath, [])
         ],

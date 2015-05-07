@@ -3,8 +3,8 @@
 
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
-Version:                1.0.0
-Release:                2%{?dist}
+Version:                1.0.1
+Release:                0%{?dist}
 Source0:                https://github.com/redhataccess/redhat-access-insights/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -73,8 +73,14 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/redhat_access_insights/*.py*
 
 %doc
+/usr/share/man/man8/*.8.gz
 
 %changelog
+* Thu May 07 2015 Dan Varga <dvarga@redhat.com> - 1.0.1-0
+- Add man pages
+- New certificate chain for cert-api.access.redhat.com
+- Better auto configuration for satellite installations
+
 * Wed Apr 29 2015 Dan Varga <dvarga@redhat.com> - 1.0.0-2
 - Drop min python-requests version to 2.4
 

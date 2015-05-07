@@ -1,6 +1,6 @@
 class InsightsConstants():
     app_name = 'redhat-access-insights'
-    version = '1.0.0'
+    version = '1.0.1'
     auth_method = 'BASIC'
     log_level = 'DEBUG'
     user_agent = app_name + '/' + version
