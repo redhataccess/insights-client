@@ -8,7 +8,7 @@ Release:                0%{?dist}
 Source0:                https://github.com/redhataccess/redhat-access-insights/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
-URL:                    http://access.redhat.com
+URL:                    http://access.redhat.com/labs/insights
 Group:                  Applications/System
 Vendor:                 Red Hat, Inc.
 
@@ -66,7 +66,7 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /etc/redhat-access-insights/.fallback.json
 /etc/redhat-access-insights/.fallback.json.asc
 /etc/redhat-access-insights/redhattools.pub.gpg
-/etc/redhat-access-insights/api.access.redhat.com.pem
+/etc/redhat-access-insights/*.pem
 
 %defattr(-,root,root)
 %{python_sitelib}/redhat_access_insights*.egg-info
