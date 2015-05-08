@@ -3,16 +3,36 @@ Auto Configuration Helper
 """
 import logging
 import os
+import copy
 from constants import InsightsConstants as constants
 from cert_auth import rhsmCertificate
+from connection import InsightsConnection
 
 logger = logging.getLogger(constants.app_name)
+APP_NAME = constants.app_name
+
+def verify_connectivity(config):
+    logger.debug("Verifying Connectivity")
+    ic = InsightsConnection(config)
+    try:
+        branch_info = ic.branch_info()
+    except:
+	logger.debug("Failed to connect to satellite")
+        return False
+
+    try:
+        remote_leaf = branch_info['remote_leaf']
+        return remote_leaf
+    except:
+        logger.debug("Failed to find accurate branch_info")
+        return False
 
 def set_auto_configuration(config, hostname, ca_cert):
     """
     Set config based on discovered data
     """
     logger.debug("Attempting to auto conf %s %s %s", config, hostname, ca_cert)
+    saved_config = copy.deepcopy(config)
     if ca_cert is not None:
         config.set(APP_NAME, 'cert_verify', ca_cert)
     config.set(APP_NAME, 'upload_url', 'https://' + hostname + '/rs/telemetry')
@@ -23,47 +43,50 @@ def set_auto_configuration(config, hostname, ca_cert):
     config.set(APP_NAME, 'dynamic_config_url', 'https://' +
                hostname + '/rs/telemetry/api/v1/static/uploader.json')
 
+    if not verify_connectivity(config):
+        logger.warn("Could not auto configure, falling back to static config")
+        #logger.warn("See %s for additional information", constants.default_log_file)
+        config = saved_config
 
 def _try_satellite6_configuration(config):
     """
     Try to autoconfigure for Satellite 6
     """
-    try:
-        from rhsm.config import initConfig
-        RHSM_CONFIG = initConfig()
+    #try:
+    from rhsm.config import initConfig
+    rhsm_config = initConfig()
 
-        logger.debug('Trying to autoconf Satellite 6')
-        cert = file(rhsmCertificate.certpath(), 'r').read()
-        key = file(rhsmCertificate.keypath(), 'r').read()
-        rhsm = rhsmCertificate(key, cert)
+    logger.debug('Trying to autoconf Satellite 6')
+    cert = file(rhsmCertificate.certpath(), 'r').read()
+    key = file(rhsmCertificate.keypath(), 'r').read()
+    rhsm = rhsmCertificate(key, cert)
 
-        # This will throw an exception if we are not registered
-        logger.debug('Checking if system is subscription-manager registered')
-        rhsm.getConsumerId()
-        logger.debug('System is subscription-manager registered')
+    # This will throw an exception if we are not registered
+    logger.debug('Checking if system is subscription-manager registered')
+    logger.debug('System is subscription-manager registered')
 
-        rhsm_hostname = RHSM_CONFIG.get('server', 'hostname')
-        logger.debug("Found Satellite Server: %s", rhsm_hostname)
-        rhsm_ca = RHSM_CONFIG.get('rhsm', 'repo_ca_cert')
-        logger.debug("Found CA: %s", rhsm_ca)
-        logger.debug("Setting authmethod to CERT")
-        config.set(APP_NAME, 'authmethod', 'CERT')
+    rhsm_hostname = rhsm_config.get('server', 'hostname')
+    logger.debug("Found Satellite Server: %s", rhsm_hostname)
+    rhsm_ca = rhsm_config.get('rhsm', 'repo_ca_cert')
+    logger.debug("Found CA: %s", rhsm_ca)
+    logger.debug("Setting authmethod to CERT")
+    config.set(APP_NAME, 'authmethod', 'CERT')
 
-        # Directly connected to Red Hat, use cert auth directly with the api
-        if rhsm_hostname == 'subscription.rhn.redhat.com':
-            logger.debug("Connected to RH Directly, using cert-api")
-            rhsm_hostname = 'cert-api.access.redhat.com'
-            rhsm_ca = None
-        else:
-            # Set the cert verify CA, and path
-            rhsm_hostname = rhsm_hostname + '/redhat_access'
+    # Directly connected to Red Hat, use cert auth directly with the api
+    if rhsm_hostname == 'subscription.rhn.redhat.com':
+        logger.debug("Connected to RH Directly, using cert-api")
+        rhsm_hostname = 'cert-api.access.redhat.com'
+        rhsm_ca = None
+    else:
+        # Set the cert verify CA, and path
+        rhsm_hostname = rhsm_hostname + '/redhat_access'
 
-        logger.debug("Trying to set auto_configuration")
-        set_auto_configuration(config, rhsm_hostname, rhsm_ca)
-        return True
-    except:
-        logger.debug('System is NOT subscription-manager registered')
-        return False
+    logger.debug("Trying to set auto_configuration")
+    set_auto_configuration(config, rhsm_hostname, rhsm_ca)
+    return True
+#    except:
+#        logger.debug('System is NOT subscription-manager registered')
+#        return False
 
 
 def _try_satellite5_configuration(config):
