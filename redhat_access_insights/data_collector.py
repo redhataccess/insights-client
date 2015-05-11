@@ -17,7 +17,11 @@ from constants import InsightsConstants as constants
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
+# python 2.7
 SOSCLEANER_LOGGER = logging.getLogger('soscleaner')
+SOSCLEANER_LOGGER.setLevel(logging.ERROR)
+# python 2.6
+SOSCLEANER_LOGGER = logging.getLogger('redhat_access_insights.soscleaner')
 SOSCLEANER_LOGGER.setLevel(logging.ERROR)
 
 
