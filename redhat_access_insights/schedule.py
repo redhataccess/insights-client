@@ -27,21 +27,14 @@ class InsightsSchedule(object):
         """
         Determine if we are already scheduled
         """
-        try:
-            os.path.isfile(CRON_WEEKLY + APP_NAME)
+        if os.path.isfile(CRON_WEEKLY + APP_NAME):
             logger.debug('Found cron.weekly')
             return True
-        except:
-            pass
-
-        try:
-            os.path.isfile(CRON_DAILY + APP_NAME)
+        elif os.path.isfile(CRON_DAILY + APP_NAME):
             logger.debug('Found cron.daily')
             return True
-        except:
-            pass
-
-        return False
+        else:
+            return False
 
     def set_daily(self):
         """
