@@ -9,9 +9,9 @@ import json
 import traceback
 import logging
 from utilities import (determine_hostname,
-                      generate_machine_id,
-                      delete_unregistered_file,
-                      write_unregistered_file)
+                       generate_machine_id,
+                       delete_unregistered_file,
+                       write_unregistered_file)
 from cert_auth import rhsmCertificate
 from constants import InsightsConstants as constants
 
@@ -26,6 +26,7 @@ URLLIB3_LOGGER = logging.getLogger('urllib3.connectionpool')
 URLLIB3_LOGGER.setLevel(logging.WARNING)
 URLLIB3_LOGGER = logging.getLogger('requests.packages.urllib3.connectionpool')
 URLLIB3_LOGGER.setLevel(logging.WARNING)
+
 
 class InsightsConnection(object):
 

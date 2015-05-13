@@ -84,7 +84,6 @@ class DataCollector(object):
         dirty = False
 
         if exclude is not None:
-            logger.warn("WARNING: Excluding data from %s", self._mangle_command(command))
             exclude_file = NamedTemporaryFile()
             exclude_file.write("\n".join(exclude))
             exclude_file.flush()
@@ -127,20 +126,25 @@ class DataCollector(object):
             'output': stdout.decode('utf-8', 'ignore')
         }
 
-    def run_commands(self, conf):
+    def run_commands(self, conf, rm_conf):
         """
         Run through the list of commands and add them to the archive
         """
         logger.debug("Beginning to execute commands")
+        try:
+            exclude = rm_conf['patterns']
+        except LookupError:
+            exclude = None
+
         commands = conf['commands']
         for command in commands:
-            try:
-                exclude = command['exclusion_pattern']
-                if len(exclude) == 0:
-                    logger.warn("WARNING: Skipping command %s", command['command'])
-                    continue
-            except LookupError:
-                exclude = None
+            if rm_conf:
+                try:
+                    if command['command'] in rm_conf['commands']:
+                            logger.warn("WARNING: Skipping command %s", command['command'])
+                            continue
+                except LookupError:
+                    pass
 
             if 'ethtool' in command['command']:
                 # Get the ethtool flag
@@ -211,31 +215,34 @@ class DataCollector(object):
                 cmd = "/sbin/ethtool " + interface
             self.archive.add_command_output(self.run_command_get_output(cmd))
 
-    def copy_files(self, conf):
+    def copy_files(self, conf, rm_conf):
         """
         Run through the list of files and copy them
         """
         logger.debug("Beginning to copy files")
         files = conf['files']
+        try:
+            exclude = rm_conf['patterns']
+        except LookupError:
+            exclude = None
 
         for _file in files:
-            file_name = _file['file']
-            try:
-                exclude = _file['exclusion_pattern']
-                if len(exclude) == 0:
-                    logger.warn("WARNING: Skipping %s", _file['file'])
-                    continue
-            except LookupError:
-                exclude = None
+            if rm_conf:
+                try:
+                    if _file['file'] in rm_conf['files']:
+                            logger.warn("WARNING: Skipping file %s", _file['file'])
+                            continue
+                except LookupError:
+                    pass
 
             pattern = None
             if len(_file['pattern']) > 0:
                 pattern = _file['pattern']
 
             if pattern is None and exclude is None:
-                self.archive.copy_file(file_name)
+                self.archive.copy_file(_file['file'])
             else:
-                self.copy_file_with_pattern(file_name, pattern, exclude)
+                self.copy_file_with_pattern(_file['file'], pattern, exclude)
         logger.debug("File copy complete")
 
     def write_branch_info(self, branch_info):
@@ -257,7 +264,6 @@ class DataCollector(object):
         logger.debug("Copying %s to %s with filters %s", path, full_path, str(patterns))
         stdin = None
         if exclude is not None:
-            logger.warn("WARNING: Excluding data from %s", path)
             exclude_file = NamedTemporaryFile()
             exclude_file.write("\n".join(exclude))
             exclude_file.flush()
@@ -295,18 +301,21 @@ class DataCollector(object):
         """
         if "*" in path:
             paths = _expand_paths(path)
+            if not paths:
+                logger.debug("Could not expand %s", path)
+                return
             for path in paths:
                 self._copy_file_with_pattern(path, patterns, exclude)
         else:
             self._copy_file_with_pattern(path, patterns, exclude)
 
-    def done(self, config, dynamic_config):
+    def done(self, config, rm_conf):
         """
         Do finalization stuff
         """
         if config.getboolean(APP_NAME, "obfuscate"):
             cleaner = SOSCleaner(quiet=True)
-            clean_opts = CleanOptions(self.archive.tmp_dir, config, dynamic_config)
+            clean_opts = CleanOptions(self.archive.tmp_dir, config, rm_conf)
             fresh = cleaner.clean_report(clean_opts, self.archive.archive_dir)
             if clean_opts.keyword_file is not None:
                 os.remove(clean_opts.keyword_file.name)
@@ -318,8 +327,7 @@ class CleanOptions(object):
     """
     Options for soscleaner
     """
-
-    def __init__(self, tmp_dir, config, dyn_conf):
+    def __init__(self, tmp_dir, config, rm_conf):
         self.report_dir = tmp_dir
         self.domains = []
         self.files = []
@@ -328,12 +336,13 @@ class CleanOptions(object):
         self.keywords = None
 
         try:
-            keywords = dyn_conf['keywords']
+            keywords = rm_conf['keywords']
             self.keyword_file = NamedTemporaryFile(delete=False)
             self.keyword_file.write("\n".join(keywords))
             self.keyword_file.flush()
             self.keyword_file.close()
             self.keywords = [self.keyword_file.name]
+            logger.debug("Attmpting keyword obfuscation")
         except LookupError:
             pass
 

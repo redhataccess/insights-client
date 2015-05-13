@@ -7,6 +7,7 @@ import sys
 import six
 import shlex
 import os
+from ConfigParser import RawConfigParser
 from subprocess import Popen, PIPE, STDOUT
 from tempfile import NamedTemporaryFile
 from constants import InsightsConstants as constants
@@ -79,40 +80,24 @@ class InsightsConfig(object):
                 logger.warn("WARNING: %s was an empty file", path)
                 return
 
-    def merge_config(self, conf, rm_conf):
-        """
-        Merge configuration with remove configuration
-        """
-        logger.debug("Merging remove configuration into config")
-        for rm_files in rm_conf['files']:
-            for files in conf['files']:
-                if rm_files['file'] == files['file']:
-                    try:
-                        files['exclusion_pattern'] = rm_files['exclusion_pattern']
-                    except KeyError:
-                        files['exclusion_pattern'] = []
-
-        for rm_cmds in rm_conf['commands']:
-            for cmds in conf['commands']:
-                if rm_cmds['command'] == cmds['command']:
-                    try:
-                        cmds['exclusion_pattern'] = rm_cmds['exclusion_pattern']
-                    except KeyError:
-                        cmds['exclusion_pattern'] = []
-
-        try:
-            conf['keywords'] = rm_conf['keywords']
-        except KeyError:
-            conf['keywords'] = None
-
-        return conf
-
     def get_conf(self, update):
         """
         Get the config
         """
         rm_conf = None
-        rm_conf = self.try_disk(self.remove_file, gpg=False)
+        # Convert config object into dict
+        if os.path.isfile(self.remove_file):
+            from ConfigParser import RawConfigParser
+            parsedconfig = RawConfigParser()
+            parsedconfig.read(self.remove_file)
+            rm_conf = {}
+            for item, value in parsedconfig.items('remove'):
+                    rm_conf[item] = value.strip().split(',')
+            try:
+                patterns = rm_conf['patterns']
+                logger.warn("WARNING: Excluding data from files")
+            except LookupError:
+                pass
 
         if update:
             logger.info("Attemping to download dynamic configuration from %s",
@@ -155,9 +140,7 @@ class InsightsConfig(object):
                         dyn_conf['file'] = self.dynamic_config_file
                         logger.debug("Success reading config")
                         logger.debug(json.dumps(dyn_conf))
-                        if rm_conf:
-                            dyn_conf = self.merge_config(dyn_conf, rm_conf)
-                        return dyn_conf
+                        return dyn_conf, rm_conf
                     except LookupError:
                         logger.error("Could not parse json from remote host")
             else:
@@ -174,9 +157,7 @@ class InsightsConfig(object):
                     conf['file'] = conf_file
                     logger.debug("Success reading config")
                     logger.debug(json.dumps(conf))
-                    if rm_conf:
-                        conf = self.merge_config(conf, rm_conf)
-                    return conf
+                    return conf, rm_conf
                 except LookupError:
                     logger.debug("Failed to find version")
 

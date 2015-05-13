@@ -139,23 +139,23 @@ def collect_data_and_upload(config, options):
     pc = InsightsConfig(config, pconn)
     dc = DataCollector()
     start = time.clock()
-    dynamic_config = pc.get_conf(options.update)
+    dynamic_config, rm_conf = pc.get_conf(options.update)
     elapsed = (time.clock() - start)
     logger.debug("Dynamic Config Elapsed Time: %s", elapsed)
     start = time.clock()
     logger.info('Starting to collect Insights data')
-    dc.run_commands(dynamic_config)
+    dc.run_commands(dynamic_config, rm_conf)
     elapsed = (time.clock() - start)
     logger.debug("Command Collection Elapsed Time: %s", elapsed)
     start = time.clock()
-    dc.copy_files(dynamic_config)
+    dc.copy_files(dynamic_config, rm_conf)
     elapsed = (time.clock() - start)
     logger.debug("File Collection Elapsed Time: %s", elapsed)
     dc.write_branch_info(branch_info)
     obfuscate = config.getboolean(APP_NAME, "obfuscate")
 
     if not options.no_tar_file:
-        tar_file = dc.done(config, dynamic_config)
+        tar_file = dc.done(config, rm_conf)
         if not options.no_upload:
             logger.info('Uploading Insights data,'
                         ' this may take a few minutes')

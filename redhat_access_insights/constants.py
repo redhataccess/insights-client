@@ -17,7 +17,7 @@ class InsightsConstants():
                        'rs/telemetry/api/v1/branch_info')
     dynamic_conf_file = default_conf_dir + '.cache.json'
     dynamic_fallback_file = default_conf_dir + '.fallback.json'
-    dynamic_remove_file = default_conf_dir + 'remove.json'
+    dynamic_remove_file = default_conf_dir + 'remove.conf'
     unregistered_file = default_conf_dir + '.unregistered'
     pub_gpg_path = default_conf_dir + 'redhattools.pub.gpg'
     machine_id_file = default_conf_dir + 'machine-id'

@@ -19,23 +19,27 @@ URL to send uploads to
 URL to send API requests to
 .IP "branch_info_url=https://api.access.redhat.com/rs/telemetry/api/v1/branch_info"
 URL to obtain branch information from
-.IP "remove_file=/etc/redhat-access-insights/remove.json"
+.IP "remove_file=/etc/redhat-access-insights/remove.conf"
 File that can be used to prevent files or commands from being collected or to exclude lines containing a specified word.
-This file MUST be in the following format, and MUST match exactly what is in the dynamic_config for file or command name
 .br
-{
-  "commands": [
-    {"command": "/sbin/lsmod",  "exclusion_pattern": ["usb"]},
-    {"command": "/sbin/lspci"}
-  ],
-  "files": [
-    {"file": "/etc/ssh/sshd_config", "exclusion_pattern": ["compression", "banner"]},
-    {"file": "/etc/hosts"}, 
-    {"file": "/var/log/redhat-access-insights/redhat-access-insights.log", "exclusion_pattern": []}
-  ],
-  "keywords": ["password", "giraffe", "moo"]
+Each word specified in patterns will exclude the entire line containing the word in all commands and files.
 .br
-}
+Keywords will be obfuscated to keyword# in all commands and files and require the obfuscate option to be True.
+.br
+This file MUST be in the following format, and MUST match exactly what is in the dynamic_config for file or command name.
+.br
+ 
+.br
+[remove]
+.br
+files=/etc/cluster/cluster.conf,/etc/hosts
+.br
+commands=/bin/dmseg,/bin/hostname
+.br
+patterns=password,username
+.br
+keywords=super$ecret,ultra$ecret
+.br
 .IP "fallback_file=/etc/redhat-access-insights/.fallback.json"
 Path to .fallback, this is the dynamic config shipped with the RPM
 .IP "dynamic_config_url=https://api.access.redhat.com/rs/telemetry/api/v1/static/uploader.json"
