@@ -216,8 +216,8 @@ def set_up_options(parser):
     Add options to the option parser
     """
     parser.add_option('--register',
-                      help=('Register system to Red Hat '
-                            'Access Insights Support'),
+                      help=('Register system to the Red Hat '
+                            'Access Insights Service'),
                       action="store_true",
                       dest="register",
                       default=False)
