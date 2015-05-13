@@ -131,9 +131,12 @@ class DataCollector(object):
         Run through the list of commands and add them to the archive
         """
         logger.debug("Beginning to execute commands")
-        try:
-            exclude = rm_conf['patterns']
-        except LookupError:
+        if rm_conf is not None:
+            try:
+                exclude = rm_conf['patterns']
+            except LookupError:
+                exclude = None
+        else:
             exclude = None
 
         commands = conf['commands']
@@ -221,9 +224,12 @@ class DataCollector(object):
         """
         logger.debug("Beginning to copy files")
         files = conf['files']
-        try:
-            exclude = rm_conf['patterns']
-        except LookupError:
+        if rm_conf:
+            try:
+                exclude = rm_conf['patterns']
+            except LookupError:
+                exclude = None
+        else:
             exclude = None
 
         for _file in files:
@@ -335,16 +341,17 @@ class CleanOptions(object):
         self.keyword_file = None
         self.keywords = None
 
-        try:
-            keywords = rm_conf['keywords']
-            self.keyword_file = NamedTemporaryFile(delete=False)
-            self.keyword_file.write("\n".join(keywords))
-            self.keyword_file.flush()
-            self.keyword_file.close()
-            self.keywords = [self.keyword_file.name]
-            logger.debug("Attmpting keyword obfuscation")
-        except LookupError:
-            pass
+        if rm_conf:
+            try:
+                keywords = rm_conf['keywords']
+                self.keyword_file = NamedTemporaryFile(delete=False)
+                self.keyword_file.write("\n".join(keywords))
+                self.keyword_file.flush()
+                self.keyword_file.close()
+                self.keywords = [self.keyword_file.name]
+                logger.debug("Attmpting keyword obfuscation")
+            except LookupError:
+                pass
 
         if config.getboolean(APP_NAME, "obfuscate_hostname"):
             self.hostname_path = "insights_commands/hostname"
