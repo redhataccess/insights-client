@@ -141,8 +141,8 @@ class DataCollector(object):
             if rm_conf:
                 try:
                     if command['command'] in rm_conf['commands']:
-                            logger.warn("WARNING: Skipping command %s", command['command'])
-                            continue
+                        logger.warn("WARNING: Skipping command %s", command['command'])
+                        continue
                 except LookupError:
                     pass
 
@@ -230,8 +230,8 @@ class DataCollector(object):
             if rm_conf:
                 try:
                     if _file['file'] in rm_conf['files']:
-                            logger.warn("WARNING: Skipping file %s", _file['file'])
-                            continue
+                        logger.warn("WARNING: Skipping file %s", _file['file'])
+                        continue
                 except LookupError:
                     pass
 

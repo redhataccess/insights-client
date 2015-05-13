@@ -7,8 +7,6 @@ import os
 import sys
 import logging
 import uuid
-import json
-from ConfigParser import RawConfigParser
 from subprocess import Popen, PIPE
 from constants import InsightsConstants as constants
 
@@ -209,7 +207,7 @@ def validate_remove_file():
         parsedconfig.read(constants.dynamic_remove_file)
         rm_conf = {}
         for item, value in parsedconfig.items('remove'):
-                rm_conf[item] = value.strip().split(',')
+            rm_conf[item] = value.strip().split(',')
         print "Remove file parsed contents"
         print rm_conf
     logger.info("JSON parsed correctly")
