@@ -402,7 +402,7 @@ class InsightsConnection(object):
         files = {'file': (file_name, open(data_collected, 'rb'))}
 
         logger.debug("Uploading %s", data_collected)
-        upload = self.session.post(self.upload_url, files=files)
+        upload = self.session.post(self.upload_url + '/' + generate_machine_id(), files=files)
 
         self.handle_fail_rcs(upload)
         logger.debug("Upload status: %s %s %s",
