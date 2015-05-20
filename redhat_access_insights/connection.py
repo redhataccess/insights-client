@@ -323,10 +323,15 @@ class InsightsConnection(object):
         post_system_url = self.api_url + '/v1/systems'
         logger.debug("POST System: %s", post_system_url)
         logger.debug(data)
-        system = self.session.post(post_system_url,
-                                   headers=headers,
-                                   data=data)
-        logger.debug("POST System status: %d", system.status_code)
+        system = None
+        try:
+            system = self.session.post(post_system_url,
+                                       headers=headers,
+                                       data=data)
+            logger.debug("POST System status: %d", system.status_code)
+        except:
+            logger.error("Could not register system, running configuration test")
+            self._test_connection()
         return system
 
     def do_group(self, group_id):
