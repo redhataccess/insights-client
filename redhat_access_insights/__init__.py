@@ -214,6 +214,11 @@ def set_up_options(parser):
     """
     Add options to the option parser
     """
+    parser.add_option('--version',
+                      help="Display version",
+                      action="store_true",
+                      dest="version",
+                      default=False)
     parser.add_option('--register',
                       help=('Register system to the Red Hat '
                             'Access Insights Service'),
@@ -224,11 +229,6 @@ def set_up_options(parser):
                       help='Refresh collection rules from Red Hat',
                       action="store_true",
                       dest="update",
-                      default=False)
-    parser.add_option('--validate',
-                      help='Validate remove.conf',
-                      action="store_true",
-                      dest="validate",
                       default=False)
     parser.add_option('--daily',
                       help=("Set Red Hat Access Insights "
@@ -246,46 +246,48 @@ def set_up_options(parser):
                       action="store",
                       help='Group to add this system to during registration',
                       dest="group")
-    parser.add_option('--test-connection',
-                      help='Test connectivity to Red Hat',
+    parser.add_option('--validate',
+                      help='Validate remove.conf',
                       action="store_true",
-                      dest="test_connection",
-                      default=False)
-    parser.add_option('--verbose',
-                      help="DEBUG output to stdout",
-                      action="store_true",
-                      dest="verbose",
-                      default=False)
-    parser.add_option('--no-gpg',
-                      help="Do not verify GPG signature",
-                      action="store_true",
-                      dest="no_gpg",
+                      dest="validate",
                       default=False)
     parser.add_option('--reregister',
                       help="Reregister this machine to Red Hat",
                       action="store_true",
                       dest="reregister",
                       default=False)
-    parser.add_option('--no-upload',
+    group = optparse.OptionGroup(parser, "Debug options")
+    group.add_option('--test-connection',
+                      help='Test connectivity to Red Hat',
+                      action="store_true",
+                      dest="test_connection",
+                      default=False)
+    group.add_option('--verbose',
+                      help="DEBUG output to stdout",
+                      action="store_true",
+                      dest="verbose",
+                      default=False)
+    group.add_option('--no-gpg',
+                      help="Do not verify GPG signature",
+                      action="store_true",
+                      dest="no_gpg",
+                      default=False)
+    group.add_option('--no-upload',
                       help="Do not upload the archive",
                       action="store_true",
                       dest="no_upload",
                       default=False)
-    parser.add_option('--no-tar-file',
+    group.add_option('--no-tar-file',
                       help="Build the directory, but do not tar",
                       action="store_true",
                       dest="no_tar_file",
                       default=False)
-    parser.add_option('--keep-archive',
+    group.add_option('--keep-archive',
                       help="Do not delete archive after upload",
                       action="store_true",
                       dest="keep_archive",
                       default=False)
-    parser.add_option('--version',
-                      help="Display version",
-                      action="store_true",
-                      dest="version",
-                      default=False)
+    parser.add_option_group(group)
 
 
 def _main():
