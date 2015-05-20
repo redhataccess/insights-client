@@ -1,6 +1,6 @@
 class InsightsConstants():
     app_name = 'redhat-access-insights'
-    version = '1.0.2'
+    version = '1.0.3'
     auth_method = 'BASIC'
     log_level = 'DEBUG'
     user_agent = app_name + '/' + version
@@ -10,11 +10,11 @@ class InsightsConstants():
     default_conf_file = default_conf_dir + app_name + '.conf'
     default_ca_file = default_conf_dir + 'cert-api.access.redhat.com.pem'
     dynamic_conf_url = ('https://cert-api.access.redhat.com/'
-                        'rs/telemetry/api/v1/static/uploader.json')
-    upload_url = 'https://cert-api.access.redhat.com/rs/telemetry'
-    api_url = 'https://cert-api.access.redhat.com/rs/telemetry/api'
+                        'r/insights/v1/static/uploader.json')
+    upload_url = 'https://cert-api.access.redhat.com/r/insights'
+    api_url = 'https://cert-api.access.redhat.com/r/insights/'
     branch_info_url = ('https://cert-api.access.redhat.com/'
-                       'rs/telemetry/api/v1/branch_info')
+                       'r/insights/v1/branch_info')
     dynamic_conf_file = default_conf_dir + '.cache.json'
     dynamic_fallback_file = default_conf_dir + '.fallback.json'
     dynamic_remove_file = default_conf_dir + 'remove.conf'

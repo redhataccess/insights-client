@@ -38,22 +38,6 @@ def determine_hostname():
     return socket_gethostname
 
 
-def get_satellite_group():
-    """
-    Obtain satellite group name
-    """
-    cmd = '/usr/sbin/subscription-manager identity'
-    args = shlex.split(cmd)
-    proc1 = Popen(args, stdout=PIPE)
-    proc2 = Popen(["/bin/grep", 'org name'],
-                  stdin=proc1.stdout,
-                  stdout=PIPE)
-    # Find org name and grab the name from the end
-    sat_group = proc2.communicate()[0].strip().split().pop()
-    logger.debug("Satellite Group: %s", sat_group)
-    return sat_group
-
-
 def _write_machine_id(machine_id):
     """
     Write machine id out to disk
@@ -111,44 +95,6 @@ def generate_machine_id(new=False):
         machine_id = str(uuid.uuid4())
         _write_machine_id(machine_id)
     return str(machine_id).strip()
-
-
-def generate_dmidecode():
-    """
-    Generate a machine_id based off dmidecode fields
-    """
-    import hashlib
-    import dmidecode
-    dmixml = dmidecode.dmidecodeXML()
-
-    # Fetch all DMI data into a libxml2.xmlDoc object
-    dmixml.SetResultType(dmidecode.DMIXML_DOC)
-    xmldoc = dmixml.QuerySection('all')
-
-    # Do some XPath queries on the XML document
-    dmixp = xmldoc.xpathNewContext()
-
-    # What to look for - XPath expressions
-    keys = ['/dmidecode/SystemInfo/Manufacturer',
-            '/dmidecode/SystemInfo/ProductName',
-            '/dmidecode/SystemInfo/SerialNumber',
-            '/dmidecode/SystemInfo/SystemUUID']
-
-    # Create a sha256 of ^ for machine_id
-    machine_id = hashlib.sha256()
-
-    # Run xpath expressions
-    for k in keys:
-        data = dmixp.xpathEval(k)
-        for element in data:
-            logger.log(logging.DEBUG, "%s: %s", k, element.get_content())
-            # Update the hash as we find the fields we are looking for
-            machine_id.update(element.get_content())
-
-    del dmixp
-    del xmldoc
-    # Create sha256 digest
-    return machine_id.hexdigest()
 
 
 def _expand_paths(path):

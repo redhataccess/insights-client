@@ -3,6 +3,7 @@ Auto Configuration Helper
 """
 import logging
 import os
+import sys
 import copy
 from constants import InsightsConstants as constants
 from cert_auth import rhsmCertificate
@@ -32,7 +33,7 @@ def verify_connectivity(config):
         return False
 
 
-def set_auto_configuration(config, hostname, ca_cert):
+def set_auto_configuration(config, hostname, ca_cert, proxy=None):
     """
     Set config based on discovered data
     """
@@ -40,12 +41,12 @@ def set_auto_configuration(config, hostname, ca_cert):
     saved_config = copy.deepcopy(config)
     if ca_cert is not None:
         config.set(APP_NAME, 'cert_verify', ca_cert)
-    config.set(APP_NAME, 'upload_url', 'https://' + hostname + '/rs/telemetry')
-    config.set(APP_NAME, 'api_url', 'https://' + hostname + '/rs/telemetry/api')
+    config.set(APP_NAME, 'upload_url', 'https://' + hostname + '/r/insights')
+    config.set(APP_NAME, 'api_url', 'https://' + hostname + '/r/insights/')
     config.set(APP_NAME, 'branch_info_url', 'https://' +
-               hostname + '/rs/telemetry/api/v1/branch_info')
+               hostname + '/r/insights/v1/branch_info')
     config.set(APP_NAME, 'dynamic_config_url', 'https://' +
-               hostname + '/rs/telemetry/api/v1/static/uploader.json')
+               hostname + '/r/insights/v1/static/uploader.json')
 
     if not verify_connectivity(config):
         logger.warn("Could not auto configure, falling back to static config")
@@ -68,9 +69,25 @@ def _try_satellite6_configuration(config):
 
         # This will throw an exception if we are not registered
         logger.debug('Checking if system is subscription-manager registered')
+        rhsm.getConsumerId()
         logger.debug('System is subscription-manager registered')
 
         rhsm_hostname = rhsm_config.get('server', 'hostname')
+        rhsm_proxy_hostname = rhsm_config.get('server', 'proxy_hostname')
+        print rhsm_proxy_hostname.trim()
+        rhsm_proxy_port = rhsm_config.get('server', 'proxy_port')
+        print rhsm_proxy_port.trim()
+        rhsm_proxy_user = rhsm_config.get('server', 'proxy_user')
+        print rhsm_proxy_user.trim()
+        rhsm_proxy_pass = rhsm_config.get('server', 'proxy_password')
+        print rhsm_proxy_pass.trim()
+        proxy = None
+        if rhsm_hostname != "":
+            proxy = "http://"
+            if rhsm_proxy_user and rhsm_proxy_pass:
+                proxy = proxy + rhsm_proxy_user + ":" + rhsm_proxy_pass + "@"
+            proxy = proxy + rhsm_proxy_hostname + rhsm_proxy_port
+        print proxy
         logger.debug("Found Satellite Server: %s", rhsm_hostname)
         rhsm_ca = rhsm_config.get('rhsm', 'repo_ca_cert')
         logger.debug("Found CA: %s", rhsm_ca)
@@ -87,7 +104,7 @@ def _try_satellite6_configuration(config):
             rhsm_hostname = rhsm_hostname + '/redhat_access'
 
         logger.debug("Trying to set auto_configuration")
-        set_auto_configuration(config, rhsm_hostname, rhsm_ca)
+        set_auto_configuration(config, rhsm_hostname, rhsm_ca, proxy)
         return True
     except:
         logger.debug('System is NOT subscription-manager registered')

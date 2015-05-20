@@ -14,8 +14,7 @@ import getpass
 import optparse
 import time
 from auto_config import try_auto_configuration
-from utilities import (get_satellite_group,
-                       validate_remove_file,
+from utilities import ( validate_remove_file,
                        generate_machine_id)
 from dynamic_config import InsightsConfig
 from data_collector import DataCollector
@@ -42,7 +41,7 @@ def parse_config_file():
     parsedconfig = ConfigParser.RawConfigParser(
         {'loglevel': constants.log_level,
          'app_name': constants.app_name,
-         'auto_config': 'False',
+         'auto_config': 'True',
          'authmethod': constants.auth_method,
          'upload_url': constants.upload_url,
          'api_url': constants.api_url,
@@ -221,22 +220,15 @@ def set_up_options(parser):
                       action="store_true",
                       dest="register",
                       default=False)
-    parser.add_option('--update',
-                      help='Get new rules from Red Hat',
+    parser.add_option('--update-collection-rules',
+                      help='Refresh collection rules from Red Hat',
                       action="store_true",
                       dest="update",
                       default=False)
     parser.add_option('--validate',
-                      help='Validate remove.json',
+                      help='Validate remove.conf',
                       action="store_true",
                       dest="validate",
-                      default=False)
-    parser.add_option('--schedule',
-                      help=("Set Red Hat Access Insights's schedule only "
-                            "(no upload).  Must be used with --daily "
-                            "or --weekly"),
-                      action="store_true",
-                      dest="schedule",
                       default=False)
     parser.add_option('--daily',
                       help=("Set Red Hat Access Insights "
@@ -254,12 +246,6 @@ def set_up_options(parser):
                       action="store",
                       help='Group to add this system to during registration',
                       dest="group")
-    parser.add_option('--satellite-group',
-                      help=("Use this system's satellite "
-                            "group during registration"),
-                      action="store_true",
-                      dest="satellite_group",
-                      default=False)
     parser.add_option('--test-connection',
                       help='Test connectivity to Red Hat',
                       action="store_true",
@@ -275,10 +261,10 @@ def set_up_options(parser):
                       action="store_true",
                       dest="no_gpg",
                       default=False)
-    parser.add_option('--regenerate',
-                      help="Regenerate machine-id",
+    parser.add_option('--reregister',
+                      help="Reregister this machine to Red Hat",
                       action="store_true",
-                      dest="regenerate",
+                      dest="reregister",
                       default=False)
     parser.add_option('--no-upload',
                       help="Do not upload the archive",
@@ -319,9 +305,6 @@ def _main():
         parser.error("Unknown arguments: %s" % args)
         sys.exit(1)
 
-    if options.satellite_group and not options.register:
-        parser.error("--satellite-group must be used with --register")
-
     if options.version:
         print constants.version
         sys.exit()
@@ -341,8 +324,9 @@ def _main():
     logger.debug("Version: " + constants.version)
     # Generate /etc/machine-id if it does not exist
     new = False
-    if options.regenerate:
+    if options.reregister:
         new = True
+        options.register = True
     logger.debug("Machine-ID: " + generate_machine_id(new))
 
     # Disable GPG verification
@@ -374,8 +358,6 @@ def _main():
     # Handle registration and grouping, this is mostly a no-op
     if options.register:
         opt_group = options.group
-        if options.satellite_group:
-            opt_group = get_satellite_group()
         hostname, opt_group = register(config, opt_group)
         logger.info('Successfully registered %s in group %s', hostname, opt_group)
 
@@ -386,10 +368,9 @@ def _main():
         logger.error("Exiting")
         sys.exit(1)
 
-    # If we are not just setting the schedule, do work son
-    if not options.schedule:
-        collect_data_and_upload(config, options)
-        handler.doRollover()
+    # do work
+    collect_data_and_upload(config, options)
+    handler.doRollover()
 
 if __name__ == '__main__':
     _main()
