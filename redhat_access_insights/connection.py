@@ -112,7 +112,6 @@ class InsightsConnection(object):
             proxies = {"https": env_proxy}
 
         conf_proxy = config.get(APP_NAME, 'proxy')
-        logger.debug("proxy string: %s", conf_proxy)
 
         if ((conf_proxy is not None and
              conf_proxy.lower() != 'None'.lower() and
@@ -401,8 +400,9 @@ class InsightsConnection(object):
         file_name = os.path.basename(data_collected)
         files = {'file': (file_name, open(data_collected, 'rb'))}
 
-        logger.debug("Uploading %s", data_collected)
-        upload = self.session.post(self.upload_url + '/' + generate_machine_id(), files=files)
+        upload_url = self.upload_url + '/' + generate_machine_id()
+        logger.debug("Uploading %s to %s", data_collected, upload_url)
+        upload = self.session.post(upload_url, files=files)
 
         self.handle_fail_rcs(upload)
         logger.debug("Upload status: %s %s %s",
