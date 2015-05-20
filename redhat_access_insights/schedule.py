@@ -20,8 +20,10 @@ class InsightsSchedule(object):
             self.set_daily()
         if options.daily:
             self.set_daily()
+            logger.info("Set schedule to daily")
         if options.weekly:
             self.set_weekly()
+            logger.info("Set schedule to weekly")
 
     def already_linked(self):
         """
