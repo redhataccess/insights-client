@@ -131,10 +131,14 @@ class InsightsConfig(object):
                 if dyn_conf:
                     try:
                         dyn_conf['version']
-                        dyn_conf_file = open(self.dynamic_config_file, 'w')
+                        dyn_conf_file = os.fdopen(os.open(self.dynamic_config_file,
+                                                          os.O_WRONLY | os.O_CREAT,
+                                                          int("0600", 8)), 'w')
                         dyn_conf_file.write(req.text)
                         dyn_conf_file.close()
-                        dyn_conf_sig_file = open(self.dynamic_config_file + ".asc", 'w')
+                        dyn_conf_sig_file = os.fdopen(os.open(self.dynamic_config_file + ".asc",
+                                                              os.O_WRONLY | os.O_CREAT,
+                                                              int("0600", 8)), 'w')
                         dyn_conf_sig_file.write(config_sig.text)
                         dyn_conf_sig_file.close()
                         dyn_conf['file'] = self.dynamic_config_file
