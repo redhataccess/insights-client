@@ -3,8 +3,6 @@ Auto Configuration Helper
 """
 import logging
 import os
-import sys
-import copy
 from constants import InsightsConstants as constants
 from cert_auth import rhsmCertificate
 from connection import InsightsConnection
@@ -145,8 +143,28 @@ def _try_satellite5_configuration(config):
                 hostname = url.netloc + '/redhat_access'
                 logger.debug("Found hostname %s", hostname)
 
+            # Auto discover proxy stuff
+            if line.startswith('enableProxy='):
+                proxy_enabled = line.strip().split('=')[1]
+            if line.startswith('httpProxy='):
+                proxy_host_port = line.strip().split('=')[1]
+            if line.startswith('proxyUser='):
+                proxy_user = line.strip().split('=')[1]
+            if line.startswith('proxyPassword='):
+                proxy_password = line.strip().split('=')[1]
+
         if hostname:
-            set_auto_configuration(config, hostname, rhn_ca)
+            proxy = None
+            if proxy_enabled:
+                proxy = "http://"
+                if proxy_user != "" and proxy_password != "":
+                    logger.debug("Found user and password for rhn_proxy")
+                    proxy = proxy + proxy_user + ':' + proxy_password
+                    proxy = proxy + "@" + proxy_host_port
+                else:
+                    proxy = proxy + "@" + proxy_host_port
+                    logger.debug("RHN Proxy: %s", proxy)
+            set_auto_configuration(config, hostname, rhn_ca, proxy)
         else:
             logger.debug("Could not find hostname")
             return False

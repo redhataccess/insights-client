@@ -7,7 +7,6 @@ import sys
 import six
 import shlex
 import os
-from ConfigParser import RawConfigParser
 from subprocess import Popen, PIPE, STDOUT
 from tempfile import NamedTemporaryFile
 from constants import InsightsConstants as constants
