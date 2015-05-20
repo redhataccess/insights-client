@@ -155,7 +155,7 @@ def _try_satellite5_configuration(config):
 
         if hostname:
             proxy = None
-            if proxy_enabled:
+            if proxy_enabled == "1":
                 proxy = "http://"
                 if proxy_user != "" and proxy_password != "":
                     logger.debug("Found user and password for rhn_proxy")
