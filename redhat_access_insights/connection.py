@@ -317,15 +317,24 @@ class InsightsConnection(object):
         """
         client_hostname = determine_hostname()
         machine_id = generate_machine_id(new_machine_id)
+
         try:
             branch_info = self.branch_info()
             remote_branch = branch_info['remote_branch']
             remote_leaf = branch_info['remote_leaf']
-        except requests.ConnectionError, LookupError:
+
+        except LookupError:
             logger.error("ERROR: Could not determine branch information, exiting!")
             logger.error("See %s for more information", constants.default_log_file)
             logger.error("Could not register system, running configuration test")
             self.test_connection()
+
+        except requests.ConnectionError:
+            logger.error("ERROR: Could not determine branch information, exiting!")
+            logger.error("See %s for more information", constants.default_log_file)
+            logger.error("Could not register system, running configuration test")
+            self.test_connection()
+
         data = {'machine_id': machine_id,
                 'remote_branch': remote_branch,
                 'remote_leaf': remote_leaf,

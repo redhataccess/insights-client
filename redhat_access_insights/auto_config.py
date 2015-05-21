@@ -3,6 +3,7 @@ Auto Configuration Helper
 """
 import logging
 import os
+import requests
 from constants import InsightsConstants as constants
 from cert_auth import rhsmCertificate
 from connection import InsightsConnection
