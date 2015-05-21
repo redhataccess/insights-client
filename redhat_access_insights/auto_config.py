@@ -91,6 +91,7 @@ def _try_satellite6_configuration(config):
         logger.debug('System is subscription-manager registered')
 
         rhsm_hostname = rhsm_config.get('server', 'hostname')
+        rhsm_hostport = rhsm_config.get('server', 'port')
         rhsm_proxy_hostname = rhsm_config.get('server', 'proxy_hostname').strip()
         rhsm_proxy_port = rhsm_config.get('server', 'proxy_port').strip()
         rhsm_proxy_user = rhsm_config.get('server', 'proxy_user').strip()
@@ -106,7 +107,7 @@ def _try_satellite6_configuration(config):
             else:
                 proxy = proxy + rhsm_proxy_hostname + ':' + rhsm_proxy_port
                 logger.debug("RHSM Proxy: %s", proxy)
-        logger.debug("Found Satellite Server: %s", rhsm_hostname)
+        logger.debug("Found Satellite Server Host: %s, Port: %s", rhsm_hostname, rhsm_hostport)
         rhsm_ca = rhsm_config.get('rhsm', 'repo_ca_cert')
         logger.debug("Found CA: %s", rhsm_ca)
         logger.debug("Setting authmethod to CERT")
@@ -118,8 +119,9 @@ def _try_satellite6_configuration(config):
             rhsm_hostname = 'cert-api.access.redhat.com'
             rhsm_ca = None
         else:
-            # Set the cert verify CA, and path
-            rhsm_hostname = rhsm_hostname + '/redhat_access'
+            # Set the host path
+            #'rhsm_hostname' should really be named ~ 'rhsm_host_base_url'
+            rhsm_hostname = rhsm_hostname + ':' + rhsm_hostport + '/redhat_access'
 
         logger.debug("Trying to set auto_configuration")
         set_auto_configuration(config, rhsm_hostname, rhsm_ca, proxy)
