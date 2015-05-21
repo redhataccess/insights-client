@@ -202,7 +202,7 @@ class InsightsConnection(object):
         if last_ex:
             raise last_ex
 
-    def _test_connection(self):
+    def test_connection(self):
         """
         Test connection to Red Hat
         """
@@ -305,9 +305,14 @@ class InsightsConnection(object):
         branch_info = branch_info.json()
 
         # Determine if we are connected to Satellite 5
-        if ((branch_info['remote_branch'] is not -1 and
-             branch_info['remote_leaf'] is -1)):
-            self.get_satellite5_info(branch_info)
+        try:
+            if ((branch_info['remote_branch'] is not -1 and
+                 branch_info['remote_leaf'] is -1)):
+                self.get_satellite5_info(branch_info)
+        except LookupError:
+            logger.error("ERROR: Failed to determine branch information, exiting.")
+            logger.error("ERROR: See %s for more information", constants.default_log_file)
+            sys.exit()
 
         return branch_info
 
@@ -329,9 +334,9 @@ class InsightsConnection(object):
                                        headers=headers,
                                        data=data)
             logger.debug("POST System status: %d", system.status_code)
-        except:
+        except ConnectionError:
             logger.error("Could not register system, running configuration test")
-            self._test_connection()
+            self.test_connection()
         return system
 
     def do_group(self, group_id):

@@ -26,7 +26,7 @@ def verify_connectivity(config):
     try:
         remote_leaf = branch_info['remote_leaf']
         return remote_leaf
-    except:
+    except LookupError:
         logger.debug("Failed to find accurate branch_info")
         return False
 
@@ -51,7 +51,7 @@ def set_auto_configuration(config, hostname, ca_cert, proxy):
     config.set(APP_NAME, 'branch_info_url', 'https://' +
                hostname + '/rs/telemetry/api/v1/branch_info')
     config.set(APP_NAME, 'dynamic_config_url', 'https://' +
-               hostname + '/rs/telemety/api/v1/static/uploader.json')
+               hostname + '/rs/telemetry/api/v1/static/uploader.json')
 
     if not verify_connectivity(config):
         logger.warn("Could not auto configure, falling back to static config")

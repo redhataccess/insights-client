@@ -57,12 +57,13 @@ def parse_config_file():
          'proxy': None})
     try:
         parsedconfig.read(constants.default_conf_file)
-    except:
+    except ConfigParser.Error:
+        logger.error("ERROR: Could not read configuration file, using defaults")
         pass
     try:
         # Try to add the redhat_access_insights section
         parsedconfig.add_section(APP_NAME)
-    except:
+    except ConfigParser.Error:
         pass
     return parsedconfig
 
@@ -355,7 +356,7 @@ def _main():
     # Test connection, useful for proxy debug
     if options.test_connection:
         pconn = InsightsConnection(config)
-        pconn._test_connection()
+        pconn.test_connection()
 
     # Handle registration and grouping, this is mostly a no-op
     if options.register:

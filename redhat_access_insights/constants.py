@@ -1,4 +1,7 @@
-class InsightsConstants():
+"""
+Constants
+"""
+class InsightsConstants(object):
     app_name = 'redhat-access-insights'
     version = '1.0.3'
     auth_method = 'BASIC'
