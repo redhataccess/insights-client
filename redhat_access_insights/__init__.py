@@ -59,7 +59,6 @@ def parse_config_file():
         parsedconfig.read(constants.default_conf_file)
     except ConfigParser.Error:
         logger.error("ERROR: Could not read configuration file, using defaults")
-        pass
     try:
         # Try to add the redhat_access_insights section
         parsedconfig.add_section(APP_NAME)
@@ -135,7 +134,11 @@ def collect_data_and_upload(config, options):
     """
     pconn = InsightsConnection(config)
     pconn.check_registration()
-    branch_info = pconn.branch_info()
+    try:
+        branch_info = pconn.branch_info()
+    except requests.ConnectionError, LookupError:
+        logger.error("Could not determine branch information")
+        sys.exit()
     pc = InsightsConfig(config, pconn)
     dc = DataCollector()
     start = time.clock()

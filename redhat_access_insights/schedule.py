@@ -45,14 +45,14 @@ class InsightsSchedule(object):
         logger.debug('Setting schedule to daily')
         try:
             os.remove(CRON_WEEKLY + APP_NAME)
-        except:
+        except OSError:
             logger.debug('Could not remove cron.weekly')
 
         try:
             os.symlink(
                 '/etc/' + APP_NAME + '/' + APP_NAME + '.cron',
                 CRON_DAILY + APP_NAME)
-        except:
+        except OSError:
             logger.debug('Could not link cron.daily')
 
     def set_weekly(self):
@@ -62,12 +62,12 @@ class InsightsSchedule(object):
         logger.debug('Setting schedule to weekly')
         try:
             os.remove(CRON_DAILY + APP_NAME)
-        except:
+        except OSError:
             logger.debug('Could not remove cron.daily')
 
         try:
             os.symlink(
                 '/etc/' + APP_NAME + '/' + APP_NAME + '.cron',
                 CRON_WEEKLY + APP_NAME)
-        except:
+        except OSError:
             logger.debug('Could not link cron.weekly')

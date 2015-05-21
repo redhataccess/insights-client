@@ -305,14 +305,9 @@ class InsightsConnection(object):
         branch_info = branch_info.json()
 
         # Determine if we are connected to Satellite 5
-        try:
-            if ((branch_info['remote_branch'] is not -1 and
-                 branch_info['remote_leaf'] is -1)):
-                self.get_satellite5_info(branch_info)
-        except LookupError:
-            logger.error("ERROR: Failed to determine branch information, exiting.")
-            logger.error("ERROR: See %s for more information", constants.default_log_file)
-            sys.exit()
+        if ((branch_info['remote_branch'] is not -1 and
+             branch_info['remote_leaf'] is -1)):
+            self.get_satellite5_info(branch_info)
 
         return branch_info
 
@@ -322,7 +317,19 @@ class InsightsConnection(object):
         """
         client_hostname = determine_hostname()
         machine_id = generate_machine_id(new_machine_id)
-        data = {'machine_id': machine_id, 'hostname': client_hostname}
+        try:
+            branch_info = self.branch_info()
+            remote_branch = branch_info['remote_branch']
+            remote_leaf = branch_info['remote_leaf']
+        except requests.ConnectionError, LookupError:
+            logger.error("ERROR: Could not determine branch information, exiting!")
+            logger.error("See %s for more information", constants.default_log_file)
+            logger.error("Could not register system, running configuration test")
+            self.test_connection()
+        data = {'machine_id': machine_id,
+                'remote_branch': remote_branch,
+                'remote_leaf': remote_leaf,
+                'hostname': client_hostname}
         data = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         post_system_url = self.api_url + '/v1/systems'
@@ -334,7 +341,7 @@ class InsightsConnection(object):
                                        headers=headers,
                                        data=data)
             logger.debug("POST System status: %d", system.status_code)
-        except ConnectionError:
+        except requests.ConnectionError:
             logger.error("Could not register system, running configuration test")
             self.test_connection()
         return system

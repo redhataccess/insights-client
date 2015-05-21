@@ -19,7 +19,7 @@ def verify_connectivity(config):
     ic = InsightsConnection(config)
     try:
         branch_info = ic.branch_info()
-    except:
+    except requests.ConnectionError, LookupError:
         logger.debug("Failed to connect to satellite")
         return False
 
