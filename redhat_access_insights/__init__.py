@@ -13,6 +13,7 @@ import ConfigParser
 import getpass
 import optparse
 import time
+import requests
 from auto_config import try_auto_configuration
 from utilities import ( validate_remove_file,
                        generate_machine_id)
@@ -136,8 +137,11 @@ def collect_data_and_upload(config, options):
     pconn.check_registration()
     try:
         branch_info = pconn.branch_info()
-    except requests.ConnectionError, LookupError:
-        logger.error("Could not determine branch information")
+    except requests.ConnectionError:
+        logger.error("ERROR: Could not connect to determine branch information")
+        sys.exit()
+    except LookupError:
+        logger.error("ERROR: Could not determine branch information")
         sys.exit()
     pc = InsightsConfig(config, pconn)
     dc = DataCollector()

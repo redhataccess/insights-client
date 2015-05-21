@@ -22,7 +22,9 @@ def determine_hostname():
 
     try:
         socket_ex = socket.gethostbyname_ex(socket_gethostname)[0]
-    except LookupError, socket.gaierror:
+    except LookupError:
+        socket_ex = ''
+    except socket.gaierror:
         socket_ex = ''
 
     gethostname_len = len(socket_gethostname)
