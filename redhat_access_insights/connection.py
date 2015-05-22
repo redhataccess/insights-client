@@ -178,7 +178,7 @@ class InsightsConnection(object):
         files = {'file': ("test", "test")}
         url = urlparse(url)
         test_url = url.scheme + "://" + url.netloc
-        for ext in (url.path + '/', '', '/rs', '/rs/telemetry'):
+        for ext in (url.path + '/', '', '/r', '/r/insights'):
             try:
                 logger.info("Testing: %s", test_url + ext)
                 if method is "POST":

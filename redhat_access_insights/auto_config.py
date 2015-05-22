@@ -50,12 +50,12 @@ def set_auto_configuration(config, hostname, ca_cert, proxy):
     if proxy is not None:
         saved_proxy = config.get(APP_NAME, 'proxy')
         config.set(APP_NAME, 'proxy', proxy)
-    config.set(APP_NAME, 'upload_url', 'https://' + hostname + '/rs/telemetry')
-    config.set(APP_NAME, 'api_url', 'https://' + hostname + '/rs/telemetry/api')
+    config.set(APP_NAME, 'upload_url', 'https://' + hostname + '/r/insights')
+    config.set(APP_NAME, 'api_url', 'https://' + hostname + '/r/insights/')
     config.set(APP_NAME, 'branch_info_url', 'https://' +
-               hostname + '/rs/telemetry/api/v1/branch_info')
+               hostname + '/r/insights/v1/branch_info')
     config.set(APP_NAME, 'collection_rules_url', 'https://' +
-               hostname + '/rs/telemetry/api/v1/static/uploader.json')
+               hostname + '/r/insights/v1/static/uploader.json')
 
     if not verify_connectivity(config):
         logger.warn("Could not auto configure, falling back to static config")
