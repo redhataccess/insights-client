@@ -24,5 +24,6 @@ class InsightsConstants(object):
     collection_fallback_file = default_conf_dir + '.fallback.json'
     collection_remove_file = default_conf_dir + 'remove.conf'
     unregistered_file = default_conf_dir + '.unregistered'
+    registered_file = default_conf_dir + '.registered'
     pub_gpg_path = default_conf_dir + 'redhattools.pub.gpg'
     machine_id_file = default_conf_dir + 'machine-id'

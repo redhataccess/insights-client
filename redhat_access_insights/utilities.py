@@ -7,6 +7,7 @@ import os
 import sys
 import logging
 import uuid
+import datetime
 from subprocess import Popen, PIPE
 from constants import InsightsConstants as constants
 
@@ -55,6 +56,7 @@ def write_unregistered_file(date):
     """
     Write .unregistered out to disk
     """
+    delete_registered_file()
     unreg = file(constants.unregistered_file, 'w')
     unreg.write(str(date))
     logger.error("This machine has been unregistered")
@@ -63,12 +65,29 @@ def write_unregistered_file(date):
     sys.exit(1)
 
 
+def write_registered_file():
+    """
+    Write .registered out to disk
+    """
+    unreg = file(constants.registered_file, 'w')
+    unreg.write(datetime.datetime.isoformat(datetime.datetime.now()))
+
+
+def delete_registered_file():
+    """
+    Remove the .registered file if we are doing a register
+    """
+    if os.path.isfile(constants.registered_file):
+        os.remove(constants.registered_file)
+
+
 def delete_unregistered_file():
     """
     Remove the .unregistered file if we are doing a register
     """
     if os.path.isfile(constants.unregistered_file):
         os.remove(constants.unregistered_file)
+    write_registered_file()
 
 
 def generate_machine_id(new=False):

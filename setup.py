@@ -22,7 +22,8 @@ if __name__ == "__main__":
     # where stuff lands
     confpath = "/etc/redhat-access-insights"
 
-    docspath = "/usr/share/man/man8/"
+    man5path = "/usr/share/man/man5/"
+    man8path = "/usr/share/man/man8/"
 
     setup(
         name="redhat-access-insights",
@@ -48,8 +49,8 @@ if __name__ == "__main__":
                         'etc/redhat-access-insights.cron']),
 
             # man pages
-            (docspath, ['docs/redhat-access-insights.8',
-                        'docs/redhat-access-insights.conf.8']),
+            (man5path, ['docs/redhat-access-insights.conf.5']),
+            (man8path, ['docs/redhat-access-insights.8']),
 
             (logpath, [])
         ],
