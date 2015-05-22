@@ -69,8 +69,8 @@ def write_registered_file():
     """
     Write .registered out to disk
     """
-    unreg = file(constants.registered_file, 'w')
-    unreg.write(datetime.datetime.isoformat(datetime.datetime.now()))
+    reg = file(constants.registered_file, 'w')
+    reg.write(datetime.datetime.isoformat(datetime.datetime.now()))
 
 
 def delete_registered_file():
