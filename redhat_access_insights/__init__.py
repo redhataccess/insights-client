@@ -17,7 +17,7 @@ import requests
 from auto_config import try_auto_configuration
 from utilities import ( validate_remove_file,
                        generate_machine_id)
-from dynamic_config import InsightsConfig
+from collection_rules import InsightsConfig
 from data_collector import DataCollector
 from schedule import InsightsSchedule
 from connection import InsightsConnection
@@ -48,7 +48,7 @@ def parse_config_file():
          'api_url': constants.api_url,
          'branch_info_url': constants.branch_info_url,
          'auto_update': 'True',
-         'dynamic_config_url': constants.dynamic_conf_url,
+         'collection_rules_url': constants.collection_rules_url,
          'obfuscate': 'False',
          'obfuscate_hostname': 'False',
          'cert_verify': constants.default_ca_file,
@@ -146,16 +146,16 @@ def collect_data_and_upload(config, options):
     pc = InsightsConfig(config, pconn)
     dc = DataCollector()
     start = time.clock()
-    dynamic_config, rm_conf = pc.get_conf(options.update)
+    collection_rules, rm_conf = pc.get_conf(options.update)
     elapsed = (time.clock() - start)
-    logger.debug("Dynamic Config Elapsed Time: %s", elapsed)
+    logger.debug("Collection Rules Elapsed Time: %s", elapsed)
     start = time.clock()
     logger.info('Starting to collect Insights data')
-    dc.run_commands(dynamic_config, rm_conf)
+    dc.run_commands(collection_rules, rm_conf)
     elapsed = (time.clock() - start)
     logger.debug("Command Collection Elapsed Time: %s", elapsed)
     start = time.clock()
-    dc.copy_files(dynamic_config, rm_conf)
+    dc.copy_files(collection_rules, rm_conf)
     elapsed = (time.clock() - start)
     logger.debug("File Collection Elapsed Time: %s", elapsed)
     dc.write_branch_info(branch_info)
@@ -259,16 +259,17 @@ def set_up_options(parser):
                       action="store_true",
                       dest="validate",
                       default=False)
-    parser.add_option('--reregister',
-                      help="Reregister this machine to Red Hat",
-                      action="store_true",
-                      dest="reregister",
-                      default=False)
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
                       help='Test connectivity to Red Hat',
                       action="store_true",
                       dest="test_connection",
+                      default=False)
+    group.add_option('--reregister',
+                      help=("Reregister this machine to Red Hat. "
+                             "Use only as directed."),
+                      action="store_true",
+                      dest="reregister",
                       default=False)
     group.add_option('--verbose',
                       help="DEBUG output to stdout",
@@ -341,7 +342,7 @@ def _main():
 
     # Disable GPG verification
     if options.no_gpg:
-        logger.warn("GPG VERIFICATION DISABLED")
+        logger.warn("WARNING: GPG VERIFICATION DISABLED")
         config.set(APP_NAME, 'gpg', 'False')
 
     # Log config except the password

@@ -43,7 +43,7 @@ def set_auto_configuration(config, hostname, ca_cert, proxy):
     saved_upload_url = config.get(APP_NAME, 'upload_url')
     saved_api_url = config.get(APP_NAME, 'api_url')
     saved_branch_info_url = config.get(APP_NAME, 'branch_info_url')
-    saved_dynamic_config_url = config.get(APP_NAME, 'dynamic_config_url')
+    saved_collection_rules_url = config.get(APP_NAME, 'collection_rules_url')
     if ca_cert is not None:
         config.set(APP_NAME, 'cert_verify', ca_cert)
         saved_cert_verify = config.get(APP_NAME, 'cert_verify')
@@ -54,7 +54,7 @@ def set_auto_configuration(config, hostname, ca_cert, proxy):
     config.set(APP_NAME, 'api_url', 'https://' + hostname + '/rs/telemetry/api')
     config.set(APP_NAME, 'branch_info_url', 'https://' +
                hostname + '/rs/telemetry/api/v1/branch_info')
-    config.set(APP_NAME, 'dynamic_config_url', 'https://' +
+    config.set(APP_NAME, 'collection_rules_url', 'https://' +
                hostname + '/rs/telemetry/api/v1/static/uploader.json')
 
     if not verify_connectivity(config):
@@ -63,7 +63,7 @@ def set_auto_configuration(config, hostname, ca_cert, proxy):
         config.set(APP_NAME, 'upload_url', saved_upload_url)
         config.set(APP_NAME, 'api_url', saved_api_url)
         config.set(APP_NAME, 'branch_info_url', saved_branch_info_url)
-        config.set(APP_NAME, 'dynamic_config_url', saved_dynamic_config_url)
+        config.set(APP_NAME, 'collection_rules_url', saved_collection_rules_url)
         if proxy is not None:
             if saved_proxy is not None and saved_proxy.lowercase == 'none':
                 saved_proxy = None

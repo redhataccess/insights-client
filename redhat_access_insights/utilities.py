@@ -139,23 +139,24 @@ def validate_remove_file():
     Validate the remove file
     """
     import stat
-    if not os.path.isfile(constants.dynamic_remove_file):
-        sys.exit("Remove file does not exist")
+    if not os.path.isfile(constants.collection_remove_file):
+        sys.exit("WARN: Remove file does not exist")
     # Make sure permissions are 600
-    mode = stat.S_IMODE(os.stat(constants.dynamic_remove_file).st_mode)
+    mode = stat.S_IMODE(os.stat(constants.collection_remove_file).st_mode)
     if not mode == 0o600:
-        sys.exit("Invalid remove file permissions"
+        sys.exit("ERROR: Invalid remove file permissions"
                  "Expected 0600 got %s" % oct(mode))
     else:
         print "Correct file permissions"
 
-    if os.path.isfile(constants.dynamic_remove_file):
+    if os.path.isfile(constants.collection_remove_file):
         from ConfigParser import RawConfigParser
         parsedconfig = RawConfigParser()
-        parsedconfig.read(constants.dynamic_remove_file)
+        parsedconfig.read(constants.collection_remove_file)
         rm_conf = {}
         for item, value in parsedconfig.items('remove'):
             rm_conf[item] = value.strip().split(',')
+        # Using print here as this could contain sensitive information
         print "Remove file parsed contents"
         print rm_conf
     logger.info("JSON parsed correctly")

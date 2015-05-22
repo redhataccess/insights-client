@@ -231,8 +231,8 @@ class InsightsConnection(object):
         Bail out if we get a 401 and leave a message
         """
         if req.status_code >= 400:
-            logger.error("Upload failed!")
-            logger.info("HTTP Status Code: %s", req.status_code)
+            logger.error("ERROR: Upload failed!")
+            logger.info("Debug Information:\nHTTP Status Code: %s", req.status_code)
             logger.info("HTTP Status Text: %s", req.reason)
             logger.debug("HTTP Response Text: %s", req.text)
             if req.status_code == 401:
