@@ -27,6 +27,17 @@ URLLIB3_LOGGER.setLevel(logging.WARNING)
 URLLIB3_LOGGER = logging.getLogger('requests.packages.urllib3.connectionpool')
 URLLIB3_LOGGER.setLevel(logging.WARNING)
 
+try:
+    import urllib3
+    urllib3.disable_warnings()
+except:
+    pass
+
+try:
+    import requests.packages.urllib3
+    requests.packages.urllib3.disable_warnings()
+except:
+    pass
 
 class InsightsConnection(object):
 
@@ -301,7 +312,10 @@ class InsightsConnection(object):
         logger.debug("Obtaining branch information from %s", self.branch_info_url)
         branch_info = self.session.get(self.branch_info_url)
         logger.debug("GET branch_info status: %s", branch_info.status_code)
-        logger.debug("Branch information: %s", json.dumps(branch_info.json()))
+        try:
+            logger.debug("Branch information: %s", json.dumps(branch_info.json()))
+        except ValueError:
+            raise LookupError
         branch_info = branch_info.json()
 
         # Determine if we are connected to Satellite 5
