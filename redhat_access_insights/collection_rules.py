@@ -27,7 +27,10 @@ class InsightsConfig(object):
         self.fallback_file = constants.collection_fallback_file
         self.remove_file = constants.collection_remove_file
         self.collection_rules_file = constants.collection_rules_file
+        self.base_url = 'https://' + config.get(APP_NAME, 'base_url')
         self.collection_rules_url = config.get(APP_NAME, 'collection_rules_url')
+        if self.collection_rules_url is None:
+            self.collection_rules_url = self.base_url + '/v1/static/uploader.json'
         self.gpg = config.getboolean(APP_NAME, 'gpg')
         self.conn = conn
 

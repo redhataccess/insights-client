@@ -49,9 +49,16 @@ class InsightsConnection(object):
         self.user_agent = constants.user_agent
         self.username = config.get(APP_NAME, "username")
         self.password = config.get(APP_NAME, "password")
+        self.base_url = "https://" + config.get(APP_NAME, "base_url")
         self.upload_url = config.get(APP_NAME, "upload_url")
+        if self.upload_url is None:
+            self.upload_url = self.base_url + "/uploads"
         self.api_url = config.get(APP_NAME, "api_url")
+        if self.api_url is None:
+            self.api_url = self.base_url
         self.branch_info_url = config.get(APP_NAME, "branch_info_url")
+        if self.branch_info_url is None:
+            self.branch_info_url = self.base_url + "/v1/branch_info"
         self.authmethod = config.get(APP_NAME, 'authmethod')
         self.cert_verify = config.get(APP_NAME, "cert_verify")
         if self.cert_verify.lower() == 'false':
@@ -325,7 +332,7 @@ class InsightsConnection(object):
 
         return branch_info
 
-    def create_system(self, new_machine_id=False):
+    def create_system(self, options, new_machine_id=False):
         """
         Create the machine via the API
         """
@@ -353,6 +360,8 @@ class InsightsConnection(object):
                 'remote_branch': remote_branch,
                 'remote_leaf': remote_leaf,
                 'hostname': client_hostname}
+        if options.display_name is not None:
+            data['display_name'] = options.display_name
         data = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         post_system_url = self.api_url + '/v1/systems'
@@ -405,7 +414,7 @@ class InsightsConnection(object):
         logger.debug("PUT group status: %d", put_group.status_code)
         logger.debug("PUT Group: %s", put_group.json())
 
-    def register(self, group_id=None):
+    def register(self, options):
         """
         Register this machine
         """
@@ -415,23 +424,25 @@ class InsightsConnection(object):
         client_hostname = determine_hostname()
         # This will undo a blacklist
         logger.debug("API: Create system")
-        system = self.create_system(new_machine_id=False)
+        system = self.create_system(options, new_machine_id=False)
 
         # If we get a 409, we know we need to generate a new machine-id
         if system.status_code == 409:
-            system = self.create_system(new_machine_id=True)
+            system = self.create_system(options, new_machine_id=True)
         self.handle_fail_rcs(system)
 
         logger.debug("System: %s", system.json())
 
         # Do grouping
-        if group_id is not None:
-            self.do_group(group_id)
+        if options.group is not None:
+            self.do_group(options.group)
 
-        if group_id is not None:
-            return (client_hostname, group_id)
+        if options.group is not None:
+            return (client_hostname, options.group, options.display_name)
+        elif options.display_name is not None:
+            return (client_hostname, "None", options.display_name)
         else:
-            return (client_hostname, "None")
+            return (client_hostname, "None", "")
 
     def upload_archive(self, data_collected):
         """

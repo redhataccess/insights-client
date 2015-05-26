@@ -29,4 +29,4 @@ clean:
 	rm -rf dist
 	rm -f MANIFEST
 	rm -rf *.egg*
-	rm -rf *.pyc
+	find . -type f -name '*.pyc' -delete

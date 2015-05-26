@@ -44,11 +44,12 @@ def parse_config_file():
          'app_name': constants.app_name,
          'auto_config': 'True',
          'authmethod': constants.auth_method,
-         'upload_url': constants.upload_url,
-         'api_url': constants.api_url,
-         'branch_info_url': constants.branch_info_url,
+         'base_url': constants.base_url,
+         'upload_url': None,
+         'api_url': None,
+         'branch_info_url': None,
          'auto_update': 'True',
-         'collection_rules_url': constants.collection_rules_url,
+         'collection_rules_url': None,
          'obfuscate': 'False',
          'obfuscate_hostname': 'False',
          'cert_verify': constants.default_ca_file,
@@ -250,6 +251,10 @@ def set_up_options(parser):
                       action="store_true",
                       dest="weekly",
                       default=False)
+    parser.add_option('--display-name',
+                      action="store",
+                      help='Display name for this system.  Must be used with --register',
+                      dest="display_name")
     parser.add_option('--group',
                       action="store",
                       help='Group to add this system to during registration',
@@ -265,8 +270,8 @@ def set_up_options(parser):
                       action="store_true",
                       dest="test_connection",
                       default=False)
-    group.add_option('--reregister',
-                      help=("Reregister this machine to Red Hat. "
+    group.add_option('--force-reregister',
+                      help=("Forcefully reregister this machine to Red Hat. "
                              "Use only as directed."),
                       action="store_true",
                       dest="reregister",
@@ -366,11 +371,16 @@ def _main():
         pconn = InsightsConnection(config)
         pconn.test_connection()
 
-    # Handle registration and grouping, this is mostly a no-op
+    # Handle registration, grouping, and display name
     if options.register:
         opt_group = options.group
-        hostname, opt_group = register(config, opt_group)
-        logger.info('Successfully registered %s in group %s', hostname, opt_group)
+        hostname, opt_group, display_name = register(config, options)
+        if options.display_name is None and options.group is None:
+            logger.info('Successfully registered %s', hostname)
+        elif options.display_name is None:
+            logger.info('Successfully registered %s in group %s', hostname, opt_group)
+        else:
+            logger.info('Successfully registered %s as %s in group %s', hostname, display_name, opt_group)
 
     # Check for .unregistered file
     if os.path.isfile(constants.unregistered_file):

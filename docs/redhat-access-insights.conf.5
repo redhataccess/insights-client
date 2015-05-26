@@ -9,16 +9,16 @@ The \fBredhat\-access\-insights.conf\fP file contains configuration information 
 [redhat-access-insights]\&
 .IP "loglevel=DEBUG"
 Change log level, valid options DEBUG, INFO, WARNING, ERROR, CRITICAL.
-.IP "auto_config=False"
+.IP "auto_config=True"
 Automatically attempt to configure connectivity to Red Hat Access Insights
 .IP "authmethod=BASIC"
 Change authentication method, valid options BASIC, CERT. Default BASIC\&
-.IP "upload_url=https://cert-api.access.redhat.com/r/insights/uploads"
-URL to send uploads to
-.IP "api_url=https://cert-api.access.redhat.com/r/insights/"
-URL to send API requests to
-.IP "branch_info_url=https://cert-api.access.redhat.com/r/insights/v1/branch_info"
-URL to obtain branch information from
+.IP "username="
+Username to use when authmethod is BASIC
+.IP "password="
+Password to use when authmethod is BASIC
+.IP "base_url=cert-api.access.redhat.com:443/r/insights"
+Base URL for API Interactions
 .IP "remove_file=/etc/redhat-access-insights/remove.conf"
 File that can be used to prevent files or commands from being collected or to exclude lines containing a specified word.
 .br
@@ -40,28 +40,20 @@ patterns=password,username
 .br
 keywords=super$ecret,ultra$ecret
 .br
-.IP "fallback_file=/etc/redhat-access-insights/.fallback.json"
-Path to .fallback, this is the dynamic config shipped with the RPM
-.IP "dynamic_config_url=https://cert-api.access.redhat.com/r/insights/v1/static/uploader.json"
-URL to retrieve dynamic configuration from.  GPG sig must me at this location + .asc
-.IP "dynamic_config_file=/etc/redhat-access-insights/.cache.json"
-Location of the dynamic configuration
-.IP "auto_update=True"
-Automatically update the dynamic configuration
 .IP "cert_verify=/etc/redhat-access-insights/cert-api.access.redhat.com.pem"
-Location of the certificate chain for cert-api.access.redhat.com used for Certificate Pinning\&
+Location of the certificate chain for cert-api.access.redhat.com used for Certificate Pinning.  Valid options are True, False, or a path to the pinned certificate(s).
 .IP "gpg=True"
 Enable/Disable GPG verification of dynamic configuration
-.IP "obfuscate=True"
+.IP "auto_update=True"
+Automatically update the dynamic configuration
+.IP "obfuscate=False"
 Obfuscate ip addresses
-.IP "obfuscate_hostname=True"
+.IP "display_name="
+Name used for display purposes
+.IP "obfuscate_hostname=False"
 Obfuscate hostname
-.IP "proxy=http://192.168.100.50:8080"
+.IP "proxy=http://user:pass@192.168.100.50:8080"
 URL for the proxy
-.IP "username="
-Username to use when authmethod = BASIC
-.IP "password="
-Password to use when authmethod = BASIC
 
 .SH "SEE ALSO"
 .BR redhat-access-insights (8)

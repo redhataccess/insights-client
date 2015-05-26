@@ -40,30 +40,19 @@ def set_auto_configuration(config, hostname, ca_cert, proxy):
     Set config based on discovered data
     """
     logger.debug("Attempting to auto conf %s %s %s %s", config, hostname, ca_cert, proxy)
-    saved_upload_url = config.get(APP_NAME, 'upload_url')
-    saved_api_url = config.get(APP_NAME, 'api_url')
-    saved_branch_info_url = config.get(APP_NAME, 'branch_info_url')
-    saved_collection_rules_url = config.get(APP_NAME, 'collection_rules_url')
+    saved_base_url = config.get(APP_NAME, 'base_url')
     if ca_cert is not None:
         config.set(APP_NAME, 'cert_verify', ca_cert)
         saved_cert_verify = config.get(APP_NAME, 'cert_verify')
     if proxy is not None:
         saved_proxy = config.get(APP_NAME, 'proxy')
         config.set(APP_NAME, 'proxy', proxy)
-    config.set(APP_NAME, 'upload_url', 'https://' + hostname + '/r/insights')
-    config.set(APP_NAME, 'api_url', 'https://' + hostname + '/r/insights/')
-    config.set(APP_NAME, 'branch_info_url', 'https://' +
-               hostname + '/r/insights/v1/branch_info')
-    config.set(APP_NAME, 'collection_rules_url', 'https://' +
-               hostname + '/r/insights/v1/static/uploader.json')
+    config.set(APP_NAME, 'base_url', hostname + '/r/insights')
 
     if not verify_connectivity(config):
         logger.warn("Could not auto configure, falling back to static config")
         logger.warn("See %s for additional information", constants.default_log_file)
-        config.set(APP_NAME, 'upload_url', saved_upload_url)
-        config.set(APP_NAME, 'api_url', saved_api_url)
-        config.set(APP_NAME, 'branch_info_url', saved_branch_info_url)
-        config.set(APP_NAME, 'collection_rules_url', saved_collection_rules_url)
+        config.set(APP_NAME, 'base_url', saved_base_url)
         if proxy is not None:
             if saved_proxy is not None and saved_proxy.lowercase == 'none':
                 saved_proxy = None

@@ -17,7 +17,7 @@ Display version
 .IP "--register"
 Register system to the Red Hat Access Insights service
 .IP "--update-collection-rules"
-Get new rules from Red Hat
+Refresh collection rules from Red Hat
 .IP "--daily"
 Set Red Hat Access Insights to collect data once per day
 .IP "--weekly"
@@ -25,13 +25,13 @@ Set Red Hat Access Insights to collect data once per week
 .IP "--group=GROUP"
 Group to add this system to during registration
 .IP "--validate"
-Validate remove.json
-.IP "--reregister"
-Reregister this machine to Red Hat
+Validate remove.conf
 
 .SH "DEBUG OPTIONS"
 .IP "--test-connection"
 Test connectivity to Red Hat
+.IP "--force-reregister"
+Forcefully reregister this machine to Red Hat.  Use only as directed.
 .IP "--verbose"
 DEBUG output to stdout
 .IP "--no-gpg"

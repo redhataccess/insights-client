@@ -14,12 +14,7 @@ class InsightsConstants(object):
     default_log_file = log_dir + app_name + '.log'
     default_conf_file = default_conf_dir + app_name + '.conf'
     default_ca_file = default_conf_dir + 'cert-api.access.redhat.com.pem'
-    collection_rules_url = ('https://cert-api.access.redhat.com/'
-                        'r/insights/v1/static/uploader.json')
-    upload_url = 'https://cert-api.access.redhat.com/r/insights'
-    api_url = 'https://cert-api.access.redhat.com/r/insights/'
-    branch_info_url = ('https://cert-api.access.redhat.com/'
-                       'r/insights/v1/branch_info')
+    base_url = 'cert-api.access.redhat.com/r/insights'
     collection_rules_file = default_conf_dir + '.cache.json'
     collection_fallback_file = default_conf_dir + '.fallback.json'
     collection_remove_file = default_conf_dir + 'remove.conf'
