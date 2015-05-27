@@ -42,8 +42,8 @@ def set_auto_configuration(config, hostname, ca_cert, proxy):
     logger.debug("Attempting to auto conf %s %s %s %s", config, hostname, ca_cert, proxy)
     saved_base_url = config.get(APP_NAME, 'base_url')
     if ca_cert is not None:
-        config.set(APP_NAME, 'cert_verify', ca_cert)
         saved_cert_verify = config.get(APP_NAME, 'cert_verify')
+        config.set(APP_NAME, 'cert_verify', ca_cert)
     if proxy is not None:
         saved_proxy = config.get(APP_NAME, 'proxy')
         config.set(APP_NAME, 'proxy', proxy)
