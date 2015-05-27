@@ -125,10 +125,9 @@ def _try_satellite5_configuration(config):
     Attempt to determine Satellite 5 Configuration
     """
     logger.debug("Trying Satellite 5 auto_config")
-    rhn_ca = '/usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT'
     rhn_config = '/etc/sysconfig/rhn/up2date'
-    if os.path.isfile(rhn_ca) and os.path.isfile(rhn_config):
-        logger.debug("Found Satellite 5 Certificate and Config")
+    if os.path.isfile(rhn_config):
+        logger.debug("Found Satellite 5 Config")
         rhn_conf_file = file(rhn_config, 'r')
         hostname = None
         for line in rhn_conf_file:
@@ -137,6 +136,8 @@ def _try_satellite5_configuration(config):
                 url = urlparse(line.split('=')[1])
                 hostname = url.netloc + '/redhat_access'
                 logger.debug("Found hostname %s", hostname)
+            if line.startswith('sslCACert='):
+                rhn_ca = line.strip().split('=')[1]
 
             # Auto discover proxy stuff
             if line.startswith('enableProxy='):
