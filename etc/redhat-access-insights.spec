@@ -39,10 +39,10 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install --root=$RPM_BUILD_ROOT $PREFIX
 
 %post
-#Migrate existing config if we can
-if  [ -f "/etc/redhat_access_proactive/redhat_access_proactive.conf" ]; then
+#Migrate existing machine-id
+if  [ -f "/etc/redhat_access_proactive/machine-id" ]; then
 mkdir -p /etc/redhat-access-insights/
-sed 's/redhat_access_proactive/redhat-access-insights/' /etc/redhat_access_proactive/redhat_access_proactive.conf > /etc/redhat-access-insights/redhat-access-insights.conf
+mv /etc/redhat_access_proactive/machine-id /etc/redhat-access-insights/machine-id
 fi
 
 %postun
