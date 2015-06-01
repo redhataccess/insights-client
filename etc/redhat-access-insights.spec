@@ -77,8 +77,10 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
-* Wed May 20 2015 Dan Varga <dvarga@redhat.com> - 1.0.3-0
+* Mon Jun 01 2015 Dan Varga <dvarga@redhat.com> - 1.0.3-0
 - New default URLs
+- New config file format
+- Default to auto configuration
 
 * Mon May 18 2015 Dan Varga <dvarga@redhat.com> - 1.0.2-0
 - Update man pages
