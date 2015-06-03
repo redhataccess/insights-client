@@ -27,17 +27,8 @@ URLLIB3_LOGGER.setLevel(logging.WARNING)
 URLLIB3_LOGGER = logging.getLogger('requests.packages.urllib3.connectionpool')
 URLLIB3_LOGGER.setLevel(logging.WARNING)
 
-try:
-    import urllib3
-    urllib3.disable_warnings()
-except ImportError:
-    pass
-
-try:
-    import requests.packages.urllib3
-    requests.packages.urllib3.disable_warnings()
-except ImportError:
-    pass
+import warnings
+warnings.simplefilter('ignore')
 
 class InsightsConnection(object):
 
