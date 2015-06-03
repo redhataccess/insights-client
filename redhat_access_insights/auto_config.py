@@ -20,17 +20,20 @@ def verify_connectivity(config):
     ic = InsightsConnection(config)
     try:
         branch_info = ic.branch_info()
-    except requests.ConnectionError:
+    except requests.ConnectionError as e:
+        logger.debug(e)
         logger.debug("Failed to connect to satellite")
         return False
-    except LookupError:
+    except LookupError as e:
+        logger.debug(e)
         logger.debug("Failed to parse response from satellite")
         return False
 
     try:
         remote_leaf = branch_info['remote_leaf']
         return remote_leaf
-    except LookupError:
+    except LookupError as e:
+        logger.debug(e)
         logger.debug("Failed to find accurate branch_info")
         return False
 
@@ -115,7 +118,8 @@ def _try_satellite6_configuration(config):
         logger.debug("Trying to set auto_configuration")
         set_auto_configuration(config, rhsm_hostname, rhsm_ca, proxy)
         return True
-    except:
+    except Exception as e:
+        logger.debug(e)
         logger.debug('System is NOT subscription-manager registered')
         return False
 

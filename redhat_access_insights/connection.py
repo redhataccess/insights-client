@@ -30,13 +30,13 @@ URLLIB3_LOGGER.setLevel(logging.WARNING)
 try:
     import urllib3
     urllib3.disable_warnings()
-except:
+except ImportError:
     pass
 
 try:
     import requests.packages.urllib3
     requests.packages.urllib3.disable_warnings()
-except:
+except ImportError:
     pass
 
 class InsightsConnection(object):
@@ -88,8 +88,8 @@ class InsightsConnection(object):
             # HACKY
             try:
                 # Need to make a request that will fail to get proxies set up
-                session.request("GET", "https://api.access.redhat.com")
-            except requests.ConnectionError:
+                session.request("GET", "https://cert-api.access.redhat.com/r/insights")
+            except requests.ConnectionError as e:
                 pass
             # Major hack, requests/urllib3 does not make access to
             # proxy_headers easy
@@ -169,7 +169,8 @@ class InsightsConnection(object):
             endpoint_addr = socket.gethostbyname(
                 endpoint_url.netloc.split(':')[0])
             logger.debug("hostname: %s ip: %s", endpoint_url.netloc, endpoint_addr)
-        except socket.gaierror:
+        except socket.gaierror as e:
+            logger.debug(e)
             logger.error("Could not resolve hostname: %s", endpoint_url.geturl())
         if self.proxies is not None:
             proxy_url = urlparse(self.proxies['https'])
@@ -184,7 +185,8 @@ class InsightsConnection(object):
                 proxy_addr = socket.gethostbyname(
                     proxy_url.netloc.split(':')[0])
                 logger.debug("Proxy hostname: %s ip: %s", proxy_url.netloc, proxy_addr)
-            except socket.gaierror:
+            except socket.gaierror as e:
+                logger.debug(e)
                 logger.error("Could not resolve proxy %s", proxy_url.geturl())
                 traceback.print_exc()
 
@@ -310,7 +312,7 @@ class InsightsConnection(object):
                     logger.debug("Found leaf id: %s", leaf_id)
                     branch_info['remote_leaf'] = leaf_id
             if leaf_id is None:
-                raise Exception("Could not determine leaf_id!  Exiting!")
+                sys.exit("Could not determine leaf_id!  Exiting!")
 
     def branch_info(self):
         """
@@ -350,7 +352,8 @@ class InsightsConnection(object):
             logger.error("Could not register system, running configuration test")
             self.test_connection()
 
-        except requests.ConnectionError:
+        except requests.ConnectionError as e:
+            logger.debug(e)
             logger.error("ERROR: Could not determine branch information, exiting!")
             logger.error("See %s for more information", constants.default_log_file)
             logger.error("Could not register system, running configuration test")
@@ -373,7 +376,8 @@ class InsightsConnection(object):
                                        headers=headers,
                                        data=data)
             logger.debug("POST System status: %d", system.status_code)
-        except requests.ConnectionError:
+        except requests.ConnectionError as e:
+            logger.debug(e)
             logger.error("Could not register system, running configuration test")
             self.test_connection()
         return system
