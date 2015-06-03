@@ -11,7 +11,7 @@ class InsightsConstants(object):
     user_agent = app_name + '/' + version
     default_conf_dir = '/etc/' + app_name + '/'
     log_dir = '/var/log/' + app_name
-    default_log_file = log_dir + app_name + '.log'
+    default_log_file = log_dir + '/' + app_name + '.log'
     default_conf_file = default_conf_dir + app_name + '.conf'
     default_ca_file = default_conf_dir + 'cert-api.access.redhat.com.pem'
     base_url = 'cert-api.access.redhat.com/r/insights'
