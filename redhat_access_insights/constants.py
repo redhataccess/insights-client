@@ -5,7 +5,7 @@ Constants
 
 class InsightsConstants(object):
     app_name = 'redhat-access-insights'
-    version = '1.0.3'
+    version = '1.0.4'
     auth_method = 'BASIC'
     log_level = 'DEBUG'
     user_agent = app_name + '/' + version
@@ -13,6 +13,7 @@ class InsightsConstants(object):
     log_dir = '/var/log/' + app_name
     default_log_file = log_dir + '/' + app_name + '.log'
     default_conf_file = default_conf_dir + app_name + '.conf'
+    default_sed_file = default_conf_dir + 'exp.sed'
     default_ca_file = default_conf_dir + 'cert-api.access.redhat.com.pem'
     base_url = 'cert-api.access.redhat.com/r/insights'
     collection_rules_file = default_conf_dir + '.cache.json'

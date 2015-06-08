@@ -146,7 +146,9 @@ def write_file_with_text(path, text):
     try:
         os.makedirs(os.path.dirname(path))
     except OSError:
-        logger.debug("Could not create dir for %s", os.path.dirname(path))
+        # This is really chatty
+        # logger.debug("Could not create dir for %s", os.path.dirname(path))
+        pass
 
     file_from_text = open(path, 'w')
     file_from_text.write(text.encode('utf8'))

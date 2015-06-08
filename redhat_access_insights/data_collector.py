@@ -83,6 +83,13 @@ class DataCollector(object):
 
         dirty = False
 
+        cmd = "/bin/sed -rf " + constants.default_sed_file
+        sedcmd = Popen(shlex.split(cmd.encode('utf-8')),
+                       stdin=proc0.stdout,
+                       stdout=PIPE)
+        proc0.stdout.close()
+        proc0 = sedcmd
+
         if exclude is not None:
             exclude_file = NamedTemporaryFile()
             exclude_file.write("\n".join(exclude))
@@ -245,10 +252,7 @@ class DataCollector(object):
             if len(_file['pattern']) > 0:
                 pattern = _file['pattern']
 
-            if pattern is None and exclude is None:
-                self.archive.copy_file(_file['file'])
-            else:
-                self.copy_file_with_pattern(_file['file'], pattern, exclude)
+            self.copy_file_with_pattern(_file['file'], pattern, exclude)
         logger.debug("File copy complete")
 
     def write_branch_info(self, branch_info):
@@ -268,35 +272,43 @@ class DataCollector(object):
             logger.debug("File %s does not exist", path)
             return
         logger.debug("Copying %s to %s with filters %s", path, full_path, str(patterns))
-        stdin = None
+
+        cmd = "/bin/sed -rf %s %s" % (constants.default_sed_file, path)
+        sedcmd = Popen(shlex.split(cmd.encode('utf-8')),
+                       stdout=PIPE)
+
         if exclude is not None:
             exclude_file = NamedTemporaryFile()
             exclude_file.write("\n".join(exclude))
             exclude_file.flush()
 
-            cmd = "/bin/grep -v -F -f %s %s" % (exclude_file.name, path)
+            cmd = "/bin/grep -v -F -f %s" % exclude_file.name
             args = shlex.split(cmd.encode("utf-8"))
-            proc = Popen(args, stdout=PIPE)
+            proc = Popen(args, stdin=sedcmd.stdout, stdout=PIPE)
+            sedcmd.stdout.close()
             stdin = proc.stdout
             if patterns is None:
                 output = proc.communicate()[0]
+            else:
+                sedcmd = proc
 
         if patterns is not None:
             pattern_file = NamedTemporaryFile()
             pattern_file.write("\n".join(patterns))
             pattern_file.flush()
 
-            if exclude is None:
-                cmd = "/bin/grep -F -f %s %s" % (pattern_file.name, path)
-            else:
-                cmd = "/bin/grep -F -f %s" % pattern_file.name
+            cmd = "/bin/grep -F -f %s" % pattern_file.name
             args = shlex.split(cmd.encode("utf-8"))
-            proc1 = Popen(args, stdin=stdin, stdout=PIPE)
+            proc1 = Popen(args, stdin=sedcmd.stdout, stdout=PIPE)
+            sedcmd.stdout.close()
 
             if exclude is not None:
                 stdin.close()
 
             output = proc1.communicate()[0]
+
+        if patterns is None and exclude is None:
+            output = sedcmd.communicate()[0]
 
         write_file_with_text(full_path, output)
 

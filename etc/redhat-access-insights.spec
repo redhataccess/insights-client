@@ -3,7 +3,7 @@
 
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
-Version:                1.0.3
+Version:                1.0.4
 Release:                0%{?dist}
 Source0:                https://github.com/redhataccess/redhat-access-insights/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
@@ -66,6 +66,7 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /etc/redhat-access-insights/.fallback.json
 /etc/redhat-access-insights/.fallback.json.asc
 /etc/redhat-access-insights/redhattools.pub.gpg
+/etc/redhat-access-insights/exp.sed
 /etc/redhat-access-insights/*.pem
 
 %defattr(-,root,root)
@@ -77,6 +78,10 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Mon Jun 08 2015 Dan Varga <dvarga@redhat.com> - 1.0.4-0
+- Improved logging of exceptions
+- Redact passwords automatically
+
 * Mon Jun 01 2015 Dan Varga <dvarga@redhat.com> - 1.0.3-0
 - New default URLs
 - New config file format

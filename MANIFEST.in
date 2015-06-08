@@ -4,5 +4,6 @@ include etc/redhat-access-insights.conf
 include etc/.fallback.json
 include etc/.fallback.json.asc
 include etc/redhattools.pub.gpg
+include etc/exp.sed
 include etc/*.pem
 include docs/*

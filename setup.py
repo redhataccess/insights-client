@@ -46,6 +46,7 @@ if __name__ == "__main__":
                         'etc/redhattools.pub.gpg',
                         'etc/api.access.redhat.com.pem',
                         'etc/cert-api.access.redhat.com.pem',
+                        'etc/exp.sed',
                         'etc/redhat-access-insights.cron']),
 
             # man pages
