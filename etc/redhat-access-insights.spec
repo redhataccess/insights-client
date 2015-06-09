@@ -66,7 +66,7 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /etc/redhat-access-insights/.fallback.json
 /etc/redhat-access-insights/.fallback.json.asc
 /etc/redhat-access-insights/redhattools.pub.gpg
-/etc/redhat-access-insights/exp.sed
+/etc/redhat-access-insights/.exp.sed
 /etc/redhat-access-insights/*.pem
 
 %defattr(-,root,root)
