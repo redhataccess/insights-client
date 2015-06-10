@@ -168,8 +168,6 @@ def collect_data_and_upload(config, options):
             logger.info('Uploading Insights data,'
                         ' this may take a few minutes')
             pconn.upload_archive(tar_file)
-            logger.info(
-                'Check https://access.redhat.com/labs/insights in an hour')
             if not obfuscate and not options.keep_archive:
                 dc.archive.delete_tmp_dir()
             else:
