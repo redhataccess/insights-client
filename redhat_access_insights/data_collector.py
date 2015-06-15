@@ -310,7 +310,7 @@ class DataCollector(object):
         if patterns is None and exclude is None:
             output = sedcmd.communicate()[0]
 
-        write_file_with_text(full_path, output)
+        write_file_with_text(full_path, output.decode('utf-8', 'ignore').strip())
 
     def copy_file_with_pattern(self, path, patterns, exclude):
         """
