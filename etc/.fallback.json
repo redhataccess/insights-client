@@ -5,10 +5,14 @@
             "file": "/boot/grub/grub.conf"
         },
         {
+            "pattern": [],
+            "file": "/boot/grub2/grub.cfg"
+        },
+        {
             "pattern": [
-                "<fencedeevice",
                 "<lvm",
-                "clusternode name="
+                "clusternode name=",
+                "<fencedevice"
             ],
             "file": "/etc/cluster/cluster.conf"
         },
@@ -21,15 +25,23 @@
             "file": "/etc/hosts"
         },
         {
-            "pattern": [],
+            "pattern": [
+                "NSSProtocol"
+            ],
             "file": "/etc/httpd/conf.d/nss.conf"
         },
         {
-            "pattern": [],
+            "pattern": [
+                "SSLProtocol",
+                "SSLCipherSuite"
+            ],
             "file": "/etc/httpd/conf.d/ssl.conf"
         },
         {
-            "pattern": [],
+            "pattern": [
+                "SSLProtocol",
+                "SSLCipherSuite"
+            ],
             "file": "/etc/httpd/conf/httpd.conf"
         },
         {
@@ -41,11 +53,16 @@
             "file": "/etc/lvm/lvm.conf"
         },
         {
-            "pattern": [],
+            "pattern": [
+                "agent_down_time",
+                "report_interval"
+            ],
             "file": "/etc/neutron/neutron.conf"
         },
         {
-            "pattern": [],
+            "pattern": [
+                "enable-cache"
+            ],
             "file": "/etc/nscd.conf"
         },
         {
@@ -73,8 +90,18 @@
             "file": "/etc/redhat_access_proactive/machine-id"
         },
         {
-            "pattern": [],
+            "pattern": [
+                "regex",
+                "imtcp"
+            ],
             "file": "/etc/rsyslog.conf"
+        },
+        {
+            "pattern": [
+                "schannel",
+                "rpc_server:netlogon"
+            ],
+            "file": "/etc/samba/smb.conf"
         },
         {
             "pattern": [],
@@ -89,7 +116,10 @@
             "file": "/etc/selinux/config"
         },
         {
-            "pattern": [],
+            "pattern": [
+                "MACs",
+                "Chipher"
+            ],
             "file": "/etc/ssh/sshd_config"
         },
         {
@@ -114,7 +144,31 @@
         },
         {
             "pattern": [],
+            "file": "/etc/udev/rules.d/70-persistent-net.rules"
+        },
+        {
+            "pattern": [
+                "ssl_sslv3",
+                "local_enable",
+                "ssl_enable"
+            ],
             "file": "/etc/vsftpd/vsftpd.conf"
+        },
+        {
+            "pattern": [],
+            "file": "/insights_commands/parted_-s.*"
+        },
+        {
+            "pattern": [],
+            "file": "/insights_commands/ps_auxwww"
+        },
+        {
+            "pattern": [],
+            "file": "/proactive_commands/parted_-s.*"
+        },
+        {
+            "pattern": [],
+            "file": "/proactive_commands/ps_auxwww"
         },
         {
             "pattern": [],
@@ -146,6 +200,14 @@
         },
         {
             "pattern": [],
+            "file": "/sos_commands/filesys/parted_-s.*"
+        },
+        {
+            "pattern": [],
+            "file": "/sos_commands/process/ps_auxwww"
+        },
+        {
+            "pattern": [],
             "file": "/sys/devices/system/clocksource/clocksource0/current_clocksource"
         },
         {
@@ -154,15 +216,22 @@
         },
         {
             "pattern": [
+                "nsslapd-cachememsize"
+            ],
+            "file": "/var/log/dirsrv/slapd-*/errors"
+        },
+        {
+            "pattern": [
                 "swapper: page allocation failure",
                 "tg3_start_xmit",
                 "Machine",
                 "Northbridge Error",
                 "be2net",
+                "Temperature above threshold",
                 "kernel: audit: backlog limit exceeded",
                 "abrtd: Executable",
-                "per_source_limit from",
                 "Dazed and confused, but trying to continue",
+                "per_source_limit from",
                 "Uhhuh. NMI received for unknown reason",
                 "dev_watchdog",
                 "SELinux is preventing /usr/sbin/logrotate from getattr access on the file",
@@ -172,6 +241,7 @@
                 "soft lockup",
                 "invoked oom-killer",
                 "WATCHDOG",
+                "heated above trip temperature",
                 "Out of MCCQ wrbs",
                 "Abort command issued",
                 "skb_copy",
@@ -180,7 +250,10 @@
             "file": "/var/log/messages"
         },
         {
-            "pattern": [],
+            "pattern": [
+                "nss-softokn-freebl-3.14.3",
+                "nss-softokn-3.14.3"
+            ],
             "file": "/var/log/yum.log"
         },
         {
@@ -221,11 +294,15 @@
         },
         {
             "pattern": [],
-            "command": "/bin/ps auxwwww"
+            "command": "/bin/ps auxcww"
         },
         {
             "pattern": [],
-            "command": "/bin/rpm -qa --qf='%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH} %{INSTALLTIME:date}\n'"
+            "command": "/bin/rpm -V coreutils procps procps-ng shadow-utils passwd sudo"
+        },
+        {
+            "pattern": [],
+            "command": "/bin/rpm -qa --qf='%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\t%{INSTALLTIME:date}\t%{BUILDTIME}\t%{RSAHEADER:pgpsig}\t%{DSAHEADER:pgpsig}\n'"
         },
         {
             "pattern": [],
@@ -277,7 +354,15 @@
         },
         {
             "pattern": [],
+            "command": "/usr/bin/df -alP"
+        },
+        {
+            "pattern": [],
             "command": "/usr/bin/free"
+        },
+        {
+            "pattern": [],
+            "command": "/usr/bin/ls -lanR /boot"
         },
         {
             "pattern": [],
@@ -308,5 +393,5 @@
             "command": "vgdisplay"
         }
     ],
-    "version": "6"
+    "version": "275"
 }

@@ -245,16 +245,24 @@ class InsightsConnection(object):
             logger.error("ERROR: Upload failed!")
             logger.info("Debug Information:\nHTTP Status Code: %s", req.status_code)
             logger.info("HTTP Status Text: %s", req.reason)
-            logger.debug("HTTP Response Text: %s", req.text)
             if req.status_code == 401:
                 logger.error("Authorization Required.")
                 logger.error("Please ensure correct credentials "
                              "in " + constants.default_conf_file)
+                logger.debug("HTTP Response Text: %s", req.text)
+            if req.status_code == 402:
+                try:
+                    logger.error(req.json()["message"])
+                except LookupError:
+                    logger.error("Got 402 but no message")
+                    logger.debug("HTTP Response Text: %s", req.text)
             if req.status_code == 412:
                 try:
-                    unreg_date = req.json()['unregistered_at']
+                    unreg_date = req.json()["unregistered_at"]
+                    logger.error(req.json()["message"])
                 except LookupError:
-                    unreg_date = "412, but no unreg_date"
+                    unreg_date = "412, but no unreg_date or message"
+                    logger.debug("HTTP Response Text: %s", req.text)
                 write_unregistered_file(unreg_date)
             sys.exit(1)
 
