@@ -3,7 +3,7 @@
 
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
-Version:                1.0.4
+Version:                1.0.5
 Release:                0%{?dist}
 Source0:                https://github.com/redhataccess/redhat-access-insights/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
@@ -16,7 +16,7 @@ Obsoletes: redhat-access-proactive
 
 Requires: python
 Requires: python-setuptools
-Requires: python-requests >= 2.4
+Requires: python-requests >= 2.6
 Requires: python-magic
 Requires: libcgroup
 Requires: pciutils
@@ -78,6 +78,10 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Fri Jun 18 2015 Dan Varga <dvarga@redhat.com> - 1.0.5-0
+- Automatically retry failed uploads when invoked via cron
+- Update python-requests dependency to >= 2.6
+
 * Mon Jun 08 2015 Dan Varga <dvarga@redhat.com> - 1.0.4-0
 - Improved logging of exceptions
 - Redact passwords automatically

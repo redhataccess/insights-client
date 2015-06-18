@@ -5,7 +5,7 @@ Constants
 
 class InsightsConstants(object):
     app_name = 'redhat-access-insights'
-    version = '1.0.4'
+    version = '1.0.5'
     auth_method = 'BASIC'
     log_level = 'DEBUG'
     sleep_time = 300
