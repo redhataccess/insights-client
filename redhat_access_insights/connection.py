@@ -266,33 +266,6 @@ class InsightsConnection(object):
                 write_unregistered_file(unreg_date)
             sys.exit(1)
 
-    def check_registration(self):
-        """
-        Check if we were unregistered
-        """
-        registration_url = self.api_url + '/v1/systems/' + generate_machine_id()
-        logger.debug("Checking registration status: %s", registration_url)
-        system_info = self.session.get(registration_url)
-
-        if system_info.status_code == 404:
-            # This system hasn't been registered and is it's first upload
-            return
-        elif system_info.status_code == 200:
-            system_info = system_info.json()
-            logger.debug("System info: %s", json.dumps(system_info))
-        else:
-            self.handle_fail_rcs(system_info)
-            logger.error("Could not check blacklist")
-            sys.exit(1)
-
-        try:
-            if system_info['unregistered_at']:
-                write_unregistered_file(system_info['unregistered_at'])
-            else:
-                logger.debug("This machine is registered")
-        except LookupError:
-            logger.debug("This machine is registered")
-
     def get_satellite5_info(self, branch_info):
         """
         Get remote_leaf for Satellite 5 Managed box
@@ -458,9 +431,7 @@ class InsightsConnection(object):
         logger.debug("Uploading %s to %s", data_collected, upload_url)
         upload = self.session.post(upload_url, files=files)
 
-        self.handle_fail_rcs(upload)
         logger.debug("Upload status: %s %s %s",
                      upload.status_code, upload.reason, upload.text)
         logger.debug("Upload duration: %s", upload.elapsed)
-        logger.info("Upload completed successfully!")
         return upload.status_code

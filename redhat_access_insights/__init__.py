@@ -135,7 +135,6 @@ def collect_data_and_upload(config, options):
     All the heavy lifting done here
     """
     pconn = InsightsConnection(config)
-    pconn.check_registration()
     try:
         branch_info = pconn.branch_info()
     except requests.ConnectionError:
@@ -167,7 +166,21 @@ def collect_data_and_upload(config, options):
         if not options.no_upload:
             logger.info('Uploading Insights data,'
                         ' this may take a few minutes')
-            pconn.upload_archive(tar_file)
+            for tries in range(options.retries):
+                status = pconn.upload_archive(tar_file)
+                if status == 201:
+                    logger.info("Upload completed successfully!")
+                    break
+                else:
+                    logger.error("Upload attempt %d of %d failed! Status Code: %s",
+                                tries+1, options.retries, status)
+                    if tries +1 != options.retries:
+                        logger.info("Waiting %d seconds then retrying", constants.sleep_time)
+                        time.sleep(constants.sleep_time)
+                    else:
+                        logger.error("All attempts to upload have failed!")
+                        logger.error("Please see %s for additional information", constants.default_log_file)
+
             if not obfuscate and not options.keep_archive:
                 dc.archive.delete_tmp_dir()
             else:
@@ -257,6 +270,13 @@ def set_up_options(parser):
                       action="store",
                       help='Group to add this system to during registration',
                       dest="group")
+    parser.add_option('--retry',
+                      action="store",
+                      type="int",
+                      help=('Number of times to retry uploading. %s seconds between tries'
+                            % constants.sleep_time),
+                      default=1,
+                      dest="retries")
     parser.add_option('--validate',
                       help='Validate remove.conf',
                       action="store_true",

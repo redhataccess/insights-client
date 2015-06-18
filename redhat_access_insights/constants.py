@@ -8,6 +8,7 @@ class InsightsConstants(object):
     version = '1.0.4'
     auth_method = 'BASIC'
     log_level = 'DEBUG'
+    sleep_time = 300
     user_agent = app_name + '/' + version
     default_conf_dir = '/etc/' + app_name + '/'
     log_dir = '/var/log/' + app_name
