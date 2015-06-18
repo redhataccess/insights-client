@@ -19,6 +19,7 @@ Requires: python-setuptools
 Requires: python-requests >= 2.6
 Requires: python-magic
 Requires: libcgroup
+Requires: tar
 Requires: pciutils
 %if 0%{?rhel} && 0%{?rhel} > 6
 Requires: libcgroup-tools
