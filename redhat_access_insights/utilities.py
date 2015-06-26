@@ -52,17 +52,23 @@ def _write_machine_id(machine_id):
     machine_id_file.close()
 
 
-def write_unregistered_file(date):
+def write_unregistered_file(date=None):
     """
     Write .unregistered out to disk
     """
     delete_registered_file()
+    rc = 0
+    if date is None:
+        date = datetime.datetime.isoformat(datetime.datetime.now())
+    else:
+        logger.error("This machine has been unregistered")
+        logger.error("Use --register if you would like to re-register this machine")
+        logger.error("Exiting")
+        rc = 1
+
     unreg = file(constants.unregistered_file, 'w')
     unreg.write(str(date))
-    logger.error("This machine has been unregistered")
-    logger.error("Use --register if you would like to re-register this machine")
-    logger.error("Exiting")
-    sys.exit(1)
+    sys.exit(rc)
 
 
 def write_registered_file():

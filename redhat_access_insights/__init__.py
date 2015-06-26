@@ -248,6 +248,12 @@ def set_up_options(parser):
                       action="store_true",
                       dest="register",
                       default=False)
+    parser.add_option('--unregister',
+                      help=('Unregister system from the Red Hat '
+                            'Access Insights Service'),
+                      action="store_true",
+                      dest="unregister",
+                      default=False)
     parser.add_option('--update-collection-rules',
                       help='Refresh collection rules from Red Hat',
                       action="store_true",
@@ -386,6 +392,11 @@ def _main():
     if options.test_connection:
         pconn = InsightsConnection(config)
         pconn.test_connection()
+
+    if options.unregister:
+        pconn = InsightsConnection(config)
+        pconn.unregister()
+        sys.exit()
 
     # Handle registration, grouping, and display name
     if options.register:

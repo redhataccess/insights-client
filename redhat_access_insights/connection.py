@@ -390,6 +390,20 @@ class InsightsConnection(object):
         logger.debug("PUT group status: %d", put_group.status_code)
         logger.debug("PUT Group: %s", put_group.json())
 
+    def unregister(self):
+        """
+        Unregister this system from the insights service
+        """
+        machine_id = generate_machine_id()
+        try:
+            logger.debug("Unregistering %s", machine_id)
+            self.session.delete(self.api_url + "/v1/systems/" + machine_id)
+            logger.info("Successfully unregistered from the Red Hat Access Insights Service")
+            write_unregistered_file()
+        except requests.ConnectionError as e:
+            logger.debug(e)
+            logger.error("Could not unregister this system")
+
     def register(self, options):
         """
         Register this machine
