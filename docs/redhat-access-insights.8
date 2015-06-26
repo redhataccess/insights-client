@@ -15,12 +15,11 @@ show this help message and exit
 .IP "--version"
 Display version
 .IP "--register"
-Register system to the Red Hat Access Insights service
+Register system to the Red Hat Access Insights Service
+.IP "--unregister"
+Unregister system from the Red Hat Access Insights Service
 .IP "--update-collection-rules"
 Refresh collection rules from Red Hat
-.IP "--daily"
-Set Red Hat Access Insights to collect data once per day
-.IP "--weekly"
 Set Red Hat Access Insights to collect data once per week
 .IP "--group=GROUP"
 Group to add this system to during registration
@@ -28,6 +27,14 @@ Group to add this system to during registration
 Number of times to retry uploading. 300 seconds between tries
 .IP "--validate"
 Validate remove.conf
+.IP "--quiet"
+Only display error messages to stdout
+.IP "--silent"
+Display no messages to stdout
+
+.IP "--daily"
+Set Red Hat Access Insights to collect data once per day
+.IP "--weekly"
 
 .SH "DEBUG OPTIONS"
 .IP "--test-connection"
