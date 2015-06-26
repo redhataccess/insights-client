@@ -69,7 +69,7 @@ def parse_config_file():
     return parsedconfig
 
 
-def set_up_logging(config, verbose):
+def set_up_logging(config, options):
     """
     Initialize Logging
     """
@@ -85,11 +85,14 @@ def set_up_logging(config, verbose):
 
     # Send anything INFO+ to stdout and log
     stdout_handler = logging.StreamHandler(sys.stdout)
-    if not verbose:
+    if not options.verbose:
         stdout_handler.setLevel(logging.INFO)
+    if options.quiet:
+        stdout_handler.setLevel(logging.ERROR)
+    if not options.silent:
+        logging.root.addHandler(stdout_handler)
 
     logging.root.addHandler(handler)
-    logging.root.addHandler(stdout_handler)
 
     formatter = logging.Formatter(LOG_FORMAT)
     handler.setFormatter(formatter)
@@ -270,6 +273,16 @@ def set_up_options(parser):
                       action="store_true",
                       dest="validate",
                       default=False)
+    parser.add_option('--quiet',
+                      help='Only display error messages to stdout',
+                      action="store_true",
+                      dest="quiet",
+                      default=False)
+    parser.add_option('--silent',
+                      help='Display no messages to stdout',
+                      action="store_true",
+                      dest="silent",
+                      default=False)
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
                       help='Test connectivity to Red Hat',
@@ -336,7 +349,7 @@ def _main():
         sys.exit()
 
     config = parse_config_file()
-    logger, handler = set_up_logging(config, options.verbose)
+    logger, handler = set_up_logging(config, options)
 
     # Defer logging till it's ready
     logger.debug('invoked with args: %s', options)
