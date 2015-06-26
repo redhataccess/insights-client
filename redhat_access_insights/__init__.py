@@ -250,18 +250,6 @@ def set_up_options(parser):
                       action="store_true",
                       dest="update",
                       default=False)
-    parser.add_option('--daily',
-                      help=("Set Red Hat Access Insights "
-                            "to collect data once per day"),
-                      action="store_true",
-                      dest="daily",
-                      default=False)
-    parser.add_option('--weekly',
-                      help=("Set Red Hat Access Insights "
-                            "to collect data once per week"),
-                      action="store_true",
-                      dest="weekly",
-                      default=False)
     parser.add_option('--display-name',
                       action="store",
                       help='Display name for this system.  Must be used with --register',
@@ -346,9 +334,6 @@ def _main():
     if options.validate:
         validate_remove_file()
         sys.exit()
-
-    if options.daily and options.weekly:
-        parser.error("options --daily and --weekly are mutually exclusive")
 
     config = parse_config_file()
     logger, handler = set_up_logging(config, options.verbose)

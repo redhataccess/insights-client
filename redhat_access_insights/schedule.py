@@ -18,12 +18,6 @@ class InsightsSchedule(object):
     def __init__(self, options):
         if not self.already_linked():
             self.set_daily()
-        if options.daily:
-            self.set_daily()
-            logger.info("Set schedule to daily")
-        if options.weekly:
-            self.set_weekly()
-            logger.info("Set schedule to weekly")
 
     def already_linked(self):
         """
@@ -54,20 +48,3 @@ class InsightsSchedule(object):
                 CRON_DAILY + APP_NAME)
         except OSError:
             logger.debug('Could not link cron.daily')
-
-    def set_weekly(self):
-        """
-        Set cron task to weekly
-        """
-        logger.debug('Setting schedule to weekly')
-        try:
-            os.remove(CRON_DAILY + APP_NAME)
-        except OSError:
-            logger.debug('Could not remove cron.daily')
-
-        try:
-            os.symlink(
-                '/etc/' + APP_NAME + '/' + APP_NAME + '.cron',
-                CRON_WEEKLY + APP_NAME)
-        except OSError:
-            logger.debug('Could not link cron.weekly')
