@@ -166,6 +166,8 @@ class DataCollector(object):
                 self._handle_ethtool(flag)
             elif 'hostname' in command['command']:
                 self._handle_hostname(command['command'])
+            elif 'parted' in command['command']:
+                self._handle_parted()
             elif 'modinfo' in command['command']:
                 self._handle_modinfo()
             elif len(command['pattern']) or exclude:
@@ -192,6 +194,18 @@ class DataCollector(object):
                 iface = match.string.split(':')[1].lstrip()
                 interfaces[iface] = True
         return interfaces
+
+    def _handle_parted(self):
+        """
+        Helper to handle parted
+        """
+        if os.path.isdir("/sys/block"):
+            for disk in os.listdir("/sys/block"):
+                if disk in ['.', '..'] or disk.startswith('ram'):
+                    continue
+                disk_path = os.path.join('/dev/', disk)
+                self.archive.add_command_output(
+                    self.run_command_get_output("parted -s %s unit s print" % disk_path))
 
     def _handle_modinfo(self):
         """
