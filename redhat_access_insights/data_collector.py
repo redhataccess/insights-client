@@ -205,7 +205,7 @@ class DataCollector(object):
                     continue
                 disk_path = os.path.join('/dev/', disk)
                 self.archive.add_command_output(
-                    self.run_command_get_output("parted -s %s unit s print" % disk_path))
+                    self.run_command_get_output("/usr/sbin/parted -s %s unit s print" % disk_path))
 
     def _handle_modinfo(self):
         """
