@@ -162,7 +162,7 @@ def _try_satellite5_configuration(config):
                     proxy = proxy + proxy_user + ':' + proxy_password
                     proxy = proxy + "@" + proxy_host_port
                 else:
-                    proxy = proxy + "@" + proxy_host_port
+                    proxy = proxy + proxy_host_port
                     logger.debug("RHN Proxy: %s", proxy)
             set_auto_configuration(config, hostname, rhn_ca, proxy)
         else:
