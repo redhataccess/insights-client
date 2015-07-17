@@ -436,7 +436,7 @@ class InsightsConnection(object):
         else:
             return (message, client_hostname, "None", "")
 
-    def upload_archive(self, data_collected):
+    def upload_archive(self, data_collected, duration):
         """
         Do an HTTPS Upload of the archive
         """
@@ -445,7 +445,9 @@ class InsightsConnection(object):
 
         upload_url = self.upload_url + '/' + generate_machine_id()
         logger.debug("Uploading %s to %s", data_collected, upload_url)
-        upload = self.session.post(upload_url, files=files)
+
+        headers = {'x-rh-collection-time': duration}
+        upload = self.session.post(upload_url, files=files, headers=headers)
 
         logger.debug("Upload status: %s %s %s",
                      upload.status_code, upload.reason, upload.text)

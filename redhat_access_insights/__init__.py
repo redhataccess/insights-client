@@ -137,6 +137,8 @@ def collect_data_and_upload(config, options):
     """
     All the heavy lifting done here
     """
+    collectionStart = time.clock()
+
     pconn = InsightsConnection(config)
     try:
         branch_info = pconn.branch_info()
@@ -164,13 +166,15 @@ def collect_data_and_upload(config, options):
     dc.write_branch_info(branch_info)
     obfuscate = config.getboolean(APP_NAME, "obfuscate")
 
+    collectionDuration = (time.clock() - collectionStart)
+
     if not options.no_tar_file:
         tar_file = dc.done(config, rm_conf)
         if not options.no_upload:
             logger.info('Uploading Insights data,'
                         ' this may take a few minutes')
             for tries in range(options.retries):
-                status = pconn.upload_archive(tar_file)
+                status = pconn.upload_archive(tar_file, collectionDuration)
                 if status == 201:
                     logger.info("Upload completed successfully!")
                     break
