@@ -401,13 +401,15 @@ def _main():
     # Handle registration, grouping, and display name
     if options.register:
         opt_group = options.group
-        hostname, opt_group, display_name = register(config, options)
+        message, hostname, opt_group, display_name = register(config, options)
         if options.display_name is None and options.group is None:
             logger.info('Successfully registered %s', hostname)
         elif options.display_name is None:
             logger.info('Successfully registered %s in group %s', hostname, opt_group)
         else:
             logger.info('Successfully registered %s as %s in group %s', hostname, display_name, opt_group)
+
+        logger.info(message)
 
     # Check for .unregistered file
     if os.path.isfile(constants.unregistered_file):

@@ -423,16 +423,18 @@ class InsightsConnection(object):
 
         logger.debug("System: %s", system.json())
 
+        message = system.headers.get("x-rh-message", "");
+
         # Do grouping
         if options.group is not None:
             self.do_group(options.group)
 
         if options.group is not None:
-            return (client_hostname, options.group, options.display_name)
+            return (message, client_hostname, options.group, options.display_name)
         elif options.display_name is not None:
-            return (client_hostname, "None", options.display_name)
+            return (message, client_hostname, "None", options.display_name)
         else:
-            return (client_hostname, "None", "")
+            return (message, client_hostname, "None", "")
 
     def upload_archive(self, data_collected):
         """
