@@ -15,7 +15,7 @@ import optparse
 import time
 import requests
 from auto_config import try_auto_configuration
-from utilities import ( validate_remove_file,
+from utilities import (validate_remove_file,
                        generate_machine_id)
 from collection_rules import InsightsConfig
 from data_collector import DataCollector
@@ -73,10 +73,10 @@ def set_up_logging(config, options):
     """
     Initialize Logging
     """
-    LOG_DIR = constants.log_dir
-    if not os.path.exists(LOG_DIR):
-        os.makedirs(LOG_DIR, 0700)
-    logging_file = os.path.join(LOG_DIR, APP_NAME + '.log')
+    log_dir = constants.log_dir
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, 0700)
+    logging_file = os.path.join(log_dir, APP_NAME + '.log')
 
     valid_levels = ['ERROR', 'DEBUG', 'INFO', 'WARNING', 'CRITICAL']
 
@@ -180,8 +180,8 @@ def collect_data_and_upload(config, options):
                     break
                 else:
                     logger.error("Upload attempt %d of %d failed! Status Code: %s",
-                                tries+1, options.retries, status)
-                    if tries +1 != options.retries:
+                                tries + 1, options.retries, status)
+                    if tries + 1 != options.retries:
                         logger.info("Waiting %d seconds then retrying", constants.sleep_time)
                         time.sleep(constants.sleep_time)
                     else:
@@ -295,41 +295,41 @@ def set_up_options(parser):
                       default=False)
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
-                      help='Test connectivity to Red Hat',
-                      action="store_true",
-                      dest="test_connection",
-                      default=False)
+                     help='Test connectivity to Red Hat',
+                     action="store_true",
+                     dest="test_connection",
+                     default=False)
     group.add_option('--force-reregister',
-                      help=("Forcefully reregister this machine to Red Hat. "
-                             "Use only as directed."),
-                      action="store_true",
-                      dest="reregister",
-                      default=False)
+                     help=("Forcefully reregister this machine to Red Hat. "
+                            "Use only as directed."),
+                     action="store_true",
+                     dest="reregister",
+                     default=False)
     group.add_option('--verbose',
-                      help="DEBUG output to stdout",
-                      action="store_true",
-                      dest="verbose",
-                      default=False)
+                     help="DEBUG output to stdout",
+                     action="store_true",
+                     dest="verbose",
+                     default=False)
     group.add_option('--no-gpg',
-                      help="Do not verify GPG signature",
-                      action="store_true",
-                      dest="no_gpg",
-                      default=False)
+                     help="Do not verify GPG signature",
+                     action="store_true",
+                     dest="no_gpg",
+                     default=False)
     group.add_option('--no-upload',
-                      help="Do not upload the archive",
-                      action="store_true",
-                      dest="no_upload",
-                      default=False)
+                     help="Do not upload the archive",
+                     action="store_true",
+                     dest="no_upload",
+                     default=False)
     group.add_option('--no-tar-file',
-                      help="Build the directory, but do not tar",
-                      action="store_true",
-                      dest="no_tar_file",
-                      default=False)
+                     help="Build the directory, but do not tar",
+                     action="store_true",
+                     dest="no_tar_file",
+                     default=False)
     group.add_option('--keep-archive',
-                      help="Do not delete archive after upload",
-                      action="store_true",
-                      dest="keep_archive",
-                      default=False)
+                     help="Do not delete archive after upload",
+                     action="store_true",
+                     dest="keep_archive",
+                     default=False)
     parser.add_option_group(group)
 
 

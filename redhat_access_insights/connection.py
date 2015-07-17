@@ -80,7 +80,7 @@ class InsightsConnection(object):
             try:
                 # Need to make a request that will fail to get proxies set up
                 session.request("GET", "https://cert-api.access.redhat.com/r/insights")
-            except requests.ConnectionError as e:
+            except requests.ConnectionError:
                 pass
             # Major hack, requests/urllib3 does not make access to
             # proxy_headers easy
