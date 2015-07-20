@@ -133,6 +133,34 @@ class DataCollector(object):
             'output': stdout.decode('utf-8', 'ignore')
         }
 
+    def _handle_commands(self, command, exclude):
+        """
+        Handle special commands
+        """
+        if 'ethtool' in command['command']:
+            # Get the ethtool flag
+            flag = None
+            try:
+                flag = command['command'].split('-')[1]
+            except LookupError:
+                pass
+            self._handle_ethtool(flag)
+        elif 'hostname' in command['command']:
+            self._handle_hostname(command['command'])
+        elif 'parted' in command['command']:
+            self._handle_parted()
+        elif 'modinfo' in command['command']:
+            self._handle_modinfo()
+        elif len(command['pattern']) or exclude:
+            cmd = command['command']
+            filters = command['pattern']
+            output = self.run_command_get_output(cmd, filters=filters, exclude=exclude)
+            self.archive.add_command_output(output)
+        else:
+            self.archive.add_command_output(
+                self.run_command_get_output(command['command']))
+
+
     def run_commands(self, conf, rm_conf):
         """
         Run through the list of commands and add them to the archive
@@ -156,28 +184,8 @@ class DataCollector(object):
                 except LookupError:
                     pass
 
-            if 'ethtool' in command['command']:
-                # Get the ethtool flag
-                flag = None
-                try:
-                    flag = command['command'].split('-')[1]
-                except LookupError:
-                    pass
-                self._handle_ethtool(flag)
-            elif 'hostname' in command['command']:
-                self._handle_hostname(command['command'])
-            elif 'parted' in command['command']:
-                self._handle_parted()
-            elif 'modinfo' in command['command']:
-                self._handle_modinfo()
-            elif len(command['pattern']) or exclude:
-                cmd = command['command']
-                filters = command['pattern']
-                output = self.run_command_get_output(cmd, filters=filters, exclude=exclude)
-                self.archive.add_command_output(output)
-            else:
-                self.archive.add_command_output(
-                    self.run_command_get_output(command['command']))
+            self._handle_commands(command, exclude)
+
         logger.debug("Commands complete")
 
     def _get_interfaces(self):
