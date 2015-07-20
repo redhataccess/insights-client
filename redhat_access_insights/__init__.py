@@ -180,7 +180,7 @@ def collect_data_and_upload(config, options):
                     break
                 else:
                     logger.error("Upload attempt %d of %d failed! Status Code: %s",
-                                tries + 1, options.retries, status)
+                                 tries + 1, options.retries, status)
                     if tries + 1 != options.retries:
                         logger.info("Waiting %d seconds then retrying", constants.sleep_time)
                         time.sleep(constants.sleep_time)
@@ -301,7 +301,7 @@ def set_up_options(parser):
                      default=False)
     group.add_option('--force-reregister',
                      help=("Forcefully reregister this machine to Red Hat. "
-                            "Use only as directed."),
+                           "Use only as directed."),
                      action="store_true",
                      dest="reregister",
                      default=False)
@@ -333,21 +333,12 @@ def set_up_options(parser):
     parser.add_option_group(group)
 
 
-def _main():
-    """
-    Main entry point
-    Parse cmdline options
-    Parse config file
-    Call data collector
-    """
-    global logger
-    sys.excepthook = handle_exception
-
-    parser = optparse.OptionParser()
-    set_up_options(parser)
-    options, args = parser.parse_args()
-    if len(args) > 0:
-        parser.error("Unknown arguments: %s" % args)
+def handle_startup(options, config):
+    # Check for .unregistered file
+    if os.path.isfile(constants.unregistered_file):
+        logger.error("This machine has been unregistered")
+        logger.error("Use --register if you would like to re-register this machine")
+        logger.error("Exiting")
         sys.exit(1)
 
     if options.version:
@@ -358,12 +349,6 @@ def _main():
         validate_remove_file()
         sys.exit()
 
-    config = parse_config_file()
-    logger, handler = set_up_logging(config, options)
-
-    # Defer logging till it's ready
-    logger.debug('invoked with args: %s', options)
-    logger.debug("Version: " + constants.version)
     # Generate /etc/machine-id if it does not exist
     new = False
     if options.reregister:
@@ -415,15 +400,38 @@ def _main():
 
         logger.info(message)
 
-    # Check for .unregistered file
-    if os.path.isfile(constants.unregistered_file):
-        logger.error("This machine has been unregistered")
-        logger.error("Use --register if you would like to re-register this machine")
-        logger.error("Exiting")
+
+def _main():
+    """
+    Main entry point
+    Parse cmdline options
+    Parse config file
+    Call data collector
+    """
+    global logger
+    sys.excepthook = handle_exception
+
+    parser = optparse.OptionParser()
+    set_up_options(parser)
+    options, args = parser.parse_args()
+    if len(args) > 0:
+        parser.error("Unknown arguments: %s" % args)
         sys.exit(1)
+
+    config = parse_config_file()
+    logger, handler = set_up_logging(config, options)
+
+    # Defer logging till it's ready
+    logger.debug('invoked with args: %s', options)
+    logger.debug("Version: " + constants.version)
+
+    # Handle all the options
+    handle_startup(options, config)
 
     # do work
     collect_data_and_upload(config, options)
+
+    # Roll log over on successful upload
     handler.doRollover()
 
 if __name__ == '__main__':
