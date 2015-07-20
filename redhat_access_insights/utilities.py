@@ -2,7 +2,6 @@
 Utility functions
 """
 import socket
-import shlex
 import os
 import sys
 import logging
