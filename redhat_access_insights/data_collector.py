@@ -160,7 +160,6 @@ class DataCollector(object):
             self.archive.add_command_output(
                 self.run_command_get_output(command['command']))
 
-
     def run_commands(self, conf, rm_conf):
         """
         Run through the list of commands and add them to the archive
