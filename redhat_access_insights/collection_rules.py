@@ -155,14 +155,15 @@ class InsightsConfig(object):
             rm_conf = {}
             for item, value in parsedconfig.items('remove'):
                     rm_conf[item] = value.strip().split(',')
-            try:
-                patterns = rm_conf['patterns']
-                logger.warn("WARNING: Excluding data from files")
-            except LookupError:
-                pass
+
+            logger.warn("WARNING: Excluding data from files")
 
         if update:
             dyn_conf = self.get_collection_rules()
+            version = dyn_conf.get('version', None)
+            if version is None:
+                logger.error("ERROR: Could not find version in json")
+                sys.exit(1)
             dyn_conf['file'] = self.collection_rules_file
             logger.debug("Success reading config")
             logger.debug(json.dumps(dyn_conf))
@@ -172,14 +173,15 @@ class InsightsConfig(object):
             logger.debug("trying to read conf from: " + conf_file)
             conf = self.try_disk(conf_file, self.gpg)
             if conf:
-                try:
-                    conf['version']
-                    conf['file'] = conf_file
-                    logger.debug("Success reading config")
-                    logger.debug(json.dumps(conf))
-                    return conf, rm_conf
-                except LookupError:
-                    logger.debug("Failed to find version")
+                version = conf.get('version', None)
+                if version is None:
+                    logger.error("ERROR: Could not find version in json")
+                    sys.exit(1)
+
+                conf['file'] = conf_file
+                logger.debug("Success reading config")
+                logger.debug(json.dumps(conf))
+                return conf, rm_conf
 
         logger.error("ERROR: Unable to download conf or read it from disk!")
         sys.exit(1)
