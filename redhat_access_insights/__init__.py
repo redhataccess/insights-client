@@ -375,7 +375,7 @@ def handle_startup(options, config):
         try_auto_configuration(config)
 
     # Set the schedule
-    InsightsSchedule(options)
+    InsightsSchedule()
 
     # Test connection, useful for proxy debug
     if options.test_connection:

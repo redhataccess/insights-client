@@ -15,7 +15,7 @@ class InsightsSchedule(object):
     """
     Set the cron schedule
     """
-    def __init__(self, options):
+    def __init__(self):
         if not self.already_linked():
             self.set_daily()
 
