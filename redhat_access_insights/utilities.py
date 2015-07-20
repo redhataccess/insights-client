@@ -7,7 +7,6 @@ import sys
 import logging
 import uuid
 import datetime
-from subprocess import Popen, PIPE
 from constants import InsightsConstants as constants
 
 logger = logging.getLogger(constants.app_name)
