@@ -1,2 +1,3 @@
 ignore-paths:
     - redhat_access_insights/soscleaner.py
+    - redhat_access_insights/cert_auth.py
