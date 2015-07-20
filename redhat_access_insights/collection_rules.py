@@ -81,6 +81,70 @@ class InsightsConfig(object):
                 logger.warn("WARNING: %s was an empty file", path)
                 return
 
+    def get_collection_rules(self):
+        """
+        Download the collection rules
+        """
+        logger.info("Attemping to download collection rules from %s",
+                    self.collection_rules_url)
+
+        req = self.conn.session.get(
+            self.collection_rules_url, headers=({'accept': 'text/plain'}))
+
+        if req.status_code == 200:
+            logger.info("Successfully downloaded collection rules")
+
+            json_response = NamedTemporaryFile()
+            json_response.write(req.text)
+            json_response.file.flush()
+        else:
+            logger.error("ERROR: Could not download dyanmic configuration")
+            logger.error("Debug Info: \nConf status: %s", req.status_code)
+            sys.exit(1)
+
+        if self.gpg:
+            self.get_collection_rules_gpg(json_response)
+
+        self.write_collection_data(self.collection_rules_file, req.text)
+
+        return json.loads(req.text)
+
+
+    def get_collection_rules_gpg(self, collection_rules):
+        """
+        Download the collection rules gpg signature
+        """
+        logger.info("Attemping to download collection "
+                    "rules GPG signature from %s",
+                    self.collection_rules_url + ".asc")
+
+        headers = ({'accept': 'text/plain'})
+        config_sig = self.conn.session.get(self.collection_rules_url + '.asc',
+                                           headers=headers)
+        if config_sig.status_code == 200:
+            logger.info("Successfully downloaded GPG signature")
+            sig_response = NamedTemporaryFile(suffix=".asc")
+            sig_response.write(config_sig.text)
+            sig_response.file.flush()
+            self.validate_gpg_sig(collection_rules.name, sig_response.name)
+            self.write_collection_data(self.collection_rules_file + ".asc", config_sig.text)
+        else:
+            logger.error("ERROR: Download of GPG Signature failed!")
+            logger.error("Sig status: %s", config_sig.status_code)
+            sys.exit(1)
+
+
+    def write_collection_data(self, path, data):
+        """
+        Write collections rules to disk
+        """
+        dyn_conf_file = os.fdopen(os.open(path,
+                                          os.O_WRONLY | os.O_CREAT,
+                                          int("0600", 8)), 'w')
+        dyn_conf_file.write(data)
+        dyn_conf_file.close()
+
+
     def get_conf(self, update):
         """
         Get the config
@@ -101,62 +165,11 @@ class InsightsConfig(object):
                 pass
 
         if update:
-            logger.info("Attemping to download collection rules from %s",
-                        self.collection_rules_url)
-
-            req = self.conn.session.get(
-                self.collection_rules_url, headers=({'accept': 'text/plain'}))
-
-            if req.status_code == 200:
-                logger.info("Successfully downloaded collection rules")
-
-                json_response = NamedTemporaryFile()
-                json_response.write(req.text)
-                json_response.file.flush()
-                if self.gpg:
-                    logger.info("Attemping to download collection "
-                                "rules GPG signature from %s",
-                                self.collection_rules_url + ".asc")
-
-                    headers = ({'accept': 'text/plain'})
-                    config_sig = self.conn.session.get(self.collection_rules_url + '.asc',
-                                                       headers=headers)
-                    if config_sig.status_code == 200:
-                        logger.info("Successfully downloaded GPG signature")
-                        sig_response = NamedTemporaryFile(suffix=".asc")
-                        sig_response.write(config_sig.text)
-                        sig_response.file.flush()
-                        self.validate_gpg_sig(json_response.name, sig_response.name)
-                    else:
-                        logger.error("ERROR: Download of GPG Signature failed!")
-                        logger.error("Sig status: %s", config_sig.status_code)
-                        sys.exit()
-
-                dyn_conf = json.loads(req.text)
-                # Ensure that we have JSON
-                if dyn_conf:
-                    try:
-                        dyn_conf['version']
-                        dyn_conf_file = os.fdopen(os.open(self.collection_rules_file,
-                                                          os.O_WRONLY | os.O_CREAT,
-                                                          int("0600", 8)), 'w')
-                        dyn_conf_file.write(req.text)
-                        dyn_conf_file.close()
-                        if self.gpg:
-                            dyn_conf_sig_file = os.fdopen(os.open(self.collection_rules_file + ".asc",
-                                                                  os.O_WRONLY | os.O_CREAT,
-                                                                  int("0600", 8)), 'w')
-                            dyn_conf_sig_file.write(config_sig.text)
-                            dyn_conf_sig_file.close()
-                        dyn_conf['file'] = self.collection_rules_file
-                        logger.debug("Success reading config")
-                        logger.debug(json.dumps(dyn_conf))
-                        return dyn_conf, rm_conf
-                    except LookupError:
-                        logger.error("ERROR: Could not parse json from remote host")
-            else:
-                logger.error("ERROR: Could not download dyanmic configuration")
-                logger.error("Debug Info: \nConf status: %s", req.status_code)
+            dyn_conf = self.get_collection_rules()
+            dyn_conf['file'] = self.collection_rules_file
+            logger.debug("Success reading config")
+            logger.debug(json.dumps(dyn_conf))
+            return dyn_conf, rm_conf
 
         for conf_file in [self.collection_rules_file, self.fallback_file]:
             logger.debug("trying to read conf from: " + conf_file)
@@ -172,4 +185,4 @@ class InsightsConfig(object):
                     logger.debug("Failed to find version")
 
         logger.error("ERROR: Unable to download conf or read it from disk!")
-        sys.exit()
+        sys.exit(1)
