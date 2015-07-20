@@ -109,7 +109,6 @@ class InsightsConfig(object):
 
         return json.loads(req.text)
 
-
     def get_collection_rules_gpg(self, collection_rules):
         """
         Download the collection rules gpg signature
@@ -133,7 +132,6 @@ class InsightsConfig(object):
             logger.error("Sig status: %s", config_sig.status_code)
             sys.exit(1)
 
-
     def write_collection_data(self, path, data):
         """
         Write collections rules to disk
@@ -143,7 +141,6 @@ class InsightsConfig(object):
                                           int("0600", 8)), 'w')
         dyn_conf_file.write(data)
         dyn_conf_file.close()
-
 
     def get_conf(self, update):
         """
