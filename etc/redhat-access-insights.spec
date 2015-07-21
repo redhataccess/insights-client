@@ -51,6 +51,8 @@ if [ "$1" -eq 0 ]; then
 rm -f /etc/cron.daily/redhat-access-insights
 rm -f /etc/cron.weekly/redhat-access-insights
 rm -f /etc/redhat-access-insights/.cache*
+rm -f /etc/redhat-access-insights/.registered
+rm -f /etc/redhat-access-insights/.unregistered
 fi
 
 %clean
