@@ -8,7 +8,7 @@ Release:                0%{?dist}
 Source0:                https://github.com/redhataccess/redhat-access-insights/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
-URL:                    http://access.redhat.com/labs/insights
+URL:                    http://access.redhat.com/insights
 Group:                  Applications/System
 Vendor:                 Red Hat, Inc.
 
@@ -20,6 +20,7 @@ Requires: python-requests >= 2.6
 Requires: python-magic
 Requires: libcgroup
 Requires: tar
+Requires: gpg
 Requires: pciutils
 %if 0%{?rhel} && 0%{?rhel} > 6
 Requires: libcgroup-tools
