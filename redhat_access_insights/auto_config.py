@@ -57,7 +57,7 @@ def set_auto_configuration(config, hostname, ca_cert, proxy):
         logger.warn("See %s for additional information", constants.default_log_file)
         config.set(APP_NAME, 'base_url', saved_base_url)
         if proxy is not None:
-            if saved_proxy is not None and saved_proxy.lowercase == 'none':
+            if saved_proxy is not None and saved_proxy.lower() == 'none':
                 saved_proxy = None
             config.set(APP_NAME, 'proxy', saved_proxy)
         if ca_cert is not None:
