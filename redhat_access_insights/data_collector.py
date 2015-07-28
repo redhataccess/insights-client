@@ -294,8 +294,13 @@ class DataCollector(object):
             return
         logger.debug("Copying %s to %s with filters %s", path, full_path, str(patterns))
 
-        cmd = "/bin/sed -rf %s %s" % (constants.default_sed_file, path)
-        sedcmd = Popen(shlex.split(cmd.encode('utf-8')),
+        cmd = []
+        # shlex.split doesn't handle special characters well
+        cmd.append("/bin/sed".encode('utf-8'))
+        cmd.append("-rf".encode('utf-8'))
+        cmd.append(constants.default_sed_file.encode('utf-8'))
+        cmd.append(path.encode('utf8'))
+        sedcmd = Popen(cmd,
                        stdout=PIPE)
 
         if exclude is not None:
