@@ -132,6 +132,18 @@ def lineno():
     return inspect.currentframe().f_back.f_lineno
 
 
+def handle_branch_info_error(msg, options):
+    if options.no_upload:
+        logger.warning(msg)
+        logger.warning("Assuming remote branch and leaf value of -1")
+        branch_info = {}
+        branch_info['remote_branch'] = branch_info['remote_leaf'] = -1
+        return branch_info
+    else:
+        logger.error("ERROR: %s", msg)
+        sys.exit()
+
+
 def collect_data_and_upload(config, options):
     """
     All the heavy lifting done here
@@ -142,11 +154,11 @@ def collect_data_and_upload(config, options):
     try:
         branch_info = pconn.branch_info()
     except requests.ConnectionError:
-        logger.error("ERROR: Could not connect to determine branch information")
-        sys.exit()
+        branch_info = handle_branch_info_error(
+            "Could not connect to determine branch information", options)
     except LookupError:
-        logger.error("ERROR: Could not determine branch information")
-        sys.exit()
+        branch_info = handle_branch_info_error(
+            "Could not determine branch information", options)
     pc = InsightsConfig(config, pconn)
     dc = DataCollector()
     start = time.clock()
