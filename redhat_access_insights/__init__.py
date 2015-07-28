@@ -29,8 +29,7 @@ if os.geteuid() is not 0:
 
 __author__ = 'Dan Varga <dvarga@redhat.com>'
 
-LOG_FORMAT = ("%(asctime)s - %(name)s - %(levelname)s "
-              "- (%(threadName)-10s) %(message)s")
+LOG_FORMAT = ("%(asctime)s %(levelname)s %(message)s")
 APP_NAME = constants.app_name
 logger = None
 
