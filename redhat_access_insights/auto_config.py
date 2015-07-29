@@ -112,7 +112,7 @@ def _try_satellite6_configuration(config):
             rhsm_ca = None
         else:
             # Set the host path
-            #'rhsm_hostname' should really be named ~ 'rhsm_host_base_url'
+            # 'rhsm_hostname' should really be named ~ 'rhsm_host_base_url'
             rhsm_hostname = rhsm_hostname + ':' + rhsm_hostport + '/redhat_access'
 
         logger.debug("Trying to set auto_configuration")

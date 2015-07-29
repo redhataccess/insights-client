@@ -16,6 +16,9 @@ from cert_auth import rhsmCertificate
 from constants import InsightsConstants as constants
 
 import xml.etree.ElementTree as ET
+import warnings
+warnings.simplefilter('ignore')
+
 APP_NAME = constants.app_name
 
 logger = logging.getLogger(APP_NAME)
@@ -27,8 +30,6 @@ URLLIB3_LOGGER.setLevel(logging.WARNING)
 URLLIB3_LOGGER = logging.getLogger('requests.packages.urllib3.connectionpool')
 URLLIB3_LOGGER.setLevel(logging.WARNING)
 
-import warnings
-warnings.simplefilter('ignore')
 
 class InsightsConnection(object):
 
@@ -85,13 +86,13 @@ class InsightsConnection(object):
             # Major hack, requests/urllib3 does not make access to
             # proxy_headers easy
             session.adapters['https://'].\
-              proxy_manager[self.proxies['https']].\
-              proxy_headers = {'Proxy-Authorization': self.proxy_auth}
+                proxy_manager[self.proxies['https']].\
+                proxy_headers = {'Proxy-Authorization': self.proxy_auth}
             session.adapters['https://'].\
-              proxy_manager[self.proxies['https']].\
-              connection_pool_kw['_proxy_headers'] = {'Proxy-Authorization': self.proxy_auth}
+                proxy_manager[self.proxies['https']].\
+                connection_pool_kw['_proxy_headers'] = {'Proxy-Authorization': self.proxy_auth}
             conns = session.adapters['https://'].\
-                      proxy_manager[self.proxies['https']].pools._container
+                proxy_manager[self.proxies['https']].pools._container
             for conn in conns:
                 connection = conns[conn]
                 connection.proxy_headers = {'Proxy-Authorization': self.proxy_auth}
@@ -423,7 +424,7 @@ class InsightsConnection(object):
 
         logger.debug("System: %s", system.json())
 
-        message = system.headers.get("x-rh-message", "");
+        message = system.headers.get("x-rh-message", "")
 
         # Do grouping
         if options.group is not None:

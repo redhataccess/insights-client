@@ -154,7 +154,7 @@ class InsightsConfig(object):
             parsedconfig.read(self.remove_file)
             rm_conf = {}
             for item, value in parsedconfig.items('remove'):
-                    rm_conf[item] = value.strip().split(',')
+                rm_conf[item] = value.strip().split(',')
 
             logger.warn("WARNING: Excluding data from files")
 
