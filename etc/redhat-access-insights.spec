@@ -82,9 +82,18 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
-* Fri Jun 18 2015 Dan Varga <dvarga@redhat.com> - 1.0.5-0
+* Wed Jul 29 2015 Dan Varga <dvarga@redhat.com> - 1.0.5-0
 - Automatically retry failed uploads when invoked via cron
 - Update python-requests dependency to >= 2.6
+- Add --unregister option
+- --no-gpg fix
+- Remove --weekly option
+- Add --quiet and --silent options
+- Default cron to quiet
+- Fix satellite 5 proxy auto configuration
+- Remove .registered and .unregistered files on uninstallation
+- lowercase -> lower()
+- Resolves: bz1248011, bz1248012, bz1248014, bz1248023
 
 * Mon Jun 08 2015 Dan Varga <dvarga@redhat.com> - 1.0.4-0
 - Improved logging of exceptions
