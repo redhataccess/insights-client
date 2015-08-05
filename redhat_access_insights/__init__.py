@@ -345,12 +345,9 @@ def set_up_options(parser):
 
 
 def handle_startup(options, config):
-    # Check for .unregistered file
-    if os.path.isfile(constants.unregistered_file):
-        logger.error("This machine has been unregistered")
-        logger.error("Use --register if you would like to re-register this machine")
-        logger.error("Exiting")
-        sys.exit(1)
+    """
+    Handle startup options
+    """
 
     if options.version:
         print constants.version
@@ -410,6 +407,13 @@ def handle_startup(options, config):
             logger.info('Successfully registered %s as %s in group %s', hostname, display_name, opt_group)
 
         logger.info(message)
+
+    # Check for .unregistered file
+    if os.path.isfile(constants.unregistered_file):
+        logger.error("This machine has been unregistered")
+        logger.error("Use --register if you would like to re-register this machine")
+        logger.error("Exiting")
+        sys.exit(1)
 
 
 def _main():
