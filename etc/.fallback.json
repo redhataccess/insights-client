@@ -218,7 +218,6 @@
                 "abrtd: Package",
                 "page allocation failure",
                 "mode:0x20",
-                "soft lockup",
                 "invoked oom-killer",
                 "WATCHDOG",
                 "heated above trip temperature",
@@ -246,6 +245,10 @@
         }
     ],
     "commands": [
+        {
+            "pattern": [],
+            "command": "/bin/date"
+        },
         {
             "pattern": [
                 "crashkernel reservation failed",
@@ -374,12 +377,24 @@
         },
         {
             "pattern": [],
+            "command": "hponcfg -g"
+        },
+        {
+            "pattern": [],
+            "command": "sestatus -b"
+        },
+        {
+            "pattern": [],
             "command": "systemctl list-unit-files"
         },
         {
             "pattern": [],
             "command": "vgdisplay"
+        },
+        {
+            "pattern": [],
+            "command": "yum -C repolist"
         }
     ],
-    "version": "303"
+    "version": "409"
 }
