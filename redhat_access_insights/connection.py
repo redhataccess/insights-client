@@ -214,7 +214,7 @@ class InsightsConnection(object):
         if last_ex:
             raise last_ex
 
-    def test_connection(self):
+    def test_connection(self, rc=0):
         """
         Test connection to Red Hat
         """
@@ -236,7 +236,7 @@ class InsightsConnection(object):
             logger.error('Additional information may be in'
                          ' /var/log/' + APP_NAME + "/" + APP_NAME + ".log")
             sys.exit(1)
-        sys.exit()
+        sys.exit(rc)
 
     def handle_fail_rcs(self, req):
         """
@@ -323,14 +323,14 @@ class InsightsConnection(object):
             logger.error("ERROR: Could not determine branch information, exiting!")
             logger.error("See %s for more information", constants.default_log_file)
             logger.error("Could not register system, running configuration test")
-            self.test_connection()
+            self.test_connection(1)
 
         except requests.ConnectionError as e:
             logger.debug(e)
             logger.error("ERROR: Could not determine branch information, exiting!")
             logger.error("See %s for more information", constants.default_log_file)
             logger.error("Could not register system, running configuration test")
-            self.test_connection()
+            self.test_connection(1)
 
         data = {'machine_id': machine_id,
                 'remote_branch': remote_branch,
@@ -352,7 +352,7 @@ class InsightsConnection(object):
         except requests.ConnectionError as e:
             logger.debug(e)
             logger.error("Could not register system, running configuration test")
-            self.test_connection()
+            self.test_connection(1)
         return system
 
     def do_group(self, group_id):
