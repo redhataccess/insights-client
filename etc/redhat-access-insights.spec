@@ -3,7 +3,7 @@
 
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
-Version:                1.0.5
+Version:                1.0.6
 Release:                0%{?dist}
 Source0:                https://github.com/redhataccess/redhat-access-insights/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
@@ -82,6 +82,10 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Tue Aug 11 2015 Dan Varga <dvarga@redhat.com> - 1.0.6-0
+- Fix unregister -> reregister flow
+- Resolves: bz1252435
+
 * Wed Jul 29 2015 Dan Varga <dvarga@redhat.com> - 1.0.5-0
 - Automatically retry failed uploads when invoked via cron
 - Update python-requests dependency to >= 2.6
