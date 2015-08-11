@@ -5,7 +5,7 @@ Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                1.0.6
 Release:                0%{?dist}
-Source0:                https://github.com/redhataccess/redhat-access-insights/archive/redhat-access-insights-%{version}.tar.gz
+Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
 URL:                    http://access.redhat.com/insights
@@ -37,8 +37,8 @@ Sends insightful information to Red Hat for automated analysis
 %setup -q
 
 %install
-test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
-%{__python} setup.py install --root=$RPM_BUILD_ROOT $PREFIX
+rm -rf ${RPM_BUILD_ROOT}
+%{__python} setup.py install --root=${RPM_BUILD_ROOT} $PREFIX
 
 %post
 #Migrate existing machine-id
