@@ -454,4 +454,4 @@ class InsightsConnection(object):
         logger.debug("Upload status: %s %s %s",
                      upload.status_code, upload.reason, upload.text)
         logger.debug("Upload duration: %s", upload.elapsed)
-        return upload.status_code
+        return upload

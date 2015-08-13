@@ -185,10 +185,12 @@ def collect_data_and_upload(config, options):
             logger.info('Uploading Insights data,'
                         ' this may take a few minutes')
             for tries in range(options.retries):
-                status = pconn.upload_archive(tar_file, collection_duration)
-                if status == 201:
+                upload = pconn.upload_archive(tar_file, collection_duration)
+                if upload.status_code == 201:
                     logger.info("Upload completed successfully!")
                     break
+                elif upload.status_code == 412:
+                    pconn.handle_fail_rcs(upload)
                 else:
                     logger.error("Upload attempt %d of %d failed! Status Code: %s",
                                  tries + 1, options.retries, status)
