@@ -31,7 +31,7 @@ def determine_hostname():
     ex_len = len(socket_ex)
 
     if fqdn_len > gethostname_len or ex_len > gethostname_len:
-        if "localhost" not in socket_ex:
+        if "localhost" not in socket_ex and len(socket_ex):
             return socket_ex
         if "localhost" not in socket_fqdn:
             return socket_fqdn
