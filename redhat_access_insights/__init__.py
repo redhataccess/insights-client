@@ -193,7 +193,7 @@ def collect_data_and_upload(config, options):
                     pconn.handle_fail_rcs(upload)
                 else:
                     logger.error("Upload attempt %d of %d failed! Status Code: %s",
-                                 tries + 1, options.retries, status)
+                                 tries + 1, options.retries, upload.status_code)
                     if tries + 1 != options.retries:
                         logger.info("Waiting %d seconds then retrying", constants.sleep_time)
                         time.sleep(constants.sleep_time)
