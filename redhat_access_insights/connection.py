@@ -443,7 +443,7 @@ class InsightsConnection(object):
         Do an HTTPS Upload of the archive
         """
         file_name = os.path.basename(data_collected)
-        files = {'file': (file_name, open(data_collected, 'rb'))}
+        files = {'file': (file_name, open(data_collected, 'rb'), 'application/x-gzip')}
 
         upload_url = self.upload_url + '/' + generate_machine_id()
         logger.debug("Uploading %s to %s", data_collected, upload_url)
