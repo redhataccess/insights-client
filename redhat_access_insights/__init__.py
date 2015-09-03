@@ -34,7 +34,7 @@ APP_NAME = constants.app_name
 logger = None
 
 
-def parse_config_file():
+def parse_config_file(conf_file):
     """
     Parse the configuration from the file
     """
@@ -57,7 +57,7 @@ def parse_config_file():
          'password': '',
          'proxy': None})
     try:
-        parsedconfig.read(constants.default_conf_file)
+        parsedconfig.read(conf_file)
     except ConfigParser.Error:
         logger.error("ERROR: Could not read configuration file, using defaults")
     try:
@@ -343,6 +343,10 @@ def set_up_options(parser):
                      action="store_true",
                      dest="keep_archive",
                      default=False)
+    group.add_option('-c', '--conf',
+                     help="Pass a custom config file",
+                     dest="conf",
+                     default=constants.default_conf_file)
     parser.add_option_group(group)
 
 
@@ -435,7 +439,7 @@ def _main():
         parser.error("Unknown arguments: %s" % args)
         sys.exit(1)
 
-    config = parse_config_file()
+    config = parse_config_file(options.conf)
     logger, handler = set_up_logging(config, options)
 
     # Defer logging till it's ready
