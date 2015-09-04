@@ -30,9 +30,9 @@ class DataCollector(object):
     Run commands and collect files
     """
 
-    def __init__(self):
+    def __init__(self, archive_=None):
         self._set_black_list()
-        self.archive = archive.InsightsArchive()
+        self.archive = archive_ if archive_ else archive.InsightsArchive()
 
     def _set_black_list(self):
         """
