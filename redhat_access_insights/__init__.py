@@ -14,6 +14,7 @@ import getpass
 import optparse
 import time
 import requests
+import shutil
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id)
@@ -210,10 +211,16 @@ def collect_data_and_upload(config, options):
                 else:
                     logger.info('Insights data retained in %s', tar_file)
         else:
-            logger.info('See Insights data in %s', tar_file)
+            handle_file_output(options, tar_file)
     else:
         logger.info('See Insights data in %s', dc.archive.archive_dir)
 
+def handle_file_output(options, tar_file):
+    if options.to_stdout:
+        shutil.copyfileobj(open(tar_file, 'rb'), sys.stdout)
+        os.unlink(tar_file)
+    else:
+        logger.info('See Insights data in %s', tar_file)
 
 def register(config, group_id=None):
     """
@@ -347,6 +354,12 @@ def set_up_options(parser):
                      help="Pass a custom config file",
                      dest="conf",
                      default=constants.default_conf_file)
+    group.add_option('--to-stdout',
+                     help='print archive to stdout; '
+                          'sets --silent and --no-upload',
+                     dest='to_stdout',
+                     default=False,
+                     action='store_true')
     parser.add_option_group(group)
 
 
@@ -438,6 +451,10 @@ def _main():
     if len(args) > 0:
         parser.error("Unknown arguments: %s" % args)
         sys.exit(1)
+
+    if options.to_stdout:
+        options.silent = True
+        options.no_upload = True
 
     config = parse_config_file(options.conf)
     logger, handler = set_up_logging(config, options)
