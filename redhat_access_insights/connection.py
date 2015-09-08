@@ -41,9 +41,21 @@ class InsightsConnection(object):
         self.user_agent = constants.user_agent
         self.username = config.get(APP_NAME, "username")
         self.password = config.get(APP_NAME, "password")
-        self.insecure_connection = config.get(APP_NAME, "insecure_connection")
-        proto = "http://" if self.insecure_connection else "https://"
-        self.base_url = proto + config.get(APP_NAME, "base_url")
+
+        self.cert_verify = config.get(APP_NAME, "cert_verify")
+        if self.cert_verify.lower() == 'false':
+            self.cert_verify = False
+        elif self.cert_verify.lower() == 'true':
+            self.cert_verify = True
+
+        protocol = "https://"
+        insecure_connection = config.getboolean(APP_NAME, "insecure_connection")
+        if insecure_connection:
+            # This really should not be used.
+            protocol = "http://"
+            self.cert_verify = False
+
+        self.base_url = protocol + config.get(APP_NAME, "base_url")
         self.upload_url = config.get(APP_NAME, "upload_url")
         if self.upload_url is None:
             self.upload_url = self.base_url + "/uploads"
@@ -54,11 +66,6 @@ class InsightsConnection(object):
         if self.branch_info_url is None:
             self.branch_info_url = self.base_url + "/v1/branch_info"
         self.authmethod = config.get(APP_NAME, 'authmethod')
-        self.cert_verify = config.get(APP_NAME, "cert_verify")
-        if self.cert_verify.lower() == 'false':
-            self.cert_verify = False
-        elif self.cert_verify.lower() == 'true':
-            self.cert_verify = True
         self.get_proxies(config)
         self._validate_hostnames()
         self.session = self._init_session()
