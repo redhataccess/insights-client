@@ -41,7 +41,9 @@ class InsightsConnection(object):
         self.user_agent = constants.user_agent
         self.username = config.get(APP_NAME, "username")
         self.password = config.get(APP_NAME, "password")
-        self.base_url = "https://" + config.get(APP_NAME, "base_url")
+        self.insecure_connection = config.get(APP_NAME, "insecure_connection")
+        proto = "http://" if self.insecure_connection else "https://"
+        self.base_url = proto + config.get(APP_NAME, "base_url")
         self.upload_url = config.get(APP_NAME, "upload_url")
         if self.upload_url is None:
             self.upload_url = self.base_url + "/uploads"
