@@ -56,7 +56,8 @@ def parse_config_file(conf_file):
          'gpg': 'True',
          'username': '',
          'password': '',
-         'proxy': None})
+         'proxy': None,
+         'insecure_connection':'False'})
     try:
         parsedconfig.read(conf_file)
     except ConfigParser.Error:
