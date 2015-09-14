@@ -216,12 +216,14 @@ def collect_data_and_upload(config, options):
     else:
         logger.info('See Insights data in %s', dc.archive.archive_dir)
 
+
 def handle_file_output(options, tar_file):
     if options.to_stdout:
         shutil.copyfileobj(open(tar_file, 'rb'), sys.stdout)
         os.unlink(tar_file)
     else:
         logger.info('See Insights data in %s', tar_file)
+
 
 def register(config, group_id=None):
     """
