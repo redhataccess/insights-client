@@ -22,6 +22,7 @@ from collection_rules import InsightsConfig
 from data_collector import DataCollector
 from schedule import InsightsSchedule
 from connection import InsightsConnection
+from archive import InsightsArchive
 
 from constants import InsightsConstants as constants
 
@@ -162,7 +163,8 @@ def collect_data_and_upload(config, options):
         branch_info = handle_branch_info_error(
             "Could not determine branch information", options)
     pc = InsightsConfig(config, pconn)
-    dc = DataCollector()
+    archive = InsightsArchive(compressor=options.compressor)
+    dc = DataCollector(archive)
     start = time.clock()
     collection_rules, rm_conf = pc.get_conf(options.update)
     elapsed = (time.clock() - start)
@@ -363,6 +365,12 @@ def set_up_options(parser):
                      dest='to_stdout',
                      default=False,
                      action='store_true')
+    group.add_option('--compressor',
+                     help='specify alternate compression '
+                          'algorithm (gz, bzip2, xz, none; defaults to gz)',
+                     dest='compressor',
+                     default='gz')
+
     parser.add_option_group(group)
 
 

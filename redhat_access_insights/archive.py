@@ -5,6 +5,8 @@ import tempfile
 import time
 import os
 import shutil
+import subprocess
+import shlex
 import logging
 from utilities import determine_hostname, _expand_paths
 from constants import InsightsConstants as constants
@@ -19,7 +21,7 @@ class InsightsArchive(object):
     and files to the insights archive
     """
 
-    def __init__(self):
+    def __init__(self, compressor="gz"):
         """
         Initialize the Insights Archive
         Create temp dir, archive dir, and command dir
@@ -30,6 +32,7 @@ class InsightsArchive(object):
                               time.strftime("%Y%m%d%H%M%S")))
         self.archive_dir = self.create_archive_dir()
         self.cmd_dir = self.create_command_dir()
+        self.compressor = compressor
 
     def create_archive_dir(self):
         """
@@ -98,17 +101,26 @@ class InsightsArchive(object):
                 logger.debug("Not a directory: %s", directory)
         return path
 
+    def get_compression_flag(self, compressor):
+        return {
+            "gz": "z",
+            "xz": "J",
+            "bz2": "j",
+            "none": ""
+        }.get(compressor, "z")
+
     def create_tar_file(self):
         """
         Create tar file to be compressed
         """
-        import tarfile
         tar_file_name = os.path.join(self.tmp_dir, self.archive_name)
-        tar_file_name = tar_file_name + ".tar.gz"
+        ext = "" if self.compressor == "none" else ".%s" % self.compressor
+        tar_file_name = tar_file_name + ".tar" + ext
         logger.debug("Tar File: " + tar_file_name)
-        tar = tarfile.open(tar_file_name, "w|gz")
-        tar.add(self.archive_dir, arcname=self.archive_name)
-        tar.close()
+        subprocess.call(shlex.split("tar c%sf %s %s" % (
+            self.get_compression_flag(self.compressor),
+            tar_file_name,
+            self.tmp_dir)), stderr=subprocess.PIPE)
         self.delete_archive_dir()
         logger.debug("Tar File Size: %s", str(os.path.getsize(tar_file_name)))
         return tar_file_name
