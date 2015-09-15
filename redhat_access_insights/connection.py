@@ -5,6 +5,7 @@ import requests
 import sys
 import os
 import json
+import subprocess
 
 import traceback
 import logging
@@ -224,6 +225,28 @@ class InsightsConnection(object):
         if last_ex:
             raise last_ex
 
+    def _test_openssl(self, url, cert):
+        '''
+        Run a test with openssl to detect any MITM proxies
+        '''
+        from urlparse import urlparse
+        hostname = urlparse(url).netloc
+        if len(hostname.split(':')) < 2:
+            hostname = hostname + ':443'
+        try:
+            ssl_output = subprocess.check_output(['openssl', 's_client',
+            '-connect', hostname, '-CAfile', cert], stdin=open('/dev/nul'))
+            print ssl_output
+            if 'Verify return code: 19' in ssl_output:
+                logger.info('Certificate chain test failed! '
+                    'Self signed certificate detected in chain')
+            else:
+                logger.info("Certificate chain test success")
+        except subprocess.CalledProcessError, err:
+            # non-zero exit, connection error, raise exception
+            logger.error('Certificate chain test failed!')
+            raise requests.ConnectionError('Could not connect to: ' + url)
+
     def test_connection(self, rc=0):
         """
         Test connection to Red Hat
@@ -232,6 +255,8 @@ class InsightsConnection(object):
         logger.info("Proxy config: %s", self.proxies)
         logger.info("Certificate Verification: %s", self.cert_verify)
         try:
+            logger.info("\nTesting certificate chain:")
+            self._test_openssl(self.base_url, self.cert_verify)
             logger.info("\nTesting upload_url connection:")
             self._test_urls(self.upload_url, "POST")
             logger.info("upload_url test success")
