@@ -236,7 +236,7 @@ class InsightsConnection(object):
         try:
             ssl_output = subprocess.check_output(['openssl', 's_client',
             '-connect', hostname, '-CAfile', cert], stdin=open('/dev/nul'))
-            print ssl_output
+            logger.info(ssl_output)
             if 'Verify return code: 19' in ssl_output:
                 logger.info('Certificate chain test failed! '
                     'Self signed certificate detected in chain')
