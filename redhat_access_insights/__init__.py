@@ -26,9 +26,6 @@ from archive import InsightsArchive
 
 from constants import InsightsConstants as constants
 
-if os.geteuid() is not 0:
-    sys.exit("Red Hat Access Insights must be run as root")
-
 __author__ = 'Dan Varga <dvarga@redhat.com>'
 
 LOG_FORMAT = ("%(asctime)s %(levelname)s %(message)s")
@@ -453,6 +450,9 @@ def _main():
     Parse config file
     Call data collector
     """
+    if os.geteuid() is not 0:
+        sys.exit("Red Hat Access Insights must be run as root")
+
     global logger
     sys.excepthook = handle_exception
 
