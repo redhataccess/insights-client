@@ -17,6 +17,9 @@ def verify_connectivity(config):
     Verify connectivity to satellite server
     """
     logger.debug("Verifying Connectivity")
+    for item, value in config.items(APP_NAME):
+        if item != 'password' and item != 'proxy':
+            logger.debug("%s:%s", item, value)
     ic = InsightsConnection(config)
     try:
         branch_info = ic.branch_info()
@@ -42,7 +45,10 @@ def set_auto_configuration(config, hostname, ca_cert, proxy):
     """
     Set config based on discovered data
     """
-    logger.debug("Attempting to auto conf %s %s %s %s", config, hostname, ca_cert, proxy)
+    logger.debug("Attempting to auto configure!")
+    logger.debug("Attempting to auto configure hostname: %s", hostname)
+    logger.debug("Attempting to auto configure CA cert: %s", ca_cert)
+    logger.debug("Attempting to auto configure proxy: %s", proxy)
     saved_base_url = config.get(APP_NAME, 'base_url')
     if ca_cert is not None:
         saved_cert_verify = config.get(APP_NAME, 'cert_verify')
@@ -107,7 +113,7 @@ def _try_satellite6_configuration(config):
 
         # Directly connected to Red Hat, use cert auth directly with the api
         if rhsm_hostname == 'subscription.rhn.redhat.com':
-            logger.debug("Connected to RH Directly, using cert-api")
+            logger.debug("Connected to Red Hat Directly, using cert-api")
             rhsm_hostname = 'cert-api.access.redhat.com'
             rhsm_ca = None
         else:

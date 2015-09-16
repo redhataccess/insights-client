@@ -31,6 +31,16 @@ URLLIB3_LOGGER.setLevel(logging.WARNING)
 URLLIB3_LOGGER = logging.getLogger('requests.packages.urllib3.connectionpool')
 URLLIB3_LOGGER.setLevel(logging.WARNING)
 
+# TODO: Document this, or turn it into a real option
+if os.environ.get('INSIGHTS_DEBUG_HTTP'):
+    import httplib
+    httplib.HTTPConnection.debuglevel = 1
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.DEBUG)
+    requests_log = logging.getLogger("urllib3")
+    requests_log.setLevel(logging.DEBUG)
+    requests_log.propagate = True
+
 
 class InsightsConnection(object):
 
@@ -235,7 +245,7 @@ class InsightsConnection(object):
             hostname = hostname + ':443'
         try:
             ssl_output = subprocess.check_output(['openssl', 's_client',
-            '-connect', hostname, '-CAfile', cert], stdin=open('/dev/nul'))
+            '-connect', hostname, '-CAfile', cert], stdin=open('/dev/null'))
             logger.info(ssl_output)
             if 'Verify return code: 19' in ssl_output:
                 logger.info('Certificate chain test failed! '
