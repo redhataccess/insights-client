@@ -243,19 +243,23 @@ class InsightsConnection(object):
         hostname = urlparse(url).netloc
         if len(hostname.split(':')) < 2:
             hostname = hostname + ':443'
-        try:
-            ssl_output = subprocess.check_output(['openssl', 's_client',
-            '-connect', hostname, '-CAfile', cert], stdin=open('/dev/null'))
-            logger.info(ssl_output)
-            if 'Verify return code: 19' in ssl_output:
-                logger.info('Certificate chain test failed! '
-                    'Self signed certificate detected in chain')
-            else:
-                logger.info("Certificate chain test success")
-        except subprocess.CalledProcessError, err:
-            # non-zero exit, connection error, raise exception
+        ssl_args = ['openssl', 's_client', '-connect', hostname]
+        if type(cert) is not bool:
+            ssl_args += ['-CAfile', cert]
+        ssl_cmd = subprocess.Popen(ssl_args, stdin=open('/dev/null'),
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        ssl_output = ssl_cmd.stdout.read()
+        ssl_exitcode = ssl_cmd.poll()
+        logger.info(ssl_output)
+        if ssl_exitcode != 0:
+            # connection error, raise exception
             logger.error('Certificate chain test failed!')
             raise requests.ConnectionError('Could not connect to: ' + url)
+        if 'Verify return code: 19' in ssl_output:
+            logger.info('Certificate chain test failed! '
+                'Self signed certificate detected in chain')
+        else:
+            logger.info("Certificate chain test success")
 
     def test_connection(self, rc=0):
         """
