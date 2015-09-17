@@ -75,18 +75,6 @@ class SOSCleaner:
         self.magic = magic.open(magic.MAGIC_NONE)
         self.magic.load()
 
-    def _check_uid(self): # pragma no cover
-
-        try:
-            if os.getuid() != 0:
-                self.logger.con_out("soscleaner must be executed by the root user in the same manner as sosreport")
-                self.logger.con_out("soscleaner cannot continue. Exiting...")
-
-                sys.exit(8)
-
-        except Exception, e:    # pragma: no cover
-            self.logger.exception(e)
-
     def _skip_file(self, d, files):
         '''
         The function passed into shutil.copytree to ignore certain patterns and filetypes
@@ -659,7 +647,6 @@ class SOSCleaner:
                 self.report_dir = options.report_dir
         self.origin_path, self.dir_path, self.session, self.logfile, self.uuid = self._prep_environment()
         self._start_logging(self.logfile)
-        self._check_uid() #make sure it's soscleaner is running as root
         self._get_disclaimer()
         if options.domains:
             self.domains = options.domains
