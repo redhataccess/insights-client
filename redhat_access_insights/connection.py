@@ -269,8 +269,9 @@ class InsightsConnection(object):
         logger.info("Proxy config: %s", self.proxies)
         logger.info("Certificate Verification: %s", self.cert_verify)
         try:
-            logger.info("\nTesting certificate chain:")
-            self._test_openssl(self.base_url, self.cert_verify)
+            if not self.proxies:
+                logger.info("\nTesting certificate chain:")
+                self._test_openssl(self.base_url, self.cert_verify)
             logger.info("\nTesting upload_url connection:")
             self._test_urls(self.upload_url, "POST")
             logger.info("upload_url test success")
