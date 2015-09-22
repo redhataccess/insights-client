@@ -3,18 +3,19 @@
  Gather and Upload Insights Data for
  Red Hat Access Insights
 """
-import os
-import sys
-import logging
-import inspect
-import traceback
-import logging.handlers
 import ConfigParser
 import getpass
+import inspect
+import json
+import logging
+import logging.handlers
 import optparse
-import time
+import os
 import requests
 import shutil
+import sys
+import time
+import traceback
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id)
@@ -163,19 +164,25 @@ def collect_data_and_upload(config, options, rc=0):
     pc = InsightsConfig(config, pconn)
     archive = InsightsArchive(compressor=options.compressor)
     dc = DataCollector(archive)
+
+    stdin_config = json.load(sys.stdin) if options.from_stdin else {}
+
     start = time.clock()
-    collection_rules, rm_conf = pc.get_conf(options.update)
+    collection_rules, rm_conf = pc.get_conf(options.update, stdin_config)
     elapsed = (time.clock() - start)
     logger.debug("Collection Rules Elapsed Time: %s", elapsed)
+
     start = time.clock()
     logger.info('Starting to collect Insights data')
     dc.run_commands(collection_rules, rm_conf)
     elapsed = (time.clock() - start)
     logger.debug("Command Collection Elapsed Time: %s", elapsed)
+
     start = time.clock()
     dc.copy_files(collection_rules, rm_conf)
     elapsed = (time.clock() - start)
     logger.debug("File Collection Elapsed Time: %s", elapsed)
+
     dc.write_branch_info(branch_info)
     obfuscate = config.getboolean(APP_NAME, "obfuscate")
 
@@ -376,6 +383,11 @@ def set_up_options(parser):
                           'algorithm (gz, bzip2, xz, none; defaults to gz)',
                      dest='compressor',
                      default='gz')
+    group.add_option('--from-stdin',
+                     help='operate in coordinator mode',
+                     dest='coordinator', action='store_true',
+                     default=False)
+
 
     parser.add_option_group(group)
 
@@ -474,6 +486,9 @@ def _main():
     if len(args) > 0:
         parser.error("Unknown arguments: %s" % args)
         sys.exit(1)
+
+    # from_stdin mode implies to_stdout
+    options.to_stdout = options.to_stdout or options.from_stdin
 
     if options.to_stdout:
         options.silent = True

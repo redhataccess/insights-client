@@ -521,7 +521,7 @@ class InsightsConnection(object):
         else:
             return (message, client_hostname, "None", "")
 
-    def upload_archive(self, data_collected, duration):
+    def upload_archive(self, data_collected, duration, cluster=None):
         """
         Do an HTTPS Upload of the archive
         """
@@ -532,7 +532,10 @@ class InsightsConnection(object):
         files = {
             'file': (file_name, open(data_collected, 'rb'), m.file(data_collected))}
 
-        upload_url = self.upload_url + '/' + generate_machine_id()
+        if cluster:
+            upload_url = self.upload_url + '/' + cluster + "?cluster=True"
+        else:
+            upload_url = self.upload_url + '/' + generate_machine_id()
         logger.debug("Uploading %s to %s", data_collected, upload_url)
 
         headers = {'x-rh-collection-time': duration}

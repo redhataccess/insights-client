@@ -81,7 +81,7 @@ class InsightsConfig(object):
                 logger.warn("WARNING: %s was an empty file", path)
                 return
 
-    def get_collection_rules(self):
+    def get_collection_rules(self, raw=False):
         """
         Download the collection rules
         """
@@ -107,12 +107,12 @@ class InsightsConfig(object):
 
         self.write_collection_data(self.collection_rules_file, req.text)
 
-        return json.loads(req.text)
+        if raw:
+            return req.text
+        else:
+            json.loads(req.text)
 
-    def get_collection_rules_gpg(self, collection_rules):
-        """
-        Download the collection rules gpg signature
-        """
+    def fetch_gpg(self):
         logger.info("Attemping to download collection "
                     "rules GPG signature from %s",
                     self.collection_rules_url + ".asc")
@@ -122,15 +122,22 @@ class InsightsConfig(object):
                                            headers=headers)
         if config_sig.status_code == 200:
             logger.info("Successfully downloaded GPG signature")
-            sig_response = NamedTemporaryFile(suffix=".asc")
-            sig_response.write(config_sig.text)
-            sig_response.file.flush()
-            self.validate_gpg_sig(collection_rules.name, sig_response.name)
-            self.write_collection_data(self.collection_rules_file + ".asc", config_sig.text)
+            return config_sig.text
         else:
             logger.error("ERROR: Download of GPG Signature failed!")
             logger.error("Sig status: %s", config_sig.status_code)
             sys.exit(1)
+
+    def get_collection_rules_gpg(self, collection_rules):
+        """
+        Download the collection rules gpg signature
+        """
+        sig_text = self.fetch_gpg()
+        sig_response = NamedTemporaryFile(suffix=".asc")
+        sig_response.write(sig_text)
+        sig_response.file.flush()
+        self.validate_gpg_sig(collection_rules.name, sig_response.name)
+        self.write_collection_data(self.collection_rules_file + ".asc", sig_text)
 
     def write_collection_data(self, path, data):
         """
@@ -142,7 +149,7 @@ class InsightsConfig(object):
         dyn_conf_file.write(data)
         dyn_conf_file.close()
 
-    def get_conf(self, update):
+    def get_conf(self, update, stdin_config=None):
         """
         Get the config
         """
@@ -155,10 +162,20 @@ class InsightsConfig(object):
             rm_conf = {}
             for item, value in parsedconfig.items('remove'):
                 rm_conf[item] = value.strip().split(',')
-
             logger.warn("WARNING: Excluding data from files")
-
-        if update:
+        if stdin_config:
+            rules_fp = NamedTemporaryFile(delete=False)
+            rules_fp.write(stdin_config["uploader.json"])
+            rules_fp.flush()
+            sig_fp = NamedTemporaryFile(delete=False)
+            sig_fp.write(stdin_config["sig"])
+            sig_fp.flush()
+            if self.validate_gpg_sig(rules_fp.name, sig_fp.name):
+                return json.loads(stdin_config["uploader.json"]), rm_conf
+            else:
+                logger.error("Unable to validate GPG signature in from_stdin mode.")
+                raise Exception("from_stdin mode failed to validate GPG sig")
+        elif update:
             dyn_conf = self.get_collection_rules()
             version = dyn_conf.get('version', None)
             if version is None:
@@ -168,20 +185,19 @@ class InsightsConfig(object):
             logger.debug("Success reading config")
             logger.debug(json.dumps(dyn_conf))
             return dyn_conf, rm_conf
+        else:
+            for conf_file in [self.collection_rules_file, self.fallback_file]:
+                logger.debug("trying to read conf from: " + conf_file)
+                conf = self.try_disk(conf_file, self.gpg)
+                if conf:
+                    version = conf.get('version', None)
+                    if version is None:
+                        logger.error("ERROR: Could not find version in json")
+                        sys.exit(1)
 
-        for conf_file in [self.collection_rules_file, self.fallback_file]:
-            logger.debug("trying to read conf from: " + conf_file)
-            conf = self.try_disk(conf_file, self.gpg)
-            if conf:
-                version = conf.get('version', None)
-                if version is None:
-                    logger.error("ERROR: Could not find version in json")
-                    sys.exit(1)
-
-                conf['file'] = conf_file
-                logger.debug("Success reading config")
-                logger.debug(json.dumps(conf))
-                return conf, rm_conf
-
+                    conf['file'] = conf_file
+                    logger.debug("Success reading config")
+                    logger.debug(json.dumps(conf))
+                    return conf, rm_conf
         logger.error("ERROR: Unable to download conf or read it from disk!")
         sys.exit(1)
