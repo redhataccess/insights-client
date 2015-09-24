@@ -55,7 +55,8 @@ def parse_config_file(conf_file):
          'username': '',
          'password': '',
          'proxy': None,
-         'insecure_connection': 'False'})
+         'insecure_connection': 'False',
+         'no_schedule': 'False'})
     try:
         parsedconfig.read(conf_file)
     except ConfigParser.Error:
@@ -315,6 +316,11 @@ def set_up_options(parser):
                       action="store_true",
                       dest="silent",
                       default=False)
+    parser.add_option('--no-schedule',
+                      help='Disable automatic scheduling',
+                      action='store_true',
+                      dest='no_schedule',
+                      default=False)
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
                      help='Test connectivity to Red Hat',
@@ -410,7 +416,9 @@ def handle_startup(options, config):
         try_auto_configuration(config)
 
     # Set the schedule
-    InsightsSchedule()
+    if not options.no_schedule and not config.getboolean(
+            APP_NAME, 'no_schedule'):
+        InsightsSchedule()
 
     # Test connection, useful for proxy debug
     if options.test_connection:
