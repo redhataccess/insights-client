@@ -225,9 +225,10 @@ class InsightsConnection(object):
                 # Strata returns 405 on a GET sometimes, this isn't a big deal
                 if test_req.status_code == 200 or test_req.status_code == 201:
                     logger.info("Successfully connected to: %s", test_url + ext)
-                    return
+                    return True
                 else:
                     logger.info("Connection failed")
+                    return False
             except requests.ConnectionError, exc:
                 last_ex = exc
                 logger.error("Could not successfully connect to: %s", test_url + ext)
@@ -273,12 +274,17 @@ class InsightsConnection(object):
                 logger.info("\nTesting certificate chain:")
                 self._test_openssl(self.base_url, self.cert_verify)
             logger.info("\nTesting upload_url connection:")
-            self._test_urls(self.upload_url, "POST")
-            logger.info("upload_url test success")
+            upload_success = self._test_urls(self.upload_url, "POST")
+            logger.info("upload_url test " + 
+                "success" if upload_success else "failed")
             logger.info("\nTesting api_url connection:")
-            self._test_urls(self.api_url, "GET")
-            logger.info("api_url test success")
-            logger.info("\nConnectivity tests completed successfully")
+            api_success = self._test_urls(self.api_url, "GET")
+            logger.info("api_url test " + 
+                "success" if api_success else "failed")
+            if upload_success and api_success:
+                logger.info("\nConnectivity tests completed successfully")
+            else:
+                logger.info("\nConnectivity tests completed with some errors")
         except requests.ConnectionError, exc:
             print exc
             logger.error('Connectivity test failed! '
