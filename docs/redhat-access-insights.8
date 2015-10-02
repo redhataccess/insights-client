@@ -33,6 +33,12 @@ Only display error messages to stdout
 Display no messages to stdout
 .IP "--no-schedule"
 Disable automatic scheduling
+.IP "-c CONF, --conf=CONF"
+Pass a custom config file
+.IP "--to-stdout"
+print archive to stdout; sets --silent and --no-upload
+.IP "--compressor"
+Specifies the compression algorithm to use. Choices are gz, bz2, xz, and none. Defaults to gz.
 .IP "--from-stdin"
 This accepts a JSON document from stdin rather than read rule config from a
 file or from Red Hat directly.  This reads a JSON document from stdin with the
@@ -57,12 +63,6 @@ Do not upload the archive
 Build the directory, but do not tar
 .IP "--keep-archive"
 Do not delete archive after upload
-.IP "-c CONF, --conf=CONF"
-Pass a custom config file
-.IP "--to-stdout"
-print archive to stdout; sets --silent and --no-upload
-.IP "--compressor"
-Specifies the compression algorithm to use. Choices are gz, bz2, xz, and none. Defaults to gz.
 
 .SH "SEE ALSO"
 .BR redhat-access-insights.conf (5)

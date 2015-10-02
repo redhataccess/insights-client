@@ -331,6 +331,25 @@ def set_up_options(parser):
                       action='store_true',
                       dest='no_schedule',
                       default=False)
+    parser.add_option('-c', '--conf',
+                      help="Pass a custom config file",
+                      dest="conf",
+                      default=constants.default_conf_file)
+    parser.add_option('--to-stdout',
+                      help='print archive to stdout; '
+                           'sets --silent and --no-upload',
+                      dest='to_stdout',
+                      default=False,
+                      action='store_true')
+    parser.add_option('--compressor',
+                      help='specify alternate compression '
+                           'algorithm (gz, bzip2, xz, none; defaults to gz)',
+                      dest='compressor',
+                      default='gz')
+    parser.add_option('--from-stdin',
+                      help='operate in coordinator mode',
+                      dest='coordinator', action='store_true',
+                      default=False)
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
                      help='Test connectivity to Red Hat',
@@ -367,25 +386,6 @@ def set_up_options(parser):
                      help="Do not delete archive after upload",
                      action="store_true",
                      dest="keep_archive",
-                     default=False)
-    group.add_option('-c', '--conf',
-                     help="Pass a custom config file",
-                     dest="conf",
-                     default=constants.default_conf_file)
-    group.add_option('--to-stdout',
-                     help='print archive to stdout; '
-                          'sets --silent and --no-upload',
-                     dest='to_stdout',
-                     default=False,
-                     action='store_true')
-    group.add_option('--compressor',
-                     help='specify alternate compression '
-                          'algorithm (gz, bzip2, xz, none; defaults to gz)',
-                     dest='compressor',
-                     default='gz')
-    group.add_option('--from-stdin',
-                     help='operate in coordinator mode',
-                     dest='coordinator', action='store_true',
                      default=False)
 
 
