@@ -275,11 +275,11 @@ class InsightsConnection(object):
                 self._test_openssl(self.base_url, self.cert_verify)
             logger.info("\nTesting upload_url connection:")
             upload_success = self._test_urls(self.upload_url, "POST")
-            logger.info("upload_url test " + 
-                "success" if upload_success else "failed")
+            logger.info("upload_url test {0}".format( 
+                "success" if upload_success else "failed"))
             logger.info("\nTesting api_url connection:")
             api_success = self._test_urls(self.api_url, "GET")
-            logger.info("api_url test " + 
+            logger.info("api_url test {0}".format( 
                 "success" if api_success else "failed")
             if upload_success and api_success:
                 logger.info("\nConnectivity tests completed successfully")
