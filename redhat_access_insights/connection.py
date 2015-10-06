@@ -250,7 +250,7 @@ class InsightsConnection(object):
         ssl_cmd = subprocess.Popen(ssl_args, stdin=open('/dev/null'),
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         ssl_output = ssl_cmd.stdout.read()
-        ssl_exitcode = ssl_cmd.poll()
+        ssl_exitcode = ssl_cmd.wait()
         logger.info(ssl_output)
         if ssl_exitcode != 0:
             # connection error, raise exception
