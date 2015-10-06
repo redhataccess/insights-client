@@ -499,7 +499,7 @@ class InsightsConnection(object):
         """
         file_name = os.path.basename(data_collected)
         import magic
-        m = magic.open(magic.MAGIC_MIME_TYPE)
+        m = magic.open(magic.MAGIC_MIME)
         m.load()
         files = {'file': (file_name, open(data_collected, 'rb'), m.file(data_collected))}
 
