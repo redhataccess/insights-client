@@ -444,7 +444,7 @@ def handle_startup(options, config):
         logger.info(message)
 
     # Check for .unregistered file
-    if os.path.isfile(constants.unregistered_file):
+    if os.path.isfile(constants.unregistered_file) and not options.register:
         logger.error("This machine has been unregistered")
         logger.error("Use --register if you would like to re-register this machine")
         logger.error("Exiting")

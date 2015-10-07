@@ -275,12 +275,12 @@ class InsightsConnection(object):
                 self._test_openssl(self.base_url, self.cert_verify)
             logger.info("\nTesting upload_url connection:")
             upload_success = self._test_urls(self.upload_url, "POST")
-            logger.info("upload_url test " + 
-                "success" if upload_success else "failed")
+            logger.info("upload_url test {0}".format( 
+                "success" if upload_success else "failed"))
             logger.info("\nTesting api_url connection:")
             api_success = self._test_urls(self.api_url, "GET")
-            logger.info("api_url test " + 
-                "success" if api_success else "failed")
+            logger.info("api_url test {0}".format( 
+                "success" if api_success else "failed"))
             if upload_success and api_success:
                 logger.info("\nConnectivity tests completed successfully")
             else:
@@ -499,7 +499,7 @@ class InsightsConnection(object):
         """
         file_name = os.path.basename(data_collected)
         import magic
-        m = magic.open(magic.MAGIC_MIME_TYPE)
+        m = magic.open(magic.MAGIC_MIME)
         m.load()
         files = {'file': (file_name, open(data_collected, 'rb'), m.file(data_collected))}
 
