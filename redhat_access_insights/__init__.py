@@ -201,8 +201,9 @@ def collect_data_and_upload(config, options, rc=0):
                         time.sleep(constants.sleep_time)
                     else:
                         logger.error("All attempts to upload have failed!")
-                        logger.error("Please see %s for additional information", constants.default_log_file)
-                        rc=1
+                        logger.error("Please see %s for additional information",
+                                     constants.default_log_file)
+                        rc = 1
 
             if not obfuscate and not options.keep_archive:
                 dc.archive.delete_tmp_dir()
@@ -234,9 +235,9 @@ def register(config, group_id=None):
     username = config.get(APP_NAME, 'username')
     password = config.get(APP_NAME, 'password')
     if (((username == "") and
-       (password == "") and
-       (config.get(APP_NAME, 'authmethod') == 'BASIC')) and not
-       (config.get(APP_NAME, 'auto_config'))):
+         (password == "") and
+         (config.get(APP_NAME, 'authmethod') == 'BASIC')) and not
+            (config.get(APP_NAME, 'auto_config'))):
         # Get input from user
         print "Please enter your Red Hat Customer Portal Credentials"
         sys.stdout.write('User Name: ')
@@ -441,7 +442,8 @@ def handle_startup(options, config):
         elif options.display_name is None:
             logger.info('Successfully registered %s in group %s', hostname, opt_group)
         else:
-            logger.info('Successfully registered %s as %s in group %s', hostname, display_name, opt_group)
+            logger.info('Successfully registered %s as %s in group %s', hostname, display_name,
+                        opt_group)
 
         logger.info(message)
 

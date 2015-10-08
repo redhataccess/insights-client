@@ -60,7 +60,8 @@ class InsightsConnection(object):
             self.cert_verify = True
 
         protocol = "https://"
-        insecure_connection = config.getboolean(APP_NAME, "insecure_connection")
+        insecure_connection = config.getboolean(
+            APP_NAME, "insecure_connection")
         if insecure_connection:
             # This really should not be used.
             protocol = "http://"
@@ -100,7 +101,8 @@ class InsightsConnection(object):
             # HACKY
             try:
                 # Need to make a request that will fail to get proxies set up
-                session.request("GET", "https://cert-api.access.redhat.com/r/insights")
+                session.request(
+                    "GET", "https://cert-api.access.redhat.com/r/insights")
             except requests.ConnectionError:
                 pass
             # Major hack, requests/urllib3 does not make access to
@@ -110,12 +112,14 @@ class InsightsConnection(object):
                 proxy_headers = {'Proxy-Authorization': self.proxy_auth}
             session.adapters['https://'].\
                 proxy_manager[self.proxies['https']].\
-                connection_pool_kw['_proxy_headers'] = {'Proxy-Authorization': self.proxy_auth}
+                connection_pool_kw['_proxy_headers'] = {
+                    'Proxy-Authorization': self.proxy_auth}
             conns = session.adapters['https://'].\
                 proxy_manager[self.proxies['https']].pools._container
             for conn in conns:
                 connection = conns[conn]
-                connection.proxy_headers = {'Proxy-Authorization': self.proxy_auth}
+                connection.proxy_headers = {
+                    'Proxy-Authorization': self.proxy_auth}
         return session
 
     def get_proxies(self, config):
@@ -180,10 +184,12 @@ class InsightsConnection(object):
                 sys.exit()
             endpoint_addr = socket.gethostbyname(
                 endpoint_url.netloc.split(':')[0])
-            logger.debug("hostname: %s ip: %s", endpoint_url.netloc, endpoint_addr)
+            logger.debug(
+                "hostname: %s ip: %s", endpoint_url.netloc, endpoint_addr)
         except socket.gaierror as e:
             logger.debug(e)
-            logger.error("Could not resolve hostname: %s", endpoint_url.geturl())
+            logger.error(
+                "Could not resolve hostname: %s", endpoint_url.geturl())
         if self.proxies is not None:
             proxy_url = urlparse(self.proxies['https'])
             try:
@@ -196,7 +202,8 @@ class InsightsConnection(object):
                     sys.exit()
                 proxy_addr = socket.gethostbyname(
                     proxy_url.netloc.split(':')[0])
-                logger.debug("Proxy hostname: %s ip: %s", proxy_url.netloc, proxy_addr)
+                logger.debug(
+                    "Proxy hostname: %s ip: %s", proxy_url.netloc, proxy_addr)
             except socket.gaierror as e:
                 logger.debug(e)
                 logger.error("Could not resolve proxy %s", proxy_url.geturl())
@@ -224,14 +231,16 @@ class InsightsConnection(object):
                 logger.debug("HTTP Response Text: %s", test_req.text)
                 # Strata returns 405 on a GET sometimes, this isn't a big deal
                 if test_req.status_code == 200 or test_req.status_code == 201:
-                    logger.info("Successfully connected to: %s", test_url + ext)
+                    logger.info(
+                        "Successfully connected to: %s", test_url + ext)
                     return True
                 else:
                     logger.info("Connection failed")
                     return False
             except requests.ConnectionError, exc:
                 last_ex = exc
-                logger.error("Could not successfully connect to: %s", test_url + ext)
+                logger.error(
+                    "Could not successfully connect to: %s", test_url + ext)
                 print exc
         if last_ex:
             raise last_ex
@@ -248,7 +257,7 @@ class InsightsConnection(object):
         if type(cert) is not bool:
             ssl_args += ['-CAfile', cert]
         ssl_cmd = subprocess.Popen(ssl_args, stdin=open('/dev/null'),
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         ssl_output = ssl_cmd.stdout.read()
         ssl_exitcode = ssl_cmd.wait()
         logger.info(ssl_output)
@@ -258,8 +267,8 @@ class InsightsConnection(object):
             raise requests.ConnectionError('Could not connect to: ' + url)
         if 'Verify return code: 19' in ssl_output:
             logger.info('Certificate chain test failed! '
-                'Self signed certificate detected in chain')
-                return False
+                        'Self signed certificate detected in chain')
+            return False
         else:
             logger.info("Certificate chain test success")
             return True
@@ -275,7 +284,7 @@ class InsightsConnection(object):
             if not self.proxies:
                 logger.info("=== Begin Certificate Chain Test ===")
                 cert_success = self._test_openssl(self.base_url,
-                    self.cert_verify)
+                                                  self.cert_verify)
                 logger.info("=== End Certificate Chain Test: {0} ===\n".format(
                     "SUCCESS" if cert_success else "FAILURE"))
             else:
@@ -292,7 +301,7 @@ class InsightsConnection(object):
                 logger.info("\nConnectivity tests completed successfully")
             else:
                 logger.info("\nConnectivity tests completed with some errors")
-                rc=1
+                rc = 1
         except requests.ConnectionError, exc:
             print exc
             logger.error('Connectivity test failed! '
@@ -308,7 +317,8 @@ class InsightsConnection(object):
         """
         if req.status_code >= 400:
             logger.error("ERROR: Upload failed!")
-            logger.info("Debug Information:\nHTTP Status Code: %s", req.status_code)
+            logger.info(
+                "Debug Information:\nHTTP Status Code: %s", req.status_code)
             logger.info("HTTP Status Text: %s", req.reason)
             if req.status_code == 401:
                 logger.error("Authorization Required.")
@@ -355,11 +365,13 @@ class InsightsConnection(object):
         """
         Retrieve branch_info from Satellite Server
         """
-        logger.debug("Obtaining branch information from %s", self.branch_info_url)
+        logger.debug(
+            "Obtaining branch information from %s", self.branch_info_url)
         branch_info = self.session.get(self.branch_info_url)
         logger.debug("GET branch_info status: %s", branch_info.status_code)
         try:
-            logger.debug("Branch information: %s", json.dumps(branch_info.json()))
+            logger.debug(
+                "Branch information: %s", json.dumps(branch_info.json()))
         except ValueError:
             raise LookupError
         branch_info = branch_info.json()
@@ -384,16 +396,22 @@ class InsightsConnection(object):
             remote_leaf = branch_info['remote_leaf']
 
         except LookupError:
-            logger.error("ERROR: Could not determine branch information, exiting!")
-            logger.error("See %s for more information", constants.default_log_file)
-            logger.error("Could not register system, running configuration test")
+            logger.error(
+                "ERROR: Could not determine branch information, exiting!")
+            logger.error(
+                "See %s for more information", constants.default_log_file)
+            logger.error(
+                "Could not register system, running configuration test")
             self.test_connection(1)
 
         except requests.ConnectionError as e:
             logger.debug(e)
-            logger.error("ERROR: Could not determine branch information, exiting!")
-            logger.error("See %s for more information", constants.default_log_file)
-            logger.error("Could not register system, running configuration test")
+            logger.error(
+                "ERROR: Could not determine branch information, exiting!")
+            logger.error(
+                "See %s for more information", constants.default_log_file)
+            logger.error(
+                "Could not register system, running configuration test")
             self.test_connection(1)
 
         data = {'machine_id': machine_id,
@@ -415,7 +433,8 @@ class InsightsConnection(object):
             logger.debug("POST System status: %d", system.status_code)
         except requests.ConnectionError as e:
             logger.debug(e)
-            logger.error("Could not register system, running configuration test")
+            logger.error(
+                "Could not register system, running configuration test")
             self.test_connection(1)
         return system
 
@@ -463,7 +482,8 @@ class InsightsConnection(object):
         try:
             logger.debug("Unregistering %s", machine_id)
             self.session.delete(self.api_url + "/v1/systems/" + machine_id)
-            logger.info("Successfully unregistered from the Red Hat Access Insights Service")
+            logger.info(
+                "Successfully unregistered from the Red Hat Access Insights Service")
             write_unregistered_file()
         except requests.ConnectionError as e:
             logger.debug(e)
@@ -509,7 +529,8 @@ class InsightsConnection(object):
         import magic
         m = magic.open(magic.MAGIC_MIME)
         m.load()
-        files = {'file': (file_name, open(data_collected, 'rb'), m.file(data_collected))}
+        files = {
+            'file': (file_name, open(data_collected, 'rb'), m.file(data_collected))}
 
         upload_url = self.upload_url + '/' + generate_machine_id()
         logger.debug("Uploading %s to %s", data_collected, upload_url)
