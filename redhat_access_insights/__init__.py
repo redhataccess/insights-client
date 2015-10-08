@@ -204,7 +204,8 @@ def collect_data_and_upload(config, options, rc=0):
                     logger.error("Upload attempt %d of %d failed! Status Code: %s",
                                  tries + 1, options.retries, upload.status_code)
                     if tries + 1 != options.retries:
-                        logger.info("Waiting %d seconds then retrying", constants.sleep_time)
+                        logger.info("Waiting %d seconds then retrying",
+                                    constants.sleep_time)
                         time.sleep(constants.sleep_time)
                     else:
                         logger.error("All attempts to upload have failed!")
@@ -241,10 +242,12 @@ def register(config, group_id=None):
     """
     username = config.get(APP_NAME, 'username')
     password = config.get(APP_NAME, 'password')
-    if (((username == "") and
-         (password == "") and
-         (config.get(APP_NAME, 'authmethod') == 'BASIC')) and not
-            (config.get(APP_NAME, 'auto_config'))):
+    if ((
+            username == "" and
+            password == "" and
+            config.get(APP_NAME, 'authmethod') == 'BASIC')
+        and
+            not config.get(APP_NAME, 'auto_config')):
         # Get input from user
         print "Please enter your Red Hat Customer Portal Credentials"
         sys.stdout.write('User Name: ')
@@ -298,7 +301,8 @@ def set_up_options(parser):
                       default=False)
     parser.add_option('--display-name',
                       action="store",
-                      help='Display name for this system.  Must be used with --register',
+                      help='Display name for this system.  '
+                           'Must be used with --register',
                       dest="display_name")
     parser.add_option('--group',
                       action="store",
@@ -307,7 +311,8 @@ def set_up_options(parser):
     parser.add_option('--retry',
                       action="store",
                       type="int",
-                      help=('Number of times to retry uploading. %s seconds between tries'
+                      help=('Number of times to retry uploading. '
+                            '%s seconds between tries'
                             % constants.sleep_time),
                       default=1,
                       dest="retries")
@@ -387,8 +392,6 @@ def set_up_options(parser):
                      action="store_true",
                      dest="keep_archive",
                      default=False)
-
-
     parser.add_option_group(group)
 
 

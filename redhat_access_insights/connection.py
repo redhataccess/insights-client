@@ -60,8 +60,8 @@ class InsightsConnection(object):
             self.cert_verify = True
 
         protocol = "https://"
-        insecure_connection = config.getboolean(
-            APP_NAME, "insecure_connection")
+        insecure_connection = config.getboolean(APP_NAME,
+                                                "insecure_connection")
         if insecure_connection:
             # This really should not be used.
             protocol = "http://"
@@ -107,19 +107,14 @@ class InsightsConnection(object):
                 pass
             # Major hack, requests/urllib3 does not make access to
             # proxy_headers easy
-            session.adapters['https://'].\
-                proxy_manager[self.proxies['https']].\
-                proxy_headers = {'Proxy-Authorization': self.proxy_auth}
-            session.adapters['https://'].\
-                proxy_manager[self.proxies['https']].\
-                connection_pool_kw['_proxy_headers'] = {
-                    'Proxy-Authorization': self.proxy_auth}
-            conns = session.adapters['https://'].\
-                proxy_manager[self.proxies['https']].pools._container
+            proxy_mgr = session.adapters['https://'].proxy_manager[self.proxies['https']]
+            auth_map = {'Proxy-Authorization': self.proxy_auth}
+            proxy_mgr.proxy_headers = auth_map
+            proxy_mgr.connection_pool_kw['_proxy_headers'] = auth_map
+            conns = proxy_mgr.pools._container
             for conn in conns:
                 connection = conns[conn]
-                connection.proxy_headers = {
-                    'Proxy-Authorization': self.proxy_auth}
+                connection.proxy_headers = auth_map
         return session
 
     def get_proxies(self, config):
@@ -257,7 +252,8 @@ class InsightsConnection(object):
         if type(cert) is not bool:
             ssl_args += ['-CAfile', cert]
         ssl_cmd = subprocess.Popen(ssl_args, stdin=open('/dev/null'),
-                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
         ssl_output = ssl_cmd.stdout.read()
         ssl_exitcode = ssl_cmd.wait()
         logger.info(ssl_output)
@@ -317,8 +313,8 @@ class InsightsConnection(object):
         """
         if req.status_code >= 400:
             logger.error("ERROR: Upload failed!")
-            logger.info(
-                "Debug Information:\nHTTP Status Code: %s", req.status_code)
+            logger.info("Debug Information:\nHTTP Status Code: %s",
+                        req.status_code)
             logger.info("HTTP Status Text: %s", req.reason)
             if req.status_code == 401:
                 logger.error("Authorization Required.")
@@ -365,13 +361,13 @@ class InsightsConnection(object):
         """
         Retrieve branch_info from Satellite Server
         """
-        logger.debug(
-            "Obtaining branch information from %s", self.branch_info_url)
+        logger.debug("Obtaining branch information from %s",
+                     self.branch_info_url)
         branch_info = self.session.get(self.branch_info_url)
         logger.debug("GET branch_info status: %s", branch_info.status_code)
         try:
-            logger.debug(
-                "Branch information: %s", json.dumps(branch_info.json()))
+            logger.debug("Branch information: %s",
+                         json.dumps(branch_info.json()))
         except ValueError:
             raise LookupError
         branch_info = branch_info.json()
