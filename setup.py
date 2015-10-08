@@ -10,7 +10,7 @@ def get_version():
         if 'version' in line:
             return eval(line.split('=')[-1])
 
-VERSION = get_version()
+VERSION = get_version().split('-')[0]
 SHORT_DESC = "Red Hat Access Insights"
 LONG_DESC = """
 Uploads insightful information to Red Hat
