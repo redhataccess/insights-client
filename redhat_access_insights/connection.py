@@ -259,8 +259,10 @@ class InsightsConnection(object):
         if 'Verify return code: 19' in ssl_output:
             logger.info('Certificate chain test failed! '
                 'Self signed certificate detected in chain')
+                return False
         else:
             logger.info("Certificate chain test success")
+            return True
 
     def test_connection(self, rc=0):
         """
@@ -271,20 +273,26 @@ class InsightsConnection(object):
         logger.info("Certificate Verification: %s", self.cert_verify)
         try:
             if not self.proxies:
-                logger.info("\nTesting certificate chain:")
-                self._test_openssl(self.base_url, self.cert_verify)
-            logger.info("\nTesting upload_url connection:")
+                logger.info("=== Begin Certificate Chain Test ===")
+                cert_success = self._test_openssl(self.base_url,
+                    self.cert_verify)
+                logger.info("=== End Certificate Chain Test: {0} ===\n".format(
+                    "SUCCESS" if cert_success else "FAILURE"))
+            else:
+                cert_success = True
+            logger.info("=== Begin Upload URL Connection Test ===")
             upload_success = self._test_urls(self.upload_url, "POST")
-            logger.info("upload_url test {0}".format( 
-                "success" if upload_success else "failed"))
-            logger.info("\nTesting api_url connection:")
+            logger.info("=== End Upload URL Connection Test: {0} ===\n".format(
+                "SUCCESS" if upload_success else "FAILURE"))
+            logger.info("=== Begin API URL Connection Test ===")
             api_success = self._test_urls(self.api_url, "GET")
-            logger.info("api_url test {0}".format( 
-                "success" if api_success else "failed"))
-            if upload_success and api_success:
+            logger.info("=== End API URL Connection Test: {0} ===\n".format(
+                "SUCCESS" if api_success else "FAILURE"))
+            if cert_success and upload_success and api_success:
                 logger.info("\nConnectivity tests completed successfully")
             else:
                 logger.info("\nConnectivity tests completed with some errors")
+                rc=1
         except requests.ConnectionError, exc:
             print exc
             logger.error('Connectivity test failed! '

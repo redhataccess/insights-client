@@ -145,7 +145,7 @@ def handle_branch_info_error(msg, options):
         sys.exit()
 
 
-def collect_data_and_upload(config, options):
+def collect_data_and_upload(config, options, rc=0):
     """
     All the heavy lifting done here
     """
@@ -202,6 +202,7 @@ def collect_data_and_upload(config, options):
                     else:
                         logger.error("All attempts to upload have failed!")
                         logger.error("Please see %s for additional information", constants.default_log_file)
+                        rc=1
 
             if not obfuscate and not options.keep_archive:
                 dc.archive.delete_tmp_dir()
@@ -215,6 +216,7 @@ def collect_data_and_upload(config, options):
             handle_file_output(options, tar_file)
     else:
         logger.info('See Insights data in %s', dc.archive.archive_dir)
+    return rc
 
 
 def handle_file_output(options, tar_file):
@@ -486,10 +488,12 @@ def _main():
     handle_startup(options, config)
 
     # do work
-    collect_data_and_upload(config, options)
+    rc = collect_data_and_upload(config, options)
 
     # Roll log over on successful upload
     handler.doRollover()
+
+    sys.exit(rc)
 
 if __name__ == '__main__':
     _main()
