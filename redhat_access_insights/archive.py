@@ -65,8 +65,6 @@ class InsightsArchive(object):
         try:
             os.makedirs(os.path.dirname(full_path))
         except OSError:
-            # This is really chatty :(
-            # logger.debug("Could not create dir for %s" % os.path.dirname(full_path))
             pass
         logger.debug("Copying %s to %s", path, full_path)
         shutil.copyfile(path, full_path)

@@ -3,18 +3,19 @@
  Gather and Upload Insights Data for
  Red Hat Access Insights
 """
-import os
-import sys
-import logging
-import inspect
-import traceback
-import logging.handlers
 import ConfigParser
 import getpass
+import inspect
+import json
+import logging
+import logging.handlers
 import optparse
-import time
+import os
 import requests
 import shutil
+import sys
+import time
+import traceback
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id)
@@ -163,19 +164,25 @@ def collect_data_and_upload(config, options, rc=0):
     pc = InsightsConfig(config, pconn)
     archive = InsightsArchive(compressor=options.compressor)
     dc = DataCollector(archive)
+
+    stdin_config = json.load(sys.stdin) if options.from_stdin else {}
+
     start = time.clock()
-    collection_rules, rm_conf = pc.get_conf(options.update)
+    collection_rules, rm_conf = pc.get_conf(options.update, stdin_config)
     elapsed = (time.clock() - start)
     logger.debug("Collection Rules Elapsed Time: %s", elapsed)
+
     start = time.clock()
     logger.info('Starting to collect Insights data')
     dc.run_commands(collection_rules, rm_conf)
     elapsed = (time.clock() - start)
     logger.debug("Command Collection Elapsed Time: %s", elapsed)
+
     start = time.clock()
     dc.copy_files(collection_rules, rm_conf)
     elapsed = (time.clock() - start)
     logger.debug("File Collection Elapsed Time: %s", elapsed)
+
     dc.write_branch_info(branch_info)
     obfuscate = config.getboolean(APP_NAME, "obfuscate")
 
@@ -197,7 +204,8 @@ def collect_data_and_upload(config, options, rc=0):
                     logger.error("Upload attempt %d of %d failed! Status Code: %s",
                                  tries + 1, options.retries, upload.status_code)
                     if tries + 1 != options.retries:
-                        logger.info("Waiting %d seconds then retrying", constants.sleep_time)
+                        logger.info("Waiting %d seconds then retrying",
+                                    constants.sleep_time)
                         time.sleep(constants.sleep_time)
                     else:
                         logger.error("All attempts to upload have failed!")
@@ -234,10 +242,12 @@ def register(config, group_id=None):
     """
     username = config.get(APP_NAME, 'username')
     password = config.get(APP_NAME, 'password')
-    if (((username == "") and
-         (password == "") and
-         (config.get(APP_NAME, 'authmethod') == 'BASIC')) and not
-            (config.get(APP_NAME, 'auto_config'))):
+    if ((
+            username == "" and
+            password == "" and
+            config.get(APP_NAME, 'authmethod') == 'BASIC')
+        and
+            not config.get(APP_NAME, 'auto_config')):
         # Get input from user
         print "Please enter your Red Hat Customer Portal Credentials"
         sys.stdout.write('User Name: ')
@@ -291,7 +301,8 @@ def set_up_options(parser):
                       default=False)
     parser.add_option('--display-name',
                       action="store",
-                      help='Display name for this system.  Must be used with --register',
+                      help='Display name for this system.  '
+                           'Must be used with --register',
                       dest="display_name")
     parser.add_option('--group',
                       action="store",
@@ -300,7 +311,8 @@ def set_up_options(parser):
     parser.add_option('--retry',
                       action="store",
                       type="int",
-                      help=('Number of times to retry uploading. %s seconds between tries'
+                      help=('Number of times to retry uploading. '
+                            '%s seconds between tries'
                             % constants.sleep_time),
                       default=1,
                       dest="retries")
@@ -323,6 +335,25 @@ def set_up_options(parser):
                       help='Disable automatic scheduling',
                       action='store_true',
                       dest='no_schedule',
+                      default=False)
+    parser.add_option('-c', '--conf',
+                      help="Pass a custom config file",
+                      dest="conf",
+                      default=constants.default_conf_file)
+    parser.add_option('--to-stdout',
+                      help='print archive to stdout; '
+                           'sets --silent and --no-upload',
+                      dest='to_stdout',
+                      default=False,
+                      action='store_true')
+    parser.add_option('--compressor',
+                      help='specify alternate compression '
+                           'algorithm (gz, bzip2, xz, none; defaults to gz)',
+                      dest='compressor',
+                      default='gz')
+    parser.add_option('--from-stdin',
+                      help='operate in coordinator mode',
+                      dest='coordinator', action='store_true',
                       default=False)
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
@@ -361,22 +392,6 @@ def set_up_options(parser):
                      action="store_true",
                      dest="keep_archive",
                      default=False)
-    group.add_option('-c', '--conf',
-                     help="Pass a custom config file",
-                     dest="conf",
-                     default=constants.default_conf_file)
-    group.add_option('--to-stdout',
-                     help='print archive to stdout; '
-                          'sets --silent and --no-upload',
-                     dest='to_stdout',
-                     default=False,
-                     action='store_true')
-    group.add_option('--compressor',
-                     help='specify alternate compression '
-                          'algorithm (gz, bzip2, xz, none; defaults to gz)',
-                     dest='compressor',
-                     default='gz')
-
     parser.add_option_group(group)
 
 
@@ -474,6 +489,9 @@ def _main():
     if len(args) > 0:
         parser.error("Unknown arguments: %s" % args)
         sys.exit(1)
+
+    # from_stdin mode implies to_stdout
+    options.to_stdout = options.to_stdout or options.from_stdin
 
     if options.to_stdout:
         options.silent = True

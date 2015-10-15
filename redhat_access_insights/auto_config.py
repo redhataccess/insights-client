@@ -60,7 +60,8 @@ def set_auto_configuration(config, hostname, ca_cert, proxy):
 
     if not verify_connectivity(config):
         logger.warn("Could not auto configure, falling back to static config")
-        logger.warn("See %s for additional information", constants.default_log_file)
+        logger.warn("See %s for additional information",
+                    constants.default_log_file)
         config.set(APP_NAME, 'base_url', saved_base_url)
         if proxy is not None:
             if saved_proxy is not None and saved_proxy.lower() == 'none':
@@ -105,7 +106,8 @@ def _try_satellite6_configuration(config):
             else:
                 proxy = proxy + rhsm_proxy_hostname + ':' + rhsm_proxy_port
                 logger.debug("RHSM Proxy: %s", proxy)
-        logger.debug("Found Satellite Server Host: %s, Port: %s", rhsm_hostname, rhsm_hostport)
+        logger.debug("Found Satellite Server Host: %s, Port: %s",
+                     rhsm_hostname, rhsm_hostport)
         rhsm_ca = rhsm_config.get('rhsm', 'repo_ca_cert')
         logger.debug("Found CA: %s", rhsm_ca)
         logger.debug("Setting authmethod to CERT")
