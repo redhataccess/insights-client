@@ -40,6 +40,7 @@ def parse_config_file(conf_file):
     """
     parsedconfig = ConfigParser.RawConfigParser(
         {'loglevel': constants.log_level,
+         'trace': 'False',
          'app_name': constants.app_name,
          'auto_config': 'True',
          'authmethod': constants.auth_method,
@@ -500,6 +501,9 @@ def _main():
     config = parse_config_file(options.conf)
     logger, handler = set_up_logging(config, options)
 
+    if config.get(APP_NAME, 'trace'):
+        sys.settrace(trace_calls)
+
     # Defer logging till it's ready
     logger.debug('invoked with args: %s', options)
     logger.debug("Version: " + constants.version)
@@ -514,6 +518,24 @@ def _main():
     handler.doRollover()
 
     sys.exit(rc)
+
+
+def trace_calls(frame, event, arg):
+    if event != 'call':
+        return
+    co = frame.f_code
+    func_name = co.co_name
+    if func_name == 'write':
+        return
+    func_line_no = frame.f_lineno
+    func_filename = co.co_filename
+    caller = frame.f_back
+    caller_line_no = caller.f_lineno
+    caller_filename = caller.f_code.co_filename
+    print 'Call to %s on line %s of %s from line %s of %s' % \
+        (func_name, func_line_no, func_filename,
+         caller_line_no, caller_filename)
+    return
 
 if __name__ == '__main__':
     _main()
