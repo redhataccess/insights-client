@@ -5,7 +5,6 @@ import requests
 import sys
 import os
 import json
-import subprocess
 
 import traceback
 import logging
@@ -81,6 +80,8 @@ class InsightsConnection(object):
         self.get_proxies(config)
         self._validate_hostnames()
         self.session = self._init_session()
+        # [barfing intensifies]
+        self.self_signed_cert = False
 
     def _init_session(self):
         """
@@ -240,34 +241,72 @@ class InsightsConnection(object):
         if last_ex:
             raise last_ex
 
-    def _test_openssl(self, url, cert):
+    def _verify_check(self, conn, cert, err, depth, ret):
+        del conn, cert
+        logger.info('depth=' + str(depth))
+        logger.info('verify error:num=' + str(err))
+        logger.info('verify return:' + str(ret))
+        if err == 19:
+            self.self_signed_cert = True
+        return True
+
+    def _generate_cert_str(self, cert_data, prefix):
+        return prefix + '/'.join(['='.join(a) for a in
+                                  cert_data.get_components()])
+
+    def _test_openssl(self):
         '''
         Run a test with openssl to detect any MITM proxies
         '''
         from urlparse import urlparse
-        hostname = urlparse(url).netloc
-        if len(hostname.split(':')) < 2:
-            hostname = hostname + ':443'
-        ssl_args = ['openssl', 's_client', '-connect', hostname]
-        if type(cert) is not bool:
-            ssl_args += ['-CAfile', cert]
-        ssl_cmd = subprocess.Popen(ssl_args, stdin=open('/dev/null'),
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT)
-        ssl_output = ssl_cmd.stdout.read()
-        ssl_exitcode = ssl_cmd.wait()
-        logger.info(ssl_output)
-        if ssl_exitcode != 0:
-            # connection error, raise exception
-            logger.error('Certificate chain test failed!')
-            raise requests.ConnectionError('Could not connect to: ' + url)
-        if 'Verify return code: 19' in ssl_output:
-            logger.info('Certificate chain test failed! '
-                        'Self signed certificate detected in chain')
-            return False
+        from OpenSSL import SSL, crypto
+        import socket
+        success = True
+        hostname = urlparse(self.base_url).netloc.split(':')
+        sock = socket.socket()
+        if self.proxies:
+            connect_str = 'CONNECT {0} HTTP/1.0\r\n'.format(hostname)
+            if self.proxy_auth:
+                connect_str += 'Proxy-Authorization: {0}\r\n'.format(self.proxy_auth)
+            connect_str += '\r\n'
+            proxy = urlparse(self.proxies).netloc.split(':')
+            sock.connect((proxy[0], int(proxy[1])))
+            sock.send(connect_str)
+            sock.recv(4096)
         else:
-            logger.info("Certificate chain test success")
-            return True
+            sock.connect((hostname[0], 443))
+        ctx = SSL.Context(SSL.TLSv1_METHOD)
+        ctx.load_verify_locations(self.cert_verify, None)
+        ctx.set_verify(SSL.VERIFY_PEER, self._verify_check)
+        ssl_conn = SSL.Connection(ctx, sock)
+        ssl_conn.set_connect_state()
+        try:
+            # output from verify generated here
+            ssl_conn.do_handshake()
+            # print cert chain
+            certs = ssl_conn.get_peer_cert_chain()
+            logger.info('---\nCertificate chain')
+            for depth, c in enumerate(certs):
+                logger.info(self._generate_cert_str(c.get_subject(),
+                                                    str(depth) + ' s :/'))
+                logger.info(self._generate_cert_str(c.get_issuer(),
+                                                    '  i :/'))
+            # print server cert
+            server_cert = ssl_conn.get_peer_certificate()
+            logger.info('---\nServer certificate')
+            logger.info(crypto.dump_certificate(crypto.FILETYPE_PEM, server_cert))
+            logger.info(self._generate_cert_str(server_cert.get_subject(), 'subject=/'))
+            logger.info(self._generate_cert_str(server_cert.get_issuer(), 'issuer=/'))
+            logger.info('---')
+        except SSL.Error:
+            success = False
+            logger.error('Certificate chain test failed!')
+        ssl_conn.shutdown()
+        ssl_conn.close()
+        if self.self_signed_cert:
+            logger.error('Certificate chain test failed!  Self '
+                         'signed certificate detected in chain')
+        return success and not self.self_signed_cert
 
     def test_connection(self, rc=0):
         """
@@ -277,22 +316,18 @@ class InsightsConnection(object):
         logger.info("Proxy config: %s", self.proxies)
         logger.info("Certificate Verification: %s", self.cert_verify)
         try:
-            if not self.proxies:
-                logger.info("=== Begin Certificate Chain Test ===")
-                cert_success = self._test_openssl(self.base_url,
-                                                  self.cert_verify)
-                logger.info("=== End Certificate Chain Test: {0} ===\n".format(
-                    "SUCCESS" if cert_success else "FAILURE"))
-            else:
-                cert_success = True
+            logger.info("=== Begin Certificate Chain Test ===")
+            cert_success = self._test_openssl()
+            logger.info("=== End Certificate Chain Test: %s ===\n",
+                        "SUCCESS" if cert_success else "FAILURE")
             logger.info("=== Begin Upload URL Connection Test ===")
             upload_success = self._test_urls(self.upload_url, "POST")
-            logger.info("=== End Upload URL Connection Test: {0} ===\n".format(
-                "SUCCESS" if upload_success else "FAILURE"))
+            logger.info("=== End Upload URL Connection Test: %s ===\n",
+                        "SUCCESS" if upload_success else "FAILURE")
             logger.info("=== Begin API URL Connection Test ===")
             api_success = self._test_urls(self.api_url, "GET")
-            logger.info("=== End API URL Connection Test: {0} ===\n".format(
-                "SUCCESS" if api_success else "FAILURE"))
+            logger.info("=== End API URL Connection Test: %s ===\n",
+                        "SUCCESS" if api_success else "FAILURE")
             if cert_success and upload_success and api_success:
                 logger.info("\nConnectivity tests completed successfully")
             else:
