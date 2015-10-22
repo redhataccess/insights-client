@@ -103,7 +103,7 @@ class InsightsConfig(object):
             json_response.write(req.text)
             json_response.file.flush()
         else:
-            logger.error("ERROR: Could not download dyanmic configuration")
+            logger.error("ERROR: Could not download dynamic configuration")
             logger.error("Debug Info: \nConf status: %s", req.status_code)
             sys.exit(1)
 
@@ -115,7 +115,7 @@ class InsightsConfig(object):
         if raw:
             return req.text
         else:
-            json.loads(req.text)
+            return json.loads(req.text)
 
     def fetch_gpg(self):
         logger.info("Attemping to download collection "
