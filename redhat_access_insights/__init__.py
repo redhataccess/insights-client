@@ -353,8 +353,8 @@ def set_up_options(parser):
                       dest='compressor',
                       default='gz')
     parser.add_option('--from-stdin',
-                      help='operate in coordinator mode',
-                      dest='coordinator', action='store_true',
+                      help='take configuration from stdin',
+                      dest='from_stdin', action='store_true',
                       default=False)
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
@@ -501,7 +501,7 @@ def _main():
     config = parse_config_file(options.conf)
     logger, handler = set_up_logging(config, options)
 
-    if config.get(APP_NAME, 'trace'):
+    if config.getboolean(APP_NAME, 'trace'):
         sys.settrace(trace_calls)
 
     # Defer logging till it's ready
