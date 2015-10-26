@@ -276,7 +276,8 @@ class InsightsConnection(object):
         else:
             sock.connect((hostname[0], 443))
         ctx = SSL.Context(SSL.TLSv1_METHOD)
-        ctx.load_verify_locations(self.cert_verify, None)
+        if type(self.cert_verify) is not bool:
+            ctx.load_verify_locations(self.cert_verify, None)
         ctx.set_verify(SSL.VERIFY_PEER, self._verify_check)
         ssl_conn = SSL.Connection(ctx, sock)
         ssl_conn.set_connect_state()
