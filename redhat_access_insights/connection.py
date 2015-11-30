@@ -210,7 +210,8 @@ class InsightsConnection(object):
         Actually test the url
         """
         from urlparse import urlparse
-        files = {'file': ("test", "test")}
+        # tell the api we're just testing the URL
+        test_flag = {'test': 'test'}
         url = urlparse(url)
         test_url = url.scheme + "://" + url.netloc
         last_ex = None
@@ -219,7 +220,7 @@ class InsightsConnection(object):
                 logger.info("Testing: %s", test_url + ext)
                 if method is "POST":
                     test_req = self.session.post(
-                        test_url + ext, timeout=10, files=files)
+                        test_url + ext, timeout=10, data=test_flag)
                 elif method is "GET":
                     test_req = self.session.get(test_url + ext, timeout=10)
                 logger.info("HTTP Status Code: %d", test_req.status_code)
