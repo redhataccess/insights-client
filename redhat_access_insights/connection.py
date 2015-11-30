@@ -77,6 +77,7 @@ class InsightsConnection(object):
         if self.branch_info_url is None:
             self.branch_info_url = self.base_url + "/v1/branch_info"
         self.authmethod = config.get(APP_NAME, 'authmethod')
+        self.systemid = config.get(APP_NAME, 'systemid')
         self.get_proxies(config)
         self._validate_hostnames()
         self.session = self._init_session()
@@ -90,6 +91,8 @@ class InsightsConnection(object):
         session = requests.Session()
         session.headers = {'User-Agent': self.user_agent,
                            'Accept': 'application/json'}
+        if self.systemid is not None:
+            session.headers.update({'systemid': self.systemid})
         if self.authmethod == "BASIC":
             session.auth = (self.username, self.password)
         elif self.authmethod == "CERT":
@@ -98,6 +101,7 @@ class InsightsConnection(object):
             session.cert = (cert, key)
         session.verify = self.cert_verify
         session.proxies = self.proxies
+        session.trust_env = False
         if self.proxy_auth:
             # HACKY
             try:

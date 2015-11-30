@@ -18,7 +18,7 @@ def verify_connectivity(config):
     """
     logger.debug("Verifying Connectivity")
     for item, value in config.items(APP_NAME):
-        if item != 'password' and item != 'proxy':
+        if item != 'password' and item != 'proxy' and item != 'systemid':
             logger.debug("%s:%s", item, value)
     ic = InsightsConnection(config)
     try:
@@ -132,13 +132,26 @@ def _try_satellite6_configuration(config):
         return False
 
 
+def _read_systemid_file(path):
+    with open(path, "r") as systemid:
+        data = systemid.read().replace('\n', '')
+    return data
+
+
 def _try_satellite5_configuration(config):
     """
     Attempt to determine Satellite 5 Configuration
     """
     logger.debug("Trying Satellite 5 auto_config")
     rhn_config = '/etc/sysconfig/rhn/up2date'
+    systemid = '/etc/sysconfig/rhn/systemid'
     if os.path.isfile(rhn_config):
+        if os.path.isfile(systemid):
+            config.set(APP_NAME, 'systemid', _read_systemid_file(systemid))
+        else:
+            logger.debug("Could not find Satellite 5 systemid file.")
+            return False
+
         logger.debug("Found Satellite 5 Config")
         rhn_conf_file = file(rhn_config, 'r')
         hostname = None

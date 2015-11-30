@@ -105,6 +105,7 @@ class InsightsConfig(object):
         else:
             logger.error("ERROR: Could not download dynamic configuration")
             logger.error("Debug Info: \nConf status: %s", req.status_code)
+            logger.error("Debug Info: \nConf message: %s", req.text)
             sys.exit(1)
 
         if self.gpg:
