@@ -56,6 +56,7 @@ def parse_config_file(conf_file):
          'gpg': 'True',
          'username': '',
          'password': '',
+         'systemid': None,
          'proxy': None,
          'insecure_connection': 'False',
          'no_schedule': 'False'})
