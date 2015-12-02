@@ -18,12 +18,14 @@ import time
 import traceback
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
-                       generate_machine_id)
+                       generate_machine_id,
+                       write_lastupload_file)
 from collection_rules import InsightsConfig
 from data_collector import DataCollector
 from schedule import InsightsSchedule
 from connection import InsightsConnection
 from archive import InsightsArchive
+from support import InsightsSupport
 
 from constants import InsightsConstants as constants
 
@@ -198,6 +200,7 @@ def collect_data_and_upload(config, options, rc=0):
             for tries in range(options.retries):
                 upload = pconn.upload_archive(tar_file, collection_duration)
                 if upload.status_code == 201:
+                    write_lastupload_file()
                     logger.info("Upload completed successfully!")
                     break
                 elif upload.status_code == 412:
@@ -374,6 +377,16 @@ def set_up_options(parser):
                      action="store_true",
                      dest="verbose",
                      default=False)
+    group.add_option('--support',
+                     help="Create a support logfile for Red Hat Insights",
+                     action="store_true",
+                     dest="support",
+                     default=False)
+    group.add_option('--status',
+                     help="Check this machine's registration status with Red Hat Insights",
+                     action="store_true",
+                     dest="status",
+                     default=False)
     group.add_option('--no-gpg',
                      help="Do not verify GPG signature",
                      action="store_true",
@@ -463,6 +476,19 @@ def handle_startup(options, config):
                         opt_group)
 
         logger.info(message)
+
+    # Collect debug/log information
+    if options.support:
+        support = InsightsSupport(config)
+        support.collect_support_info()
+        sys.exit(0)
+
+    # Just check registration status
+    if options.status:
+        support = InsightsSupport(config)
+        reg_check = support.registration_check()
+        logger.info('\n'.join(reg_check))
+        sys.exit(0)
 
     # Check for .unregistered file
     if os.path.isfile(constants.unregistered_file) and not options.register:

@@ -511,6 +511,26 @@ class InsightsConnection(object):
         logger.debug("PUT group status: %d", put_group.status_code)
         logger.debug("PUT Group: %s", put_group.json())
 
+    def api_registration_check(self):
+        '''
+        Check registration status through API
+        '''
+        machine_id = generate_machine_id()
+        try:
+            res = self.session.get(self.api_url + '/v1/systems/' + machine_id)
+        except request.ConnectionError as e:
+            return False
+        # check the 'unregistered_at' attribute of the response
+        try:
+            unreg_status = json.loads(res.content)['unregistered_at']
+        except AttributeError:
+            # no record of this machine, machine was never registered
+            return None
+        if unreg_status is None:
+            return True
+        else:
+            return unreg_status
+
     def unregister(self):
         """
         Unregister this system from the insights service

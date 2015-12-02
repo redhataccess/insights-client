@@ -159,6 +159,14 @@ def write_file_with_text(path, text):
     file_from_text.close()
 
 
+def write_lastupload_file():
+    """
+    Write .lastupload out to disk
+    """
+    reg = file(constants.lastupload_file, 'w')
+    reg.write(datetime.datetime.isoformat(datetime.datetime.now()))
+
+
 def validate_remove_file():
     """
     Validate the remove file
