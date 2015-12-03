@@ -59,9 +59,8 @@ class DataCollector(object):
         Execute a command through the system shell. First checks to see if the
         requested command is executable. Returns (returncode, stdout, 0)
         """
-        cmd_env = os.environ
         # ensure consistent locale for collected command output
-        cmd_env['LC_ALL'] = 'C'
+        cmd_env = {'LC_ALL': 'C'}
         if not six.PY3:
             command = command.encode('utf-8', 'ignore')
         args = shlex.split(command)
