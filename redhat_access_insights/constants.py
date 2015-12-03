@@ -13,7 +13,6 @@ class InsightsConstants(object):
     default_conf_dir = '/etc/' + app_name + '/'
     log_dir = '/var/log/' + app_name
     default_log_file = log_dir + '/' + app_name + '.log'
-    support_log_file = log_dir + '/' + app_name + '-support.log'
     default_conf_file = default_conf_dir + app_name + '.conf'
     default_sed_file = default_conf_dir + '.exp.sed'
     default_ca_file = default_conf_dir + 'cert-api.access.redhat.com.pem'
