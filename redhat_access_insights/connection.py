@@ -66,6 +66,8 @@ class InsightsConnection(object):
             protocol = "http://"
             self.cert_verify = False
 
+        self.auto_config = config.getboolean(APP_NAME,
+                                             'auto_config')
         self.base_url = protocol + config.get(APP_NAME, "base_url")
         self.upload_url = config.get(APP_NAME, "upload_url")
         if self.upload_url is None:
@@ -368,6 +370,14 @@ class InsightsConnection(object):
                 except LookupError:
                     logger.error("Got 402 but no message")
                     logger.debug("HTTP Response Text: %s", req.text)
+            if req.status_code == 403 and self.auto_config:
+                # Insights disabled in satellite
+                from urlparse import urlparse
+                rhsm_hostname = urlparse(self.base_url).hostname
+                if rhsm_hostname != 'subscription.rhn.redhat.com':
+                    logger.error('Please enable Insights on Satellite server '
+                                 '%s to continue.' %
+                                 rhsm_hostname)
             if req.status_code == 412:
                 try:
                     unreg_date = req.json()["unregistered_at"]
