@@ -490,10 +490,18 @@ def handle_startup(options, config):
         logger.info('\n'.join(reg_check))
         sys.exit(0)
 
+    # First startup, no .registered or .unregistered
+    if (not os.path.isfile(constants.registered_file) and
+       not os.path.isfile(constants.unregistered_file) and not options.register):
+        logger.error('This machine has not yet been registered.')
+        logger.error('Use --register to register this machine.')
+        logger.error("Exiting")
+        sys.exit(1)
+
     # Check for .unregistered file
     if os.path.isfile(constants.unregistered_file) and not options.register:
-        logger.error("This machine has been unregistered")
-        logger.error("Use --register if you would like to re-register this machine")
+        logger.error("This machine has been unregistered.")
+        logger.error("Use --register if you would like to re-register this machine.")
         logger.error("Exiting")
         sys.exit(1)
 
