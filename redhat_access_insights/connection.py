@@ -83,8 +83,9 @@ class InsightsConnection(object):
         self.get_proxies(config)
         self._validate_hostnames()
         self.session = self._init_session()
-        # [barfing intensifies]
-        self.self_signed_cert = False
+        # need this global -- [barfing intensifies]
+        # tuple of self-signed cert flag & cert chain list
+        self.cert_chain = (False, [])
 
     def _init_session(self):
         """
@@ -249,12 +250,15 @@ class InsightsConnection(object):
             raise last_ex
 
     def _verify_check(self, conn, cert, err, depth, ret):
-        del conn, cert
+        del conn
+        # add cert to chain
+        self.cert_chain[1].append(cert)
         logger.info('depth=' + str(depth))
         logger.info('verify error:num=' + str(err))
         logger.info('verify return:' + str(ret))
         if err == 19:
-            self.self_signed_cert = True
+            # self-signed cert
+            self.cert_chain[0] = True
         return True
 
     def _generate_cert_str(self, cert_data, prefix):
@@ -271,6 +275,7 @@ class InsightsConnection(object):
         success = True
         hostname = urlparse(self.base_url).netloc.split(':')
         sock = socket.socket()
+        sock.setblocking(1)
         if self.proxies:
             connect_str = 'CONNECT {0} HTTP/1.0\r\n'.format(hostname)
             if self.proxy_auth:
@@ -292,7 +297,9 @@ class InsightsConnection(object):
             # output from verify generated here
             ssl_conn.do_handshake()
             # print cert chain
-            certs = ssl_conn.get_peer_cert_chain()
+            certs = self.cert_chain[1]
+            # put them in the right order
+            certs.reverse()
             logger.info('---\nCertificate chain')
             for depth, c in enumerate(certs):
                 logger.info(self._generate_cert_str(c.get_subject(),
@@ -311,10 +318,10 @@ class InsightsConnection(object):
             logger.error('Certificate chain test failed!')
         ssl_conn.shutdown()
         ssl_conn.close()
-        if self.self_signed_cert:
+        if self.cert_chain[0]:
             logger.error('Certificate chain test failed!  Self '
                          'signed certificate detected in chain')
-        return success and not self.self_signed_cert
+        return success and not self.cert_chain[0]
 
     def test_connection(self, rc=0):
         """
