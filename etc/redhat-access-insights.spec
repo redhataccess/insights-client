@@ -4,7 +4,7 @@
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                1.0.7
-Release:                0%{?dist}
+Release:                3%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -82,22 +82,15 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
-* Tue Aug 11 2015 Dan Varga <dvarga@redhat.com> - 1.0.6-0
-- Fix unregister -> reregister flow
-- Resolves: bz1252435
-
-* Wed Jul 29 2015 Dan Varga <dvarga@redhat.com> - 1.0.5-0
-- Automatically retry failed uploads when invoked via cron
-- Update python-requests dependency to >= 2.6
-- Add --unregister option
-- --no-gpg fix
-- Remove --weekly option
-- Add --quiet and --silent options
-- Default cron to quiet
-- Fix satellite 5 proxy auto configuration
-- Remove .registered and .unregistered files on uninstallation
-- lowercase -> lower()
-- Resolves: bz1248011, bz1248012, bz1248014, bz1248023
+* Wed Jan 06 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.7-3
+- New config options trace and no_schedule
+- New command line options --no_schedule, --conf, --to-stdout, --compressor, --from-stdin, --support, --offline, and --status
+- Add certificate chain verification to connection test
+- Revised debug output
+- Reduced set of environment vars used for command execution
+- OpenStack cluster support
+- Remember time of last successful upload
+- Resolves: bz1237112, bz1243028, bz1244113, bz1246919, bz1250384, bz1257242, bz1267299, bz1276055, bz1276130, bz1280353, bz1295929, bz1295935, bz1295939 
 
 * Mon Jun 08 2015 Dan Varga <dvarga@redhat.com> - 1.0.4-0
 - Improved logging of exceptions
