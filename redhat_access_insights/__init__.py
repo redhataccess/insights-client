@@ -16,6 +16,7 @@ import shutil
 import sys
 import time
 import traceback
+import atexit
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
@@ -150,6 +151,12 @@ def handle_branch_info_error(msg, options):
         sys.exit()
 
 
+def handle_exit(archive, keep_archive):
+    # delete the archive on exit so we don't keep crap around
+    if not keep_archive:
+        archive.delete_tmp_dir()
+
+
 def collect_data_and_upload(config, options, rc=0):
     """
     All the heavy lifting done here
@@ -168,6 +175,9 @@ def collect_data_and_upload(config, options, rc=0):
     pc = InsightsConfig(config, pconn)
     archive = InsightsArchive(compressor=options.compressor)
     dc = DataCollector(archive)
+
+    # register the exit handler here to delete the archive
+    atexit.register(handle_exit, archive, options.keep_archive)
 
     stdin_config = json.load(sys.stdin) if options.from_stdin else {}
 
