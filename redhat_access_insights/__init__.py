@@ -177,7 +177,7 @@ def collect_data_and_upload(config, options, rc=0):
     dc = DataCollector(archive)
 
     # register the exit handler here to delete the archive
-    atexit.register(handle_exit, archive, options.keep_archive)
+    atexit.register(handle_exit, archive, options.keep_archive or options.no_upload)
 
     stdin_config = json.load(sys.stdin) if options.from_stdin else {}
 
@@ -228,7 +228,7 @@ def collect_data_and_upload(config, options, rc=0):
                                      constants.default_log_file)
                         rc = 1
 
-            if not obfuscate and not options.keep_archive:
+            if (not obfuscate and not options.keep_archive) or options.no_upload:
                 dc.archive.delete_tmp_dir()
             else:
                 if obfuscate:
@@ -506,7 +506,7 @@ def handle_startup(options, config):
 
     # Set offline mode for OSP use
     offline_mode = False
-    if options.offline and options.from_stdin:
+    if (options.offline and options.from_stdin) or options.no_upload:
         offline_mode = True
 
     # First startup, no .registered or .unregistered
