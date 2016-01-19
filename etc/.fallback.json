@@ -391,6 +391,10 @@
             "pattern": [],
             "command": "vgdisplay"
         },
+		{
+            "pattern": [],
+            "command": "/usr/bin/last -xwR --time-format iso"
+        },
         {
             "pattern": [],
             "command": "yum -C repolist"
