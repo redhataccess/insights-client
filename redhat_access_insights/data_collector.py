@@ -245,7 +245,7 @@ class DataCollector(object):
                 cmd = "/sbin/ethtool " + interface
             self.archive.add_command_output(self.run_command_get_output(cmd))
 
-    def copy_files(self, conf, rm_conf):
+    def copy_files(self, conf, rm_conf, container_fs):
         """
         Run through the list of files and copy them
         """
@@ -272,7 +272,13 @@ class DataCollector(object):
             if len(_file['pattern']) > 0:
                 pattern = _file['pattern']
 
-            self.copy_file_with_pattern(_file['file'], pattern, exclude)
+            # append container filesystem path to filename
+            if container_fs:
+                if container_fs.endswith('/'):
+                    container_fs = container_fs.rstrip('/')
+                self.copy_file_with_pattern(container_fs + _file['file'], pattern, exclude)
+            else:
+                self.copy_file_with_pattern(_file['file'], pattern, exclude)
         logger.debug("File copy complete")
 
     def write_branch_info(self, branch_info):

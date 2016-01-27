@@ -189,14 +189,20 @@ def collect_data_and_upload(config, options, rc=0):
     elapsed = (time.clock() - start)
     logger.debug("Collection Rules Elapsed Time: %s", elapsed)
 
-    start = time.clock()
-    logger.info('Starting to collect Insights data')
-    dc.run_commands(collection_rules, rm_conf)
-    elapsed = (time.clock() - start)
-    logger.debug("Command Collection Elapsed Time: %s", elapsed)
+    if options.container_fs and not os.path.isdir(options.container_fs):
+        logger.error('Invalid path specified for --container-fs')
+        sys.exit(1)
+
+    # no commands run in the container filesystem
+    if not options.container_fs:
+        start = time.clock()
+        logger.info('Starting to collect Insights data')
+        dc.run_commands(collection_rules, rm_conf)
+        elapsed = (time.clock() - start)
+        logger.debug("Command Collection Elapsed Time: %s", elapsed)
 
     start = time.clock()
-    dc.copy_files(collection_rules, rm_conf)
+    dc.copy_files(collection_rules, rm_conf, options.container_fs)
     elapsed = (time.clock() - start)
     logger.debug("File Collection Elapsed Time: %s", elapsed)
 
@@ -231,7 +237,7 @@ def collect_data_and_upload(config, options, rc=0):
                                      constants.default_log_file)
                         rc = 1
 
-            if (not obfuscate and not options.keep_archive) or options.no_upload:
+            if (not obfuscate and not options.keep_archive):
                 dc.archive.delete_tmp_dir()
             else:
                 if obfuscate:
@@ -377,6 +383,10 @@ def set_up_options(parser):
                       help='offline mode for OSP use',
                       dest='offline', action='store_true',
                       default=False)
+    parser.add_option('--container-fs',
+                      help='Absolute path to mounted filesystem to run Insights against',
+                      action='store',
+                      dest='container_fs')
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
                      help='Test connectivity to Red Hat',
