@@ -21,14 +21,18 @@ class InsightsArchive(object):
     and files to the insights archive
     """
 
-    def __init__(self, compressor="gz"):
+    def __init__(self, compressor="gz", container_name=None):
         """
         Initialize the Insights Archive
         Create temp dir, archive dir, and command dir
         """
         self.tmp_dir = tempfile.mkdtemp(prefix='/var/tmp/')
+        if container_name:
+            name = container_name
+        else:
+            name = determine_hostname()
         self.archive_name = ("insights-%s-%s" %
-                             (determine_hostname(),
+                             (name,
                               time.strftime("%Y%m%d%H%M%S")))
         self.archive_dir = self.create_archive_dir()
         self.cmd_dir = self.create_command_dir()

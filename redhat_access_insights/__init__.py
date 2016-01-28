@@ -176,7 +176,8 @@ def collect_data_and_upload(config, options, rc=0):
         branch_info = handle_branch_info_error(
             "Could not determine branch information", options)
     pc = InsightsConfig(config, pconn)
-    archive = InsightsArchive(compressor=options.compressor)
+    archive = InsightsArchive(compressor=options.compressor,
+                              container_name=options.container_name)
     dc = DataCollector(archive)
 
     # register the exit handler here to delete the archive
@@ -189,12 +190,12 @@ def collect_data_and_upload(config, options, rc=0):
     elapsed = (time.clock() - start)
     logger.debug("Collection Rules Elapsed Time: %s", elapsed)
 
-    if options.container_fs and not os.path.isdir(options.container_fs):
-        logger.error('Invalid path specified for --container-fs')
+    if options.container_mode and not os.path.isdir(options.container_fs):
+        logger.error('Invalid path specified for --fs')
         sys.exit(1)
 
     # no commands run in the container filesystem
-    if not options.container_fs:
+    if not options.container_mode:
         start = time.clock()
         logger.info('Starting to collect Insights data')
         dc.run_commands(collection_rules, rm_conf)
@@ -383,10 +384,20 @@ def set_up_options(parser):
                       help='offline mode for OSP use',
                       dest='offline', action='store_true',
                       default=False)
-    parser.add_option('--container-fs',
-                      help='Absolute path to mounted filesystem to run Insights against',
+    parser.add_option('--container',
+                      help='Run Insights in container mode.',
+                      action='store_true',
+                      dest='container_mode')
+    parser.add_option('--fs',
+                      help='Absolute path to mounted filesystem to run Insights against. '
+                           'Only valid when --container is used',
                       action='store',
                       dest='container_fs')
+    parser.add_option('--name',
+                      help='Name to use for mounted container filesystem. '
+                           'Only valid when --container is used',
+                      action='store',
+                      dest='container_name')
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
                      help='Test connectivity to Red Hat',
@@ -525,6 +536,11 @@ def handle_startup(options, config):
     offline_mode = False
     if (options.offline and options.from_stdin) or options.no_upload:
         offline_mode = True
+
+    # blank these out if --container not set
+    if not options.container_mode:
+        options.container_fs = None
+        options.container_name = None
 
     # First startup, no .registered or .unregistered
     # Ignore if in offline mode
