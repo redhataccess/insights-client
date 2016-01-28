@@ -122,6 +122,16 @@ def generate_machine_id(new=False):
     return str(machine_id).strip()
 
 
+def delete_machine_id():
+    '''
+    Only for force-reregister
+    '''
+    if os.path.isfile(constants.machine_id_file):
+        os.remove(constants.machine_id_file)
+    if os.path.isfile('/etc/machine-id'):
+        os.remove('/etc/machine-id')
+
+
 def _expand_paths(path):
     """
     Expand wildcarded paths

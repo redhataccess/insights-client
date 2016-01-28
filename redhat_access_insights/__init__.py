@@ -20,7 +20,10 @@ import atexit
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
-                       write_lastupload_file)
+                       write_lastupload_file,
+                       delete_registered_file,
+                       delete_unregistered_file,
+                       delete_machine_id)
 from collection_rules import InsightsConfig
 from data_collector import DataCollector
 from schedule import InsightsSchedule
@@ -439,9 +442,13 @@ def handle_startup(options, config):
 
     # Generate /etc/machine-id if it does not exist
     new = False
+    # force-reregister -- remove machine-id files nd registration files before trying to register again
     if options.reregister:
         new = True
         options.register = True
+        delete_registered_file()
+        delete_unregistered_file()
+        delete_machine_id()
     logger.debug("Machine-ID: " + generate_machine_id(new))
 
     # Disable GPG verification
