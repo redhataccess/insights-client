@@ -272,13 +272,7 @@ class DataCollector(object):
             if len(_file['pattern']) > 0:
                 pattern = _file['pattern']
 
-            # append container filesystem path to filename
-            if container_fs:
-                if container_fs.endswith('/'):
-                    container_fs = container_fs.rstrip('/')
-                self.copy_file_with_pattern(container_fs + _file['file'], pattern, exclude)
-            else:
-                self.copy_file_with_pattern(_file['file'], pattern, exclude)
+            self.copy_file_with_pattern(_file['file'], pattern, exclude, container_fs)
         logger.debug("File copy complete")
 
     def write_branch_info(self, branch_info):
@@ -289,11 +283,18 @@ class DataCollector(object):
         full_path = self.archive.get_full_archive_path('/branch_info')
         write_file_with_text(full_path, json.dumps(branch_info))
 
-    def _copy_file_with_pattern(self, path, patterns, exclude):
+    def _copy_file_with_pattern(self, path, patterns, exclude, container_fs):
         """
         Copy file, selecting only lines we are interested in
         """
         full_path = self.archive.get_full_archive_path(path)
+
+        # append container filesystem path to filename
+        if container_fs:
+            if container_fs.endswith('/'):
+                container_fs = container_fs.rstrip('/')
+            path = os.path.realpath(container_fs) + path
+
         if not os.path.isfile(path):
             logger.debug("File %s does not exist", path)
             return
@@ -343,7 +344,7 @@ class DataCollector(object):
 
         write_file_with_text(full_path, output.decode('utf-8', 'ignore').strip())
 
-    def copy_file_with_pattern(self, path, patterns, exclude):
+    def copy_file_with_pattern(self, path, patterns, exclude, container_fs):
         """
         Copy a single file or regex, creating the necessary directories
         But grepping for pattern(s)
@@ -354,9 +355,9 @@ class DataCollector(object):
                 logger.debug("Could not expand %s", path)
                 return
             for path in paths:
-                self._copy_file_with_pattern(path, patterns, exclude)
+                self._copy_file_with_pattern(path, patterns, exclude, container_fs)
         else:
-            self._copy_file_with_pattern(path, patterns, exclude)
+            self._copy_file_with_pattern(path, patterns, exclude, container_fs)
 
     def done(self, config, rm_conf):
         """
