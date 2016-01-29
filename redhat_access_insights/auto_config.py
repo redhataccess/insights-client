@@ -12,7 +12,7 @@ logger = logging.getLogger(constants.app_name)
 APP_NAME = constants.app_name
 
 
-def verify_connectivity(config):
+def verify_connectivity(config, connect_method):
     """
     Verify connectivity to satellite server
     """
@@ -25,11 +25,11 @@ def verify_connectivity(config):
         branch_info = ic.branch_info()
     except requests.ConnectionError as e:
         logger.debug(e)
-        logger.debug("Failed to connect to satellite")
+        logger.debug("Failed to connect to %s" % connect_method)
         return False
     except LookupError as e:
         logger.debug(e)
-        logger.debug("Failed to parse response from satellite")
+        logger.debug("Failed to parse response from %s" % connect_method)
         return False
 
     try:
@@ -41,7 +41,7 @@ def verify_connectivity(config):
         return False
 
 
-def set_auto_configuration(config, hostname, ca_cert, proxy):
+def set_auto_configuration(config, hostname, ca_cert, proxy, connect_method):
     """
     Set config based on discovered data
     """
@@ -58,7 +58,7 @@ def set_auto_configuration(config, hostname, ca_cert, proxy):
         config.set(APP_NAME, 'proxy', proxy)
     config.set(APP_NAME, 'base_url', hostname + '/r/insights')
 
-    if not verify_connectivity(config):
+    if not verify_connectivity(config, connect_method):
         logger.warn("Could not auto configure, falling back to static config")
         logger.warn("See %s for additional information",
                     constants.default_log_file)
@@ -112,19 +112,20 @@ def _try_satellite6_configuration(config):
         logger.debug("Found CA: %s", rhsm_ca)
         logger.debug("Setting authmethod to CERT")
         config.set(APP_NAME, 'authmethod', 'CERT')
-
+        connect_method = 'Satellite 6'
         # Directly connected to Red Hat, use cert auth directly with the api
         if rhsm_hostname == 'subscription.rhn.redhat.com':
             logger.debug("Connected to Red Hat Directly, using cert-api")
             rhsm_hostname = 'cert-api.access.redhat.com'
             rhsm_ca = None
+            connect_method = 'RHSM Hosted'
         else:
             # Set the host path
             # 'rhsm_hostname' should really be named ~ 'rhsm_host_base_url'
             rhsm_hostname = rhsm_hostname + ':' + rhsm_hostport + '/redhat_access'
 
         logger.debug("Trying to set auto_configuration")
-        set_auto_configuration(config, rhsm_hostname, rhsm_ca, proxy)
+        set_auto_configuration(config, rhsm_hostname, rhsm_ca, proxy, connect_method)
         return True
     except Exception as e:
         logger.debug(e)
@@ -185,7 +186,7 @@ def _try_satellite5_configuration(config):
                 else:
                     proxy = proxy + proxy_host_port
                     logger.debug("RHN Proxy: %s", proxy)
-            set_auto_configuration(config, hostname, rhn_ca, proxy)
+            set_auto_configuration(config, hostname, rhn_ca, proxy, 'Satellite 5')
         else:
             logger.debug("Could not find hostname")
             return False
