@@ -170,10 +170,10 @@ class InsightsConfig(object):
                 rm_conf[item] = value.strip().split(',')
             logger.warn("WARNING: Excluding data from files")
         if stdin_config:
-            rules_fp = NamedTemporaryFile(delete=False)
+            rules_fp = NamedTemporaryFile()
             rules_fp.write(stdin_config["uploader.json"])
             rules_fp.flush()
-            sig_fp = NamedTemporaryFile(delete=False)
+            sig_fp = NamedTemporaryFile()
             sig_fp.write(stdin_config["sig"])
             sig_fp.flush()
             if self.validate_gpg_sig(rules_fp.name, sig_fp.name):
