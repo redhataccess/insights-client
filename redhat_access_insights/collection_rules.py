@@ -90,7 +90,7 @@ class InsightsConfig(object):
         """
         Download the collection rules
         """
-        logger.info("Attemping to download collection rules from %s",
+        logger.info("Attempting to download collection rules from %s",
                     self.collection_rules_url)
 
         req = self.conn.session.get(
@@ -119,7 +119,7 @@ class InsightsConfig(object):
             return json.loads(req.text)
 
     def fetch_gpg(self):
-        logger.info("Attemping to download collection "
+        logger.info("Attempting to download collection "
                     "rules GPG signature from %s",
                     self.collection_rules_url + ".asc")
 
