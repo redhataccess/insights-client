@@ -43,7 +43,7 @@ class InsightsConfig(object):
         """
         Validate the collection rules
         """
-        logger.info("Verifying GPG signature of Insights configuration")
+        logger.debug("Verifying GPG signature of Insights configuration")
         if sig is None:
             sig = path + ".asc"
         command = ("/usr/bin/gpg --no-default-keyring "
@@ -90,14 +90,14 @@ class InsightsConfig(object):
         """
         Download the collection rules
         """
-        logger.info("Attempting to download collection rules from %s",
+        logger.debug("Attempting to download collection rules from %s",
                     self.collection_rules_url)
 
         req = self.conn.session.get(
             self.collection_rules_url, headers=({'accept': 'text/plain'}))
 
         if req.status_code == 200:
-            logger.info("Successfully downloaded collection rules")
+            logger.debug("Successfully downloaded collection rules")
 
             json_response = NamedTemporaryFile()
             json_response.write(req.text)
@@ -119,7 +119,7 @@ class InsightsConfig(object):
             return json.loads(req.text)
 
     def fetch_gpg(self):
-        logger.info("Attempting to download collection "
+        logger.debug("Attempting to download collection "
                     "rules GPG signature from %s",
                     self.collection_rules_url + ".asc")
 
@@ -127,7 +127,7 @@ class InsightsConfig(object):
         config_sig = self.conn.session.get(self.collection_rules_url + '.asc',
                                            headers=headers)
         if config_sig.status_code == 200:
-            logger.info("Successfully downloaded GPG signature")
+            logger.debug("Successfully downloaded GPG signature")
             return config_sig.text
         else:
             logger.error("ERROR: Download of GPG Signature failed!")
