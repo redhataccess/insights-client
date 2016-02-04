@@ -79,15 +79,13 @@ def _try_satellite6_configuration(config):
         from rhsm.config import initConfig
         rhsm_config = initConfig()
 
-        logger.debug('Trying to autoconf Satellite 6')
+        logger.debug('Trying to auto-configure Satellite 6...')
         cert = file(rhsmCertificate.certpath(), 'r').read()
         key = file(rhsmCertificate.keypath(), 'r').read()
         rhsm = rhsmCertificate(key, cert)
 
         # This will throw an exception if we are not registered
-        logger.debug('Checking if system is subscription-manager registered')
         rhsm.getConsumerId()
-        logger.debug('System is subscription-manager registered')
 
         rhsm_hostname = rhsm_config.get('server', 'hostname')
         rhsm_hostport = rhsm_config.get('server', 'port')
@@ -115,6 +113,7 @@ def _try_satellite6_configuration(config):
         connect_method = 'Satellite 6'
         # Directly connected to Red Hat, use cert auth directly with the api
         if rhsm_hostname == 'subscription.rhn.redhat.com':
+            logger.debug('Trying to auto-configure RHSM Hosted...')
             logger.debug("Connected to Red Hat Directly, using cert-api")
             rhsm_hostname = 'cert-api.access.redhat.com'
             rhsm_ca = None
@@ -123,13 +122,13 @@ def _try_satellite6_configuration(config):
             # Set the host path
             # 'rhsm_hostname' should really be named ~ 'rhsm_host_base_url'
             rhsm_hostname = rhsm_hostname + ':' + rhsm_hostport + '/redhat_access'
-
-        logger.debug("Trying to set auto_configuration")
+        logger.debug('System is registered to %s.' % connect_method)
+        logger.debug("Trying to set auto_configuration...")
         set_auto_configuration(config, rhsm_hostname, rhsm_ca, proxy, connect_method)
         return True
     except Exception as e:
         logger.debug(e)
-        logger.debug('System is NOT subscription-manager registered')
+        logger.debug('System is not registered to Satellite 6')
         return False
 
 
@@ -143,7 +142,7 @@ def _try_satellite5_configuration(config):
     """
     Attempt to determine Satellite 5 Configuration
     """
-    logger.debug("Trying Satellite 5 auto_config")
+    logger.debug("Trying to auto-configure Satellite 5...")
     rhn_config = '/etc/sysconfig/rhn/up2date'
     systemid = '/etc/sysconfig/rhn/systemid'
     if os.path.isfile(rhn_config):
@@ -153,7 +152,7 @@ def _try_satellite5_configuration(config):
             logger.debug("Could not find Satellite 5 systemid file.")
             return False
 
-        logger.debug("Found Satellite 5 Config")
+        logger.debug("Found Satellite 5 config")
         rhn_conf_file = file(rhn_config, 'r')
         hostname = None
         for line in rhn_conf_file:
@@ -186,6 +185,7 @@ def _try_satellite5_configuration(config):
                 else:
                     proxy = proxy + proxy_host_port
                     logger.debug("RHN Proxy: %s", proxy)
+            logger.debug('System is registered to Satellite 5.')
             set_auto_configuration(config, hostname, rhn_ca, proxy, 'Satellite 5')
         else:
             logger.debug("Could not find hostname")
