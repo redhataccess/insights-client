@@ -28,8 +28,8 @@ if __name__ == "__main__":
     setup(
         name="redhat-access-insights",
         version=VERSION,
-        author="Dan Varga",
-        author_email="dvarga@redhat.com",
+        author="Jeremy Crafts",
+        author_email="jcrafts@redhat.com",
         license="GPL",
         packages=find_packages(),
         install_requires=['requests'],

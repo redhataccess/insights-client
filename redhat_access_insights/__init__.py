@@ -33,7 +33,7 @@ from support import InsightsSupport
 
 from constants import InsightsConstants as constants
 
-__author__ = 'Dan Varga <dvarga@redhat.com>'
+__author__ = 'Jeremy Crafts <jcrafts@redhat.com>'
 
 LOG_FORMAT = ("%(asctime)s %(levelname)s %(message)s")
 APP_NAME = constants.app_name
