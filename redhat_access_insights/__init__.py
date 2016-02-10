@@ -178,7 +178,7 @@ def collect_data_and_upload(config, options, rc=0):
     pc = InsightsConfig(config, pconn)
     archive = InsightsArchive(compressor=options.compressor,
                               container_name=options.container_name)
-    dc = DataCollector(archive)
+    dc = DataCollector(archive, container_name=options.container_name)
 
     # register the exit handler here to delete the archive
     atexit.register(handle_exit, archive, options.keep_archive or options.no_upload)
@@ -194,13 +194,11 @@ def collect_data_and_upload(config, options, rc=0):
         logger.error('Invalid path specified for --fs')
         sys.exit(1)
 
-    # no commands run in the container filesystem
-    if not options.container_mode:
-        start = time.clock()
-        logger.info('Starting to collect Insights data')
-        dc.run_commands(collection_rules, rm_conf)
-        elapsed = (time.clock() - start)
-        logger.debug("Command Collection Elapsed Time: %s", elapsed)
+    start = time.clock()
+    logger.info('Starting to collect Insights data')
+    dc.run_commands(collection_rules, rm_conf, options.container_fs)
+    elapsed = (time.clock() - start)
+    logger.debug("Command Collection Elapsed Time: %s", elapsed)
 
     start = time.clock()
     dc.copy_files(collection_rules, rm_conf, options.container_fs)
