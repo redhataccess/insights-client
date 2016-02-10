@@ -136,28 +136,21 @@ class DataCollector(object):
         """
         Handle special commands
         """
-        if 'ethtool' in command['command']:
-            # Get the ethtool flag
-            flag = None
-            try:
-                flag = command['command'].split('-')[1]
-            except LookupError:
-                pass
-            self._handle_ethtool(flag)
-        elif 'hostname' in command['command']:
-            self._handle_hostname(command['command'])
-        elif 'parted' in command['command']:
-            self._handle_parted()
-        elif 'modinfo' in command['command']:
-            self._handle_modinfo()
-        elif len(command['pattern']) or exclude:
-            cmd = command['command']
-            filters = command['pattern']
-            output = self.run_command_get_output(cmd, filters=filters, exclude=exclude)
-            self.archive.add_command_output(output)
-        else:
-            self.archive.add_command_output(
-                self.run_command_get_output(command['command']))
+        try:
+            if command['pre_command']:
+                self._handle_command_with_args(command)
+        except KeyError:
+            # no pre-command exists
+            if 'hostname' in command['command']:
+                self._handle_hostname(command['command'])
+            elif len(command['pattern']) or exclude:
+                cmd = command['command']
+                filters = command['pattern']
+                output = self.run_command_get_output(cmd, filters=filters, exclude=exclude)
+                self.archive.add_command_output(output)
+            else:
+                self.archive.add_command_output(
+                    self.run_command_get_output(command['command']))
 
     def run_commands(self, conf, rm_conf):
         """
@@ -186,43 +179,31 @@ class DataCollector(object):
 
         logger.debug("Commands complete")
 
-    def _get_interfaces(self):
-        """
-        Get valid ethernet interfaces on the system
-        """
-        interfaces = {}
-        output = self.run_command_get_output(
-            "/sbin/ip -o link")["output"].splitlines()
-        for line in output:
-            match = re.match(
-                '.*link/ether', line.decode('utf-8', 'ignore').strip())
-            if match:
-                iface = match.string.split(':')[1].lstrip()
-                interfaces[iface] = True
-        return interfaces
-
-    def _handle_parted(self):
-        """
-        Helper to handle parted
-        """
-        if os.path.isdir("/sys/block"):
-            for disk in os.listdir("/sys/block"):
-                if disk in ['.', '..'] or disk.startswith('ram'):
-                    continue
-                disk_path = os.path.join('/dev/', disk)
-                self.archive.add_command_output(
-                    self.run_command_get_output("/usr/sbin/parted -s %s unit s print" % disk_path))
-
-    def _handle_modinfo(self):
-        """
-        Helper to handle modinfo
-        """
-        for module in os.listdir("/sys/module"):
-            response = self.run_command_get_output("modinfo " + module)
+    def _handle_command_with_args(self, command):
+        '''
+        Run a pre-command to get external arguments for a command,
+        then run the command with each argument
+        '''
+        cmd = command['command']
+        pre_cmd = command['pre_command']
+        logger.debug('Executing pre-command: %s' % pre_cmd)
+        try:
+            pre_proc = Popen(pre_cmd, stdout=PIPE, shell=True)
+        except OSError as err:
+            if err.errno == errno.ENOENT:
+                logger.debug("Command %s not found", pre_cmd)
+            return
+        stdout, sterr = pre_proc.communicate()
+        arguments = stdout.splitlines()
+        logger.debug('Pre-command results: %s' % arguments)
+        for arg in arguments:
+            full_cmd = cmd + ' ' + arg
+            response = self.run_command_get_output(full_cmd)
             if response['status'] is 0:
                 self.archive.add_command_output(response)
             else:
-                logger.debug("Module %s not loaded; skipping", module)
+                if 'modinfo' in cmd:
+                    logger.debug("Module %s not loaded; skipping", module)
 
     def _handle_hostname(self, command):
         """
@@ -233,17 +214,6 @@ class DataCollector(object):
             'status': 0,
             'output': determine_hostname()
         })
-
-    def _handle_ethtool(self, flag):
-        """
-        Helper to handle ethtool not supporting *
-        """
-        for interface in self._get_interfaces():
-            if flag is not None:
-                cmd = "/sbin/ethtool -" + flag + " " + interface
-            else:
-                cmd = "/sbin/ethtool " + interface
-            self.archive.add_command_output(self.run_command_get_output(cmd))
 
     def copy_files(self, conf, rm_conf):
         """

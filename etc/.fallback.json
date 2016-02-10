@@ -300,28 +300,39 @@
             "command": "/sbin/chkconfig --list"
         },
         {
-            "pattern": [],
-            "command": "/sbin/ethtool"
+            "pattern":[],
+            "command": "/sbin/modinfo",
+            "pre_command": "/bin/ls /sys/module"
         },
         {
             "pattern": [],
-            "command": "/sbin/ethtool -S"
+            "command": "/sbin/ethtool",
+            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
         },
         {
             "pattern": [],
-            "command": "/sbin/ethtool -g"
+            "command": "/sbin/ethtool -S",
+            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
         },
         {
             "pattern": [],
-            "command": "/sbin/ethtool -i"
+            "command": "/sbin/ethtool -g",
+            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
         },
         {
             "pattern": [],
-            "command": "/sbin/ethtool -k"
+            "command": "/sbin/ethtool -i",
+            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
         },
         {
             "pattern": [],
-            "command": "/sbin/ifconfig -a"
+            "command": "/sbin/ethtool -k",
+            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
+        },
+        {
+            "pattern": [],
+            "command": "/sbin/ifconfig -a",
+            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
         },
         {
             "pattern": [],
@@ -373,7 +384,8 @@
         },
         {
             "pattern": [],
-            "command": "/usr/sbin/parted -s"
+            "command": "/usr/sbin/parted -s",
+            "pre_command": "/bin/ls /sys/block | awk '!/^ram|^\\.+$/ {print \"/dev/\" $1 \" unit s print\"}'"
         },
         {
             "pattern": [],

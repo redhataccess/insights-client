@@ -91,7 +91,7 @@ class InsightsConfig(object):
         Download the collection rules
         """
         logger.debug("Attempting to download collection rules from %s",
-                    self.collection_rules_url)
+                     self.collection_rules_url)
 
         req = self.conn.session.get(
             self.collection_rules_url, headers=({'accept': 'text/plain'}))
