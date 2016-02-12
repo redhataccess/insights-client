@@ -30,9 +30,10 @@ class DataCollector(object):
     Run commands and collect files
     """
 
-    def __init__(self, archive_=None):
+    def __init__(self, archive_=None, container_name=None):
         self._set_black_list()
         self.archive = archive_ if archive_ else archive.InsightsArchive()
+        self.container_name=container_name
 
     def _set_black_list(self):
         """
@@ -54,11 +55,16 @@ class DataCollector(object):
                                command,
                                exclude=None,
                                filters=None,
-                               nolog=False):
+                               nolog=False,
+                               archive_name=None):
         """
         Execute a command through the system shell. First checks to see if the
         requested command is executable. Returns (returncode, stdout, 0)
         """
+
+        if archive_name == None:
+            archive_name = self._mangle_command(command)
+
         # ensure consistent locale for collected command output
         cmd_env = {'LC_ALL': 'C'}
         if not six.PY3:
@@ -74,7 +80,7 @@ class DataCollector(object):
         except OSError as err:
             if err.errno == errno.ENOENT:
                 logger.debug("Command %s not found", command)
-                return {'cmd': self._mangle_command(command),
+                return {'cmd': archive_name,
                         'status': 127,
                         'output': "Command not found"}
             else:
@@ -127,7 +133,7 @@ class DataCollector(object):
         logger.debug("stderr: %s", stderr)
 
         return {
-            'cmd': self._mangle_command(command),
+            'cmd': archive_name,
             'status': proc0.returncode,
             'output': stdout.decode('utf-8', 'ignore')
         }
@@ -159,7 +165,27 @@ class DataCollector(object):
             self.archive.add_command_output(
                 self.run_command_get_output(command['command']))
 
-    def run_commands(self, conf, rm_conf):
+    def _handle_container_commands(self, command, exclude, container_fs):
+
+        if 'rpm' in command['command']:
+            cmd = command['command'].replace('rpm', 'rpm --root=' + container_fs, 1)
+            filters = command['pattern']
+            output = self.run_command_get_output(
+                cmd,
+                filters=filters,
+                exclude=exclude,
+                archive_name=self._mangle_command(command['command']))
+            self.archive.add_command_output(output)
+
+        elif 'hostname' in command['command']:
+            self.archive.add_command_output({
+                'cmd': self._mangle_command(command['command']),
+                'status': 0,
+                'output': self.container_name
+            })
+
+
+    def run_commands(self, conf, rm_conf, container_fs):
         """
         Run through the list of commands and add them to the archive
         """
@@ -182,7 +208,10 @@ class DataCollector(object):
                 except LookupError:
                     pass
 
-            self._handle_commands(command, exclude)
+            if container_fs:
+                self._handle_container_commands(command, exclude, container_fs)
+            else:
+                self._handle_commands(command, exclude)
 
         logger.debug("Commands complete")
 
