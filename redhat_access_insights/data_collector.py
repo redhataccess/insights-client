@@ -385,7 +385,7 @@ class DataCollector(object):
 
 
         if container_fs:
-            paths_on_disk = os.paths_to_collect.join(container_fs, paths_to_collect.lstrip('/'))
+            paths_on_disk = os.path.join(container_fs, paths_to_collect.lstrip('/'))
         else:
             paths_on_disk = paths_to_collect
 
