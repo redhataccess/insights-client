@@ -469,10 +469,10 @@ def handle_startup(options, config):
         # Try to discover if we are connected to a satellite or not
         try_auto_configuration(config)
 
-    # Set the schedule
-    if not options.no_schedule and not config.getboolean(
-            APP_NAME, 'no_schedule'):
-        InsightsSchedule()
+    if options.no_schedule and not options.register:
+        InsightsSchedule(set_cron=False).remove_scheduling()
+        logger.info('Automatic scheduling for Insights has been removed.')
+        sys.exit()
 
     # Test connection, useful for proxy debug
     if options.test_connection:
@@ -486,17 +486,24 @@ def handle_startup(options, config):
 
     # Handle registration, grouping, and display name
     if options.register:
+        # Set the schedule
         opt_group = options.group
-        message, hostname, opt_group, display_name = register(config, options)
-        if options.display_name is None and options.group is None:
-            logger.info('Successfully registered %s', hostname)
-        elif options.display_name is None:
-            logger.info('Successfully registered %s in group %s', hostname, opt_group)
+        if os.path.isfile(constants.registered_file):
+            logger.info('This host has already been registered.')
         else:
-            logger.info('Successfully registered %s as %s in group %s', hostname, display_name,
-                        opt_group)
-
-        logger.info(message)
+            message, hostname, opt_group, display_name = register(config, options)
+            if options.display_name is None and options.group is None:
+                logger.info('Successfully registered %s', hostname)
+            elif options.display_name is None:
+                logger.info('Successfully registered %s in group %s', hostname, opt_group)
+            else:
+                logger.info('Successfully registered %s as %s in group %s', hostname, display_name,
+                            opt_group)
+            logger.info(message)
+        if not options.no_schedule and not config.getboolean(
+                APP_NAME, 'no_schedule'):
+            InsightsSchedule()
+            logger.info('Automatic daily scheduling for Insights has been enabled.')
 
     # Collect debug/log information
     if options.support:

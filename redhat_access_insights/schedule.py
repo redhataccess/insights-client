@@ -15,8 +15,8 @@ class InsightsSchedule(object):
     """
     Set the cron schedule
     """
-    def __init__(self):
-        if not self.already_linked():
+    def __init__(self, set_cron=True):
+        if set_cron and not self.already_linked():
             self.set_daily()
 
     def already_linked(self):
@@ -48,3 +48,17 @@ class InsightsSchedule(object):
                 CRON_DAILY + APP_NAME)
         except OSError:
             logger.debug('Could not link cron.daily')
+
+    def remove_scheduling(self):
+        '''
+        Delete cron tasks
+        '''
+        logger.debug('Removing all cron tasks')
+        try:
+            os.remove(CRON_WEEKLY + APP_NAME)
+        except OSError:
+            logger.debug('Could not remove cron.weekly')
+        try:
+            os.remove(CRON_DAILY + APP_NAME)
+        except OSError:
+            logger.debug('Could not remove cron.daily')
