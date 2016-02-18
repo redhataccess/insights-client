@@ -610,11 +610,19 @@ class InsightsConnection(object):
         Do an HTTPS Upload of the archive
         """
         file_name = os.path.basename(data_collected)
-        import magic
-        m = magic.open(magic.MAGIC_MIME)
-        m.load()
+        try:
+            import magic
+            m = magic.open(magic.MAGIC_MIME)
+            m.load()
+            mime_type = m.file(data_collected)
+        except ImportError:
+            magic = None
+            logger.debug('python-magic not installed, using backup function...')
+            from utilities import magic_plan_b
+            mime_type = magic_plan_b(data_collected)
+
         files = {
-            'file': (file_name, open(data_collected, 'rb'), m.file(data_collected))}
+            'file': (file_name, open(data_collected, 'rb'), mime_type)}
 
         if cluster:
             upload_url = self.upload_url + '/' + cluster + "?cluster=True"

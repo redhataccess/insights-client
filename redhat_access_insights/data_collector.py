@@ -245,7 +245,7 @@ class DataCollector(object):
                 cmd = "/sbin/ethtool " + interface
             self.archive.add_command_output(self.run_command_get_output(cmd))
 
-    def copy_files(self, conf, rm_conf):
+    def copy_files(self, conf, rm_conf, stdin_config=None):
         """
         Run through the list of files and copy them
         """
@@ -271,7 +271,16 @@ class DataCollector(object):
             pattern = None
             if len(_file['pattern']) > 0:
                 pattern = _file['pattern']
-
+            if _file['file'] == '/etc/redhat-access-insights/machine-id' and stdin_config:
+                try:
+                    machine_id = stdin_config['machine-id']
+                    logger.debug('Using machine-id from stdin: %s' % machine_id)
+                    write_file_with_text(
+                        self.archive.get_full_archive_path(_file['file']),
+                        machine_id)
+                    continue
+                except KeyError:
+                    logger.debug('No machine-id from stdin.  Using regular file')
             self.copy_file_with_pattern(_file['file'], pattern, exclude)
         logger.debug("File copy complete")
 

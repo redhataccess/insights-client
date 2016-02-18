@@ -176,17 +176,23 @@ def collect_data_and_upload(config, options, rc=0):
     except LookupError:
         branch_info = handle_branch_info_error(
             "Could not determine branch information", options)
-    pc = InsightsConfig(config, pconn, custom_rules=options.rules)
+    pc = InsightsConfig(config, pconn)
     archive = InsightsArchive(compressor=options.compressor)
     dc = DataCollector(archive)
 
     # register the exit handler here to delete the archive
     atexit.register(handle_exit, archive, options.keep_archive or options.no_upload)
 
-    stdin_config = json.load(sys.stdin) if options.from_stdin else {}
+    if options.from_file:
+        with open(options.from_file, 'r') as f:
+            stdin_config = json.load(f)
+    elif options.from_stdin:
+        stdin_config = json.load(sys.stdin)
+    else:
+        stdin_config = {}
 
     start = time.clock()
-    collection_rules, rm_conf = pc.get_conf(options.update, stdin_config=stdin_config)
+    collection_rules, rm_conf = pc.get_conf(options.update, stdin_config)
     elapsed = (time.clock() - start)
     logger.debug("Collection Rules Elapsed Time: %s", elapsed)
 
@@ -197,7 +203,7 @@ def collect_data_and_upload(config, options, rc=0):
     logger.debug("Command Collection Elapsed Time: %s", elapsed)
 
     start = time.clock()
-    dc.copy_files(collection_rules, rm_conf)
+    dc.copy_files(collection_rules, rm_conf, stdin_config)
     elapsed = (time.clock() - start)
     logger.debug("File Collection Elapsed Time: %s", elapsed)
 
@@ -359,10 +365,6 @@ def set_up_options(parser):
                       help="Pass a custom config file",
                       dest="conf",
                       default=constants.default_conf_file)
-    parser.add_option('-r', '--rules',
-                      help="Pass a custom rules json file",
-                      dest="rules",
-                      default=None)
     parser.add_option('--to-stdout',
                       help='print archive to stdout; '
                            'sets --silent and --no-upload',
@@ -377,6 +379,10 @@ def set_up_options(parser):
     parser.add_option('--from-stdin',
                       help='take configuration from stdin',
                       dest='from_stdin', action='store_true',
+                      default=False)
+    parser.add_option('--from-file',
+                      help='take configuration from file',
+                      dest='from_file', action='store',
                       default=False)
     parser.add_option('--offline',
                       help='offline mode for OSP use',
@@ -530,10 +536,16 @@ def handle_startup(options, config):
         # exit with !status, 0 for True, 1 for False
         sys.exit(not status)
 
-    # Set offline mode for OSP use
+    # Set offline mode for OSP/RHEV use
     offline_mode = False
-    if (options.offline and options.from_stdin) or options.no_upload:
+    if (options.offline and
+       (options.from_stdin or options.from_file)) or options.no_upload:
         offline_mode = True
+
+    # Can't use both
+    if options.from_stdin and options.from_file:
+        logger.error('Can\'t use both --from-stdin and --from-file.')
+        sys.exit(1)
 
     # First startup, no .registered or .unregistered
     # Ignore if in offline mode
@@ -575,7 +587,7 @@ def _main():
         sys.exit(1)
 
     # from_stdin mode implies to_stdout
-    options.to_stdout = options.to_stdout or options.from_stdin
+    options.to_stdout = options.to_stdout or options.from_stdin or options.from_file
 
     if options.to_stdout:
         options.silent = True

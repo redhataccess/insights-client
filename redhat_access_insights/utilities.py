@@ -191,3 +191,17 @@ def validate_remove_file():
         print "Remove file parsed contents"
         print rm_conf
     logger.info("JSON parsed correctly")
+
+
+def magic_plan_b(filename):
+    '''
+    Use this in instances where
+    python-magic is MIA and can't be installed
+    for whatever reason
+    '''
+    import shlex
+    from subprocess import Popen, PIPE
+    cmd = shlex.split('file --mime-type --mime-encoding ' + filename)
+    stdout, stderr = Popen(cmd, stdout=PIPE).communicate()
+    mime_str = stdout.split(filename + ': ')[1].strip()
+    return mime_str
