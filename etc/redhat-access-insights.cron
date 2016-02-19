@@ -9,13 +9,13 @@ then
     exit 1;
 else
     /bin/chmod +x ${path}
-    if [[ $(/sbin/service cgconfig status) == *Running* ]];
+    if [[ $(/sbin/service cgconfig status 2>/dev/null) == *Running* ]];
     then
         /bin/cgcreate -g memory:redhataccessinsights
         /bin/cgset -r memory.limit_in_bytes=536870912 redhataccessinsights
         exec /bin/cgexec -g memory:redhataccessinsights ${name} --retry 3 --quiet
         /bin/cgdelete memory:redhataccessinsights
     else
-        exec ${name}
+        exec ${name} --quiet
     fi
 fi
