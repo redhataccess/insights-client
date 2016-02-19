@@ -300,39 +300,28 @@
             "command": "/sbin/chkconfig --list"
         },
         {
-            "pattern":[],
-            "command": "/sbin/modinfo",
-            "pre_command": "/bin/ls /sys/module"
+            "pattern": [],
+            "command": "/sbin/ethtool"
         },
         {
             "pattern": [],
-            "command": "/sbin/ethtool",
-            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
+            "command": "/sbin/ethtool -S"
         },
         {
             "pattern": [],
-            "command": "/sbin/ethtool -S",
-            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
+            "command": "/sbin/ethtool -g"
         },
         {
             "pattern": [],
-            "command": "/sbin/ethtool -g",
-            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
+            "command": "/sbin/ethtool -i"
         },
         {
             "pattern": [],
-            "command": "/sbin/ethtool -i",
-            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
+            "command": "/sbin/ethtool -k"
         },
         {
             "pattern": [],
-            "command": "/sbin/ethtool -k",
-            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
-        },
-        {
-            "pattern": [],
-            "command": "/sbin/ifconfig -a",
-            "pre_command": "/sbin/ip -o link | awk -F ': ' '/.*link\\/ether/ {print $2}'"
+            "command": "/sbin/ifconfig -a"
         },
         {
             "pattern": [],
@@ -384,8 +373,7 @@
         },
         {
             "pattern": [],
-            "command": "/usr/sbin/parted -s",
-            "pre_command": "/bin/ls /sys/block | awk '!/^ram|^\\.+$/ {print \"/dev/\" $1 \" unit s print\"}'"
+            "command": "/usr/sbin/parted -s"
         },
         {
             "pattern": [],
@@ -402,10 +390,6 @@
         {
             "pattern": [],
             "command": "vgdisplay"
-        },
-		{
-            "pattern": [],
-            "command": "/usr/bin/last -xwR --time-format iso"
         },
         {
             "pattern": [],
