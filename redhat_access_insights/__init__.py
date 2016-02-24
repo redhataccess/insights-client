@@ -211,16 +211,27 @@ def collect_data_and_upload(config, options, rc=0):
     elapsed = (time.clock() - start)
     logger.debug("Collection Rules Elapsed Time: %s", elapsed)
 
-    start = time.clock()
-    logger.info('Starting to collect Insights data')
-    dc.run_commands(collection_rules, rm_conf)
-    elapsed = (time.clock() - start)
-    logger.debug("Command Collection Elapsed Time: %s", elapsed)
+    if options.container_fs and not os.path.isdir(options.container_fs):
+        logger.error('Invalid path specified for --fs')
+        sys.exit(1)
 
-    start = time.clock()
-    dc.copy_files(collection_rules, rm_conf, stdin_config)
-    elapsed = (time.clock() - start)
-    logger.debug("File Collection Elapsed Time: %s", elapsed)
+    if options.collection_target == 'VERSION0' or "specs" not in collection_rules:
+        start = time.clock()
+        logger.info('Starting to collect Insights data')
+        dc.run_commands(collection_rules, rm_conf)
+        elapsed = (time.clock() - start)
+        logger.debug("Command Collection Elapsed Time: %s", elapsed)
+
+        start = time.clock()
+        dc.copy_files(collection_rules, rm_conf, stdin_config)
+        elapsed = (time.clock() - start)
+        logger.debug("File Collection Elapsed Time: %s", elapsed)
+
+    else:
+        start = time.clock()
+        dc.process_specs(collection_rules, rm_conf, options)
+        elapsed = (time.clock() - start)
+        logger.debug("Data Collection Elapsed Time: %s", elapsed)
 
     dc.write_branch_info(branch_info)
     obfuscate = config.getboolean(APP_NAME, "obfuscate")
@@ -403,6 +414,18 @@ def set_up_options(parser):
                       help='offline mode for OSP use',
                       dest='offline', action='store_true',
                       default=False)
+    parser.add_option('--collection-target',
+                      help='One of "host", "docker_container", "docker_image", or "VERSION0".  "VERSION0" collects exactly as this program did before this option was added.',
+                      action='store',
+                      dest='collection_target')
+    parser.add_option('--fs',
+                      help='Absolute path to mounted filesystem to collect data from (instead of /).',
+                      action='store',
+                      dest='container_fs')
+    parser.add_option('--name',
+                      help='Name to use for uploaded data (instead of hostname).',
+                      action='store',
+                      dest='container_name')
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
                      help='Test connectivity to Red Hat',
@@ -560,6 +583,9 @@ def handle_startup(options, config):
         logger.error('Can\'t use both --from-stdin and --from-file.')
         sys.exit(1)
 
+    if not options.collection_target:
+        options.collection_target = "host"
+
     # First startup, no .registered or .unregistered
     # Ignore if in offline mode
     if (not os.path.isfile(constants.registered_file) and
@@ -590,7 +616,7 @@ def _main():
         sys.exit("Red Hat Access Insights must be run as root")
 
     global logger
-    sys.excepthook = handle_exception
+    #sys.excepthook = handle_exception
 
     parser = optparse.OptionParser()
     set_up_options(parser)

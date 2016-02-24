@@ -137,12 +137,23 @@ class InsightsArchive(object):
         logger.debug("Deleting: " + self.archive_dir)
         shutil.rmtree(self.archive_dir, True)
 
-    def add_command_output(self, command):
+    def add_command_output(self, command, archive_file_name=None):
         """
         Add command output to file
         Use DataCollector.run_command_get_output to run the command
         """
-        logger.debug("Writing %s to cmd_dir", command['cmd'])
-        cmd_out = open(os.path.join(self.cmd_dir, command['cmd']), 'w')
+        if archive_file_name:
+            file_on_disk = os.path.join(self.archive_dir, os.path.relpath(archive_file_name, '/'))
+        else:
+            file_on_disk = os.path.join(self.cmd_dir, command['cmd'])
+
+        logger.debug("Writing %s to %s", command['cmd'], file_on_disk)
+        cmd_out = self._open_ensure_dirs(file_on_disk)
         cmd_out.write(command['output'].encode('utf8'))
         cmd_out.close()
+
+    def _open_ensure_dirs(self, file_on_disk):
+        dirname = os.path.dirname(file_on_disk)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname, 0o700)
+        return open(file_on_disk, 'w')

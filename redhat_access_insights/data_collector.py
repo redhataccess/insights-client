@@ -25,6 +25,85 @@ SOSCLEANER_LOGGER = logging.getLogger('redhat_access_insights.soscleaner')
 SOSCLEANER_LOGGER.setLevel(logging.ERROR)
 
 
+"""
+
+An example additions to uploader.json
+
+    "specs": {
+        ...
+        "rpm_-V_packages": {
+            "host": [
+                {
+                    "pattern": [],
+                    "command": "/bin/rpm -V coreutils procps procps-ng shadow-utils passwd sudo",
+                    "archive_file_name": "/insights_commands/rpm_-V_coreutils_procps_procps-ng_shadow-utils_passwd_sudo"
+                }
+            ],
+            "docker_image": [
+                {
+                    "pattern": [],
+                    "command": "/bin/rpm --root={CONTAINER_MOUNT_POINT} -V coreutils procps procps-ng shadow-utils passwd sudo",
+                    "archive_file_name": "/insights_data/image/commands/rpm_-V_coreutils_procps_procps-ng_shadow-utils_passwd_sudo"
+                }
+            ]
+        },
+        "httpd.conf": {
+            "host": [
+                {
+                    "pattern": [
+                        "SSLProtocol",
+                        "SSLCipherSuite",
+                        "NSSProtocol"
+                    ],
+                    "archive_file_name": "/{EXPANDED_FILE_NAME}",
+                    "file": "/etc/httpd/conf/httpd.conf"
+                }
+            ],
+            "docker_image": [
+                {
+                    "pattern": [
+                        "SSLProtocol",
+                        "SSLCipherSuite",
+                        "NSSProtocol"
+                    ],
+                    "archive_file_name": "/insights_data/image/rootfs/{EXPANDED_FILE_NAME}",
+                    "file": "{CONTAINER_MOUNT_POINT}/etc/httpd/conf/httpd.conf"
+                }
+            ]
+        },
+        ...
+
+    "specs" is a new top level section combining the function of both the existing sections "commands"
+    and "files".
+
+    "httpd.conf" and "rpm_-V_packages" are the symbolic names of two specs we can collect.
+
+    "host" and "docker_image" are analysis targets.  The "host" section should directly echo
+    the "commands" and "files" sections in the same file.
+
+     "file" and "command" have the same meanings as they do in the existing "files" and "commands"
+     sections, with the exception that they may now contain symbolic names of things only the
+     client can determine.
+
+     "archive_file_name" is the location where the output of this spec should be located for
+     this analysis target.  It may contain symbolic names.
+
+
+     "{CONTAINER_MOUNT_POINT}" only defined in "file" and "command", for docker_container and
+     docker_image, the location on the host where the root file system of the container or image
+     is mounted.
+
+     "{EXPANDED_FILE_NAME}" only defined in "archive_file_name" in sections also containing "file".
+     Since "file" can contain a pattern, and can collect multiple files with names not known till
+     collected, this provides a way to place these files in the archive.  If "file" contains
+     "{CONTAINER_MOUNT_POINT}" it will not be included in the expansion of "{EXPADED_FILE_NAME}".
+
+"""
+
+
+
+
+
 class DataCollector(object):
     """
     Run commands and collect files
@@ -54,11 +133,16 @@ class DataCollector(object):
                                command,
                                exclude=None,
                                filters=None,
-                               nolog=False):
+                               nolog=False,
+                               mangled_command=None):
         """
         Execute a command through the system shell. First checks to see if the
         requested command is executable. Returns (returncode, stdout, 0)
         """
+
+        if mangled_command == None:
+            mangled_command = self._mangle_command(command)
+
         # ensure consistent locale for collected command output
         cmd_env = {'LC_ALL': 'C'}
         if not six.PY3:
@@ -74,7 +158,7 @@ class DataCollector(object):
         except OSError as err:
             if err.errno == errno.ENOENT:
                 logger.debug("Command %s not found", command)
-                return {'cmd': self._mangle_command(command),
+                return {'cmd': mangled_command,
                         'status': 127,
                         'output': "Command not found"}
             else:
@@ -127,7 +211,7 @@ class DataCollector(object):
         logger.debug("stderr: %s", stderr)
 
         return {
-            'cmd': self._mangle_command(command),
+            'cmd': mangled_command,
             'status': proc0.returncode,
             'output': stdout.decode('utf-8', 'ignore')
         }
@@ -292,22 +376,45 @@ class DataCollector(object):
         full_path = self.archive.get_full_archive_path('/branch_info')
         write_file_with_text(full_path, json.dumps(branch_info))
 
-    def _copy_file_with_pattern(self, path, patterns, exclude):
+    def _copy_file_with_pattern(self, path_on_disk, patterns, exclude,
+                                container_fs=None,
+                                archive_file_name=None):
         """
-        Copy file, selecting only lines we are interested in
+        Copy path_on_disk into archive, selecting only lines we are interested in
+
+        path_on_disk is the full path of the file to copy.
+            If the file is within a mounted file system, then container_fs will not
+            be None, and will be the initial part of path_on_disk, this is done so
+            that _expand_files works correctly for mounted file systems.
+        container_fs: if not None, is the absolute file name of the mounted file system
+        archive_file_name: if not None, is a where in the archive that path_on_disk should
+            be copied.  This may contain '{EXPANDED_FILE_NAME}' which will be replaced
+            by the value of path_on_disk with the value of container_fs removed.
         """
-        full_path = self.archive.get_full_archive_path(path)
-        if not os.path.isfile(path):
-            logger.debug("File %s does not exist", path)
+        if not os.path.isfile(path_on_disk):
+            logger.debug("File %s does not exist", path_on_disk)
             return
-        logger.debug("Copying %s to %s with filters %s", path, full_path, str(patterns))
+
+        if container_fs:
+            # reconstruct the path_to_collect by stripping off the container
+            path_to_collect = '/' + os.path.relpath(path_on_disk, container_fs)
+        else:
+            path_to_collect = path_on_disk
+
+        if archive_file_name:
+            path_in_archive = self.archive.get_full_archive_path(
+                archive_file_name.replace("{EXPANDED_FILE_NAME}", path_to_collect))
+        else:
+            path_in_archive = self.archive.get_full_archive_path(path_to_collect)
+
+        logger.debug("Copying %s to %s with filters %s", path_on_disk, path_in_archive, str(patterns))
 
         cmd = []
         # shlex.split doesn't handle special characters well
         cmd.append("/bin/sed".encode('utf-8'))
         cmd.append("-rf".encode('utf-8'))
         cmd.append(constants.default_sed_file.encode('utf-8'))
-        cmd.append(path.encode('utf8'))
+        cmd.append(path_on_disk.encode('utf8'))
         sedcmd = Popen(cmd,
                        stdout=PIPE)
 
@@ -344,22 +451,110 @@ class DataCollector(object):
         if patterns is None and exclude is None:
             output = sedcmd.communicate()[0]
 
-        write_file_with_text(full_path, output.decode('utf-8', 'ignore').strip())
+        write_file_with_text(path_in_archive, output.decode('utf-8', 'ignore').strip())
 
-    def copy_file_with_pattern(self, path, patterns, exclude):
+    def copy_file_with_pattern(self, paths_to_collect, patterns, exclude,
+                               container_fs=None,
+                               archive_file_name=None):
         """
         Copy a single file or regex, creating the necessary directories
         But grepping for pattern(s)
         """
-        if "*" in path:
-            paths = _expand_paths(path)
+        if "*" in paths_to_collect:
+            paths = _expand_paths(paths_to_collect)
             if not paths:
-                logger.debug("Could not expand %s", path)
+                logger.debug("Could not expand %s", paths_to_collect)
                 return
-            for path in paths:
-                self._copy_file_with_pattern(path, patterns, exclude)
+            for path_on_disk in paths:
+                self._copy_file_with_pattern(path_on_disk, patterns, exclude,
+                                             container_fs=container_fs,
+                                             archive_file_name=archive_file_name)
         else:
-            self._copy_file_with_pattern(path, patterns, exclude)
+            self._copy_file_with_pattern(paths_to_collect, patterns, exclude,
+                                         container_fs=container_fs,
+                                         archive_file_name=archive_file_name)
+
+
+    def _process_file_spec(self, spec, exclude, options):
+
+        pattern = None
+        if len(spec['pattern']) > 0:
+            pattern = spec['pattern']
+
+        if 'archive_file_name' in spec:
+            archive_file_name = spec['archive_file_name']
+        else:
+            archive_file_name = None
+
+        if options.container_fs:
+            files_to_collect = spec['file'].replace("{CONTAINER_MOUNT_POINT}", options.container_fs)
+        else:
+            files_to_collect = spec['file']
+
+        self.copy_file_with_pattern(files_to_collect, pattern, exclude,
+                                    options.container_fs,
+                                    archive_file_name=archive_file_name)
+
+
+    def _process_command_spec(self, spec, exclude, options):
+
+        if options.collection_target == "host":
+            self._handle_commands(spec, exclude)
+
+        else:
+            if options.container_fs:
+                command = spec['command'].replace("{CONTAINER_MOUNT_POINT}", options.container_fs)
+
+            filters = spec['pattern']
+
+            if 'archive_file_name' in spec:
+                archive_file_name = spec['archive_file_name']
+                mangled_command = None
+            else:
+                archive_file_name = None
+                mangled_command = self._mangle_command(specs['command'])
+
+            output = self.run_command_get_output(command, filters=filters, exclude=exclude,
+                                                 mangled_command=mangled_command)
+            self.archive.add_command_output(output, archive_file_name=archive_file_name)
+
+    def process_specs(self, conf, rm_conf, options):
+        logger.debug("Beginning to process specs")
+
+        if rm_conf:
+            try:
+                exclude = rm_conf['patterns']
+            except LookupError:
+                exclude = None
+        else:
+            exclude = None
+
+        for name, spec_group in conf['specs'].items():
+            if options.collection_target in spec_group:
+                for each_spec in spec_group[options.collection_target]:
+                    if 'file' in each_spec:
+                        if rm_conf:
+                            try:
+                                if each_spec['file'] in rm_conf['files']:
+                                    logger.warn("WARNING: Skipping file %s", each_spec['file'])
+                                    continue
+                            except LookupError:
+                                pass
+
+                        self._process_file_spec(each_spec, exclude, options)
+
+                    elif 'command' in each_spec:
+                        if rm_conf:
+                            try:
+                                if each_spec['command'] in rm_conf['commands']:
+                                    logger.warn("WARNING: Skipping command %s", each_spec['command'])
+                                    continue
+                            except LookupError:
+                                pass
+
+                        self._process_command_spec(each_spec, exclude, options)
+
+        logger.debug("specs processing complete")
 
     def done(self, config, rm_conf):
         """
