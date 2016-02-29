@@ -100,10 +100,8 @@ def _try_satellite6_configuration(config):
             if rhsm_proxy_user != "" and rhsm_proxy_pass != "":
                 logger.debug("Found user and password for rhsm_proxy")
                 proxy = proxy + rhsm_proxy_user + ":" + rhsm_proxy_pass + "@"
-                proxy = proxy + rhsm_proxy_hostname + rhsm_proxy_port
-            else:
-                proxy = proxy + rhsm_proxy_hostname + ':' + rhsm_proxy_port
-                logger.debug("RHSM Proxy: %s", proxy)
+            proxy = proxy + rhsm_proxy_hostname + ':' + rhsm_proxy_port
+            logger.debug("RHSM Proxy: %s", proxy)
         logger.debug("Found Satellite Server Host: %s, Port: %s",
                      rhsm_hostname, rhsm_hostport)
         rhsm_ca = rhsm_config.get('rhsm', 'repo_ca_cert')
