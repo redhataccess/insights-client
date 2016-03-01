@@ -27,10 +27,7 @@ class InsightsArchive(object):
         Create temp dir, archive dir, and command dir
         """
         self.tmp_dir = tempfile.mkdtemp(prefix='/var/tmp/')
-        if container_name:
-            name = container_name
-        else:
-            name = determine_hostname()
+        name = determine_hostname(container_name)
         self.archive_name = ("insights-%s-%s" %
                              (name,
                               time.strftime("%Y%m%d%H%M%S")))

@@ -12,7 +12,7 @@ import logging
 import six
 from tempfile import NamedTemporaryFile
 from soscleaner import SOSCleaner
-from utilities import determine_hostname, _expand_paths, write_file_with_text
+from utilities import determine_hostname, _expand_paths, write_file_with_text, generate_container_id
 from constants import InsightsConstants as constants
 
 APP_NAME = constants.app_name
@@ -30,10 +30,15 @@ class DataCollector(object):
     Run commands and collect files
     """
 
-    def __init__(self, archive_=None, container_name=None):
+    def __init__(self, archive_=None, mountpoint=None, container_name=None):
+        # in --container mode, this will be instantiated in a different way than
+        #  in the normal collect_data_and_upload function in __init__.py
         self._set_black_list()
         self.archive = archive_ if archive_ else archive.InsightsArchive()
-        self.container_name=container_name
+        self.mountpoint = '/'
+        if mountpoint:
+            self.mountpoint = mountpoint
+        self.container_name = container_name
 
     def _set_black_list(self):
         """
@@ -56,14 +61,14 @@ class DataCollector(object):
                                exclude=None,
                                filters=None,
                                nolog=False,
-                               archive_name=None):
+                               mangled_command=None):
         """
         Execute a command through the system shell. First checks to see if the
         requested command is executable. Returns (returncode, stdout, 0)
         """
-
-        if archive_name == None:
-            archive_name = self._mangle_command(command)
+        # mangle the command if it's not pre-mangled
+        if not mangled_command:
+            mangled_command = self._mangle_command(command)
 
         # ensure consistent locale for collected command output
         cmd_env = {'LC_ALL': 'C'}
@@ -80,7 +85,7 @@ class DataCollector(object):
         except OSError as err:
             if err.errno == errno.ENOENT:
                 logger.debug("Command %s not found", command)
-                return {'cmd': archive_name,
+                return {'cmd': mangled_command,
                         'status': 127,
                         'output': "Command not found"}
             else:
@@ -133,7 +138,7 @@ class DataCollector(object):
         logger.debug("stderr: %s", stderr)
 
         return {
-            'cmd': archive_name,
+            'cmd': mangled_command,
             'status': proc0.returncode,
             'output': stdout.decode('utf-8', 'ignore')
         }
@@ -142,7 +147,9 @@ class DataCollector(object):
         """
         Handle special commands
         """
-        if 'ethtool' in command['command']:
+        if 'rpm' in command['command']:
+            self._handle_rpm(command, exclude)
+        elif 'ethtool' in command['command']:
             # Get the ethtool flag
             flag = None
             try:
@@ -165,27 +172,7 @@ class DataCollector(object):
             self.archive.add_command_output(
                 self.run_command_get_output(command['command']))
 
-    def _handle_container_commands(self, command, exclude, container_fs):
-
-        if 'rpm' in command['command']:
-            cmd = command['command'].replace('rpm', 'rpm --root=' + container_fs, 1)
-            filters = command['pattern']
-            output = self.run_command_get_output(
-                cmd,
-                filters=filters,
-                exclude=exclude,
-                archive_name=self._mangle_command(command['command']))
-            self.archive.add_command_output(output)
-
-        elif 'hostname' in command['command']:
-            self.archive.add_command_output({
-                'cmd': self._mangle_command(command['command']),
-                'status': 0,
-                'output': self.container_name
-            })
-
-
-    def run_commands(self, conf, rm_conf, container_fs):
+    def run_commands(self, conf, rm_conf):
         """
         Run through the list of commands and add them to the archive
         """
@@ -208,10 +195,7 @@ class DataCollector(object):
                 except LookupError:
                     pass
 
-            if container_fs:
-                self._handle_container_commands(command, exclude, container_fs)
-            else:
-                self._handle_commands(command, exclude)
+            self._handle_commands(command, exclude)
 
         logger.debug("Commands complete")
 
@@ -229,6 +213,21 @@ class DataCollector(object):
                 iface = match.string.split(':')[1].lstrip()
                 interfaces[iface] = True
         return interfaces
+
+    def _handle_rpm(self, command, exclude):
+        '''
+        Helper to handle rpm
+        '''
+        cmd = command['command'].replace('rpm', 'rpm --root=' + self.mountpoint, 1)
+        filters = command['pattern']
+        # pre-mangle rpm command separately so that we don't get '--root=' in it
+        mangled_rpm = self._mangle_command(command['command'])
+        output = self.run_command_get_output(
+            cmd,
+            filters=filters,
+            exclude=exclude,
+            mangled_command=mangled_rpm)
+        self.archive.add_command_output(output)
 
     def _handle_parted(self):
         """
@@ -260,7 +259,7 @@ class DataCollector(object):
         self.archive.add_command_output({
             'cmd': self._mangle_command(command),
             'status': 0,
-            'output': determine_hostname()
+            'output': determine_hostname(self.container_name)
         })
 
     def _handle_ethtool(self, flag):
@@ -274,7 +273,7 @@ class DataCollector(object):
                 cmd = "/sbin/ethtool " + interface
             self.archive.add_command_output(self.run_command_get_output(cmd))
 
-    def copy_files(self, conf, rm_conf, container_fs):
+    def copy_files(self, conf, rm_conf):
         """
         Run through the list of files and copy them
         """
@@ -301,7 +300,9 @@ class DataCollector(object):
             if len(_file['pattern']) > 0:
                 pattern = _file['pattern']
 
-            self.copy_file_with_pattern(_file['file'], pattern, exclude, container_fs)
+            self.copy_file_with_pattern(_file['file'], pattern, exclude)
+
+        # maybe tack the machine-id for containers here, instead of in the copy file func
         logger.debug("File copy complete")
 
     def write_branch_info(self, branch_info):
@@ -312,92 +313,90 @@ class DataCollector(object):
         full_path = self.archive.get_full_archive_path('/branch_info')
         write_file_with_text(full_path, json.dumps(branch_info))
 
-    def _copy_file_with_pattern(self, path_on_disk, patterns, exclude, container_fs):
+    def _copy_file_with_pattern(self, real_path, patterns, exclude):
         """
         Copy file, selecting only lines we are interested in
         """
+        # we're given the real path, so strip it back to relative path
+        # the file's destination inside the archive is based on
+        #  the relative location of the file to the mountpoint
+        relative_path = os.path.join('/',
+                                     os.path.relpath(real_path, self.mountpoint))
+        archive_path = self.archive.get_full_archive_path(relative_path)
 
-        if container_fs:
-            # reconstruct the path_to_collect by stripping off the container
-            path_to_collect = '/' + os.path.relpath(path_on_disk, container_fs)
-        else:
-            path_to_collect = path_on_disk
-
-        path_in_archive = self.archive.get_full_archive_path(path_to_collect)
-
-        if not os.path.isfile(path_on_disk):
-            logger.debug("File %s does not exist", path_on_disk)
+        if not os.path.isfile(real_path):
+            logger.debug("File %s does not exist", real_path)
             return
-        logger.debug("Copying %s to %s with filters %s", path_on_disk, path_in_archive, str(patterns))
+        logger.debug("Copying %s to %s with filters %s", real_path, archive_path, str(patterns))
 
-        cmd = []
-        # shlex.split doesn't handle special characters well
-        cmd.append("/bin/sed".encode('utf-8'))
-        cmd.append("-rf".encode('utf-8'))
-        cmd.append(constants.default_sed_file.encode('utf-8'))
-        cmd.append(path_on_disk.encode('utf8'))
-        sedcmd = Popen(cmd,
-                       stdout=PIPE)
-
-        if exclude is not None:
-            exclude_file = NamedTemporaryFile()
-            exclude_file.write("\n".join(exclude))
-            exclude_file.flush()
-
-            cmd = "/bin/grep -v -F -f %s" % exclude_file.name
-            args = shlex.split(cmd.encode("utf-8"))
-            proc = Popen(args, stdin=sedcmd.stdout, stdout=PIPE)
-            sedcmd.stdout.close()
-            stdin = proc.stdout
-            if patterns is None:
-                output = proc.communicate()[0]
-            else:
-                sedcmd = proc
-
-        if patterns is not None:
-            pattern_file = NamedTemporaryFile()
-            pattern_file.write("\n".join(patterns))
-            pattern_file.flush()
-
-            cmd = "/bin/grep -F -f %s" % pattern_file.name
-            args = shlex.split(cmd.encode("utf-8"))
-            proc1 = Popen(args, stdin=sedcmd.stdout, stdout=PIPE)
-            sedcmd.stdout.close()
+        if self.container_name and path_to_collect == "/etc/redhat-access-insights/machine-id":
+            # make a container machine-id
+            # TODO: could use container ID instead
+            output = generate_container_id(self.container_name)
+        else:
+            cmd = []
+            # shlex.split doesn't handle special characters well
+            cmd.append("/bin/sed".encode('utf-8'))
+            cmd.append("-rf".encode('utf-8'))
+            cmd.append(constants.default_sed_file.encode('utf-8'))
+            cmd.append(real_path.encode('utf8'))
+            sedcmd = Popen(cmd,
+                           stdout=PIPE)
 
             if exclude is not None:
-                stdin.close()
+                exclude_file = NamedTemporaryFile()
+                exclude_file.write("\n".join(exclude))
+                exclude_file.flush()
 
-            output = proc1.communicate()[0]
+                cmd = "/bin/grep -v -F -f %s" % exclude_file.name
+                args = shlex.split(cmd.encode("utf-8"))
+                proc = Popen(args, stdin=sedcmd.stdout, stdout=PIPE)
+                sedcmd.stdout.close()
+                stdin = proc.stdout
+                if patterns is None:
+                    output = proc.communicate()[0]
+                else:
+                    sedcmd = proc
 
-        if patterns is None and exclude is None:
-            output = sedcmd.communicate()[0]
+            if patterns is not None:
+                pattern_file = NamedTemporaryFile()
+                pattern_file.write("\n".join(patterns))
+                pattern_file.flush()
 
-        write_file_with_text(path_in_archive, output.decode('utf-8', 'ignore').strip())
+                cmd = "/bin/grep -F -f %s" % pattern_file.name
+                args = shlex.split(cmd.encode("utf-8"))
+                proc1 = Popen(args, stdin=sedcmd.stdout, stdout=PIPE)
+                sedcmd.stdout.close()
 
-    def copy_file_with_pattern(self, paths_to_collect, patterns, exclude, container_fs):
+                if exclude is not None:
+                    stdin.close()
+
+                output = proc1.communicate()[0]
+
+            if patterns is None and exclude is None:
+                output = sedcmd.communicate()[0]
+
+        write_file_with_text(archive_path, output.decode('utf-8', 'ignore').strip())
+
+    def copy_file_with_pattern(self, path, patterns, exclude):
         """
         Copy a single file or regex, creating the necessary directories
         But grepping for pattern(s)
-
-        paths_to_collect is the path pattern as specified in the uploader.json file
-        container_fs is None or the location of the container (as a directory tree)
         """
+        # the actual location of the file
+        # need to append this here for _expand_paths to work
+        real_path = os.path.join(self.mountpoint,
+                                 path.lstrip('/'))
 
-
-        if container_fs:
-            paths_on_disk = os.path.join(container_fs, paths_to_collect.lstrip('/'))
-        else:
-            paths_on_disk = paths_to_collect
-
-        if "*" in paths_to_collect:
-            paths = _expand_paths(paths_on_disk)
-            if not paths:
-                logger.debug("Could not expand %s", paths_on_disk)
+        if "*" in path:
+            expanded_paths = _expand_paths(real_path)
+            if not expanded_paths:
+                logger.debug("Could not expand %s", real_path)
                 return
-            for path_on_disk in paths:
-                self._copy_file_with_pattern(path_on_disk, patterns, exclude, container_fs)
+            for p in expanded_paths:
+                self._copy_file_with_pattern(p, patterns, exclude)
         else:
-            self._copy_file_with_pattern(paths_on_disk, patterns, exclude, container_fs)
+            self._copy_file_with_pattern(real_path, patterns, exclude)
 
     def done(self, config, rm_conf):
         """

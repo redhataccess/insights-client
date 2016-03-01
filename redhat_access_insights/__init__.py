@@ -33,7 +33,7 @@ from support import InsightsSupport
 
 from constants import InsightsConstants as constants
 
-__author__ = 'Dan Varga <dvarga@redhat.com>'
+__author__ = 'Jeremy Crafts <jcrafts@redhat.com>'
 
 LOG_FORMAT = ("%(asctime)s %(levelname)s %(message)s")
 APP_NAME = constants.app_name
@@ -176,9 +176,8 @@ def collect_data_and_upload(config, options, rc=0):
         branch_info = handle_branch_info_error(
             "Could not determine branch information", options)
     pc = InsightsConfig(config, pconn)
-    archive = InsightsArchive(compressor=options.compressor,
-                              container_name=options.container_name)
-    dc = DataCollector(archive, container_name=options.container_name)
+    archive = InsightsArchive(compressor=options.compressor)
+    dc = DataCollector(archive)
 
     # register the exit handler here to delete the archive
     atexit.register(handle_exit, archive, options.keep_archive or options.no_upload)
@@ -190,18 +189,18 @@ def collect_data_and_upload(config, options, rc=0):
     elapsed = (time.clock() - start)
     logger.debug("Collection Rules Elapsed Time: %s", elapsed)
 
-    if options.container_mode and not os.path.isdir(options.container_fs):
-        logger.error('Invalid path specified for --fs')
-        sys.exit(1)
+    # if options.container_mode and not os.path.isdir(options.container_fs):
+    #     logger.error('Invalid path specified for --fs')
+    #     sys.exit(1)
 
     start = time.clock()
     logger.info('Starting to collect Insights data')
-    dc.run_commands(collection_rules, rm_conf, options.container_fs)
+    dc.run_commands(collection_rules, rm_conf)
     elapsed = (time.clock() - start)
     logger.debug("Command Collection Elapsed Time: %s", elapsed)
 
     start = time.clock()
-    dc.copy_files(collection_rules, rm_conf, options.container_fs)
+    dc.copy_files(collection_rules, rm_conf)
     elapsed = (time.clock() - start)
     logger.debug("File Collection Elapsed Time: %s", elapsed)
 
@@ -386,16 +385,16 @@ def set_up_options(parser):
                       help='Run Insights in container mode.',
                       action='store_true',
                       dest='container_mode')
-    parser.add_option('--fs',
-                      help='Absolute path to mounted filesystem to run Insights against. '
-                           'Only valid when --container is used',
-                      action='store',
-                      dest='container_fs')
-    parser.add_option('--name',
-                      help='Name to use for mounted container filesystem. '
-                           'Only valid when --container is used',
-                      action='store',
-                      dest='container_name')
+    # parser.add_option('--fs',
+    #                   help='Absolute path to mounted filesystem to run Insights against. '
+    #                        'Only valid when --container is used',
+    #                   action='store',
+    #                   dest='container_fs')
+    # parser.add_option('--name',
+    #                   help='Name to use for mounted container filesystem. '
+    #                        'Only valid when --container is used',
+    #                   action='store',
+    #                   dest='container_name')
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
                      help='Test connectivity to Red Hat',
@@ -488,10 +487,10 @@ def handle_startup(options, config):
         # Try to discover if we are connected to a satellite or not
         try_auto_configuration(config)
 
-    # Set the schedule
-    if not options.no_schedule and not config.getboolean(
-            APP_NAME, 'no_schedule'):
-        InsightsSchedule()
+    if options.no_schedule and not options.register:
+        InsightsSchedule(set_cron=False).remove_scheduling()
+        logger.info('Automatic scheduling for Insights has been removed.')
+        sys.exit()
 
     # Test connection, useful for proxy debug
     if options.test_connection:
@@ -505,17 +504,24 @@ def handle_startup(options, config):
 
     # Handle registration, grouping, and display name
     if options.register:
+        # Set the schedule
         opt_group = options.group
-        message, hostname, opt_group, display_name = register(config, options)
-        if options.display_name is None and options.group is None:
-            logger.info('Successfully registered %s', hostname)
-        elif options.display_name is None:
-            logger.info('Successfully registered %s in group %s', hostname, opt_group)
+        if os.path.isfile(constants.registered_file):
+            logger.info('This host has already been registered.')
         else:
-            logger.info('Successfully registered %s as %s in group %s', hostname, display_name,
-                        opt_group)
-
-        logger.info(message)
+            message, hostname, opt_group, display_name = register(config, options)
+            if options.display_name is None and options.group is None:
+                logger.info('Successfully registered %s', hostname)
+            elif options.display_name is None:
+                logger.info('Successfully registered %s in group %s', hostname, opt_group)
+            else:
+                logger.info('Successfully registered %s as %s in group %s', hostname, display_name,
+                            opt_group)
+            logger.info(message)
+        if not options.no_schedule and not config.getboolean(
+                APP_NAME, 'no_schedule'):
+            InsightsSchedule()
+            logger.info('Automatic daily scheduling for Insights has been enabled.')
 
     # Collect debug/log information
     if options.support:
@@ -536,9 +542,9 @@ def handle_startup(options, config):
         offline_mode = True
 
     # blank these out if --container not set
-    if not options.container_mode:
-        options.container_fs = None
-        options.container_name = None
+    # if not options.container_mode:
+    #     options.container_fs = None
+    #     options.container_name = None
 
     # First startup, no .registered or .unregistered
     # Ignore if in offline mode

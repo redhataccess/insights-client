@@ -12,31 +12,35 @@ from constants import InsightsConstants as constants
 logger = logging.getLogger(constants.app_name)
 
 
-def determine_hostname():
+def determine_hostname(container=None):
     """
     Find fqdn if we can
     """
-    socket_gethostname = socket.gethostname()
-    socket_fqdn = socket.getfqdn()
+    if container:
+        # use container name as "hostname" for container
+        return container
+    else:
+        socket_gethostname = socket.gethostname()
+        socket_fqdn = socket.getfqdn()
 
-    try:
-        socket_ex = socket.gethostbyname_ex(socket_gethostname)[0]
-    except LookupError:
-        socket_ex = ''
-    except socket.gaierror:
-        socket_ex = ''
+        try:
+            socket_ex = socket.gethostbyname_ex(socket_gethostname)[0]
+        except LookupError:
+            socket_ex = ''
+        except socket.gaierror:
+            socket_ex = ''
 
-    gethostname_len = len(socket_gethostname)
-    fqdn_len = len(socket_fqdn)
-    ex_len = len(socket_ex)
+        gethostname_len = len(socket_gethostname)
+        fqdn_len = len(socket_fqdn)
+        ex_len = len(socket_ex)
 
-    if fqdn_len > gethostname_len or ex_len > gethostname_len:
-        if "localhost" not in socket_ex and len(socket_ex):
-            return socket_ex
-        if "localhost" not in socket_fqdn:
-            return socket_fqdn
+        if fqdn_len > gethostname_len or ex_len > gethostname_len:
+            if "localhost" not in socket_ex and len(socket_ex):
+                return socket_ex
+            if "localhost" not in socket_fqdn:
+                return socket_fqdn
 
-    return socket_gethostname
+        return socket_gethostname
 
 
 def _write_machine_id(machine_id):
@@ -96,7 +100,7 @@ def delete_unregistered_file():
 
 def generate_machine_id(new=False):
     """
-    Generate a machine-id if /etc/machine-id does not exist
+    Generate a machine-id if /etc/redhat-access-insights/machine-id does not exist
     """
     machine_id = None
     machine_id_file = None
@@ -105,17 +109,7 @@ def generate_machine_id(new=False):
         machine_id_file = open(constants.machine_id_file, 'r')
         machine_id = machine_id_file.read()
         machine_id_file.close()
-    elif (os.path.isfile('/etc/machine-id') and not
-          os.path.isfile(constants.machine_id_file)):
-        logger.debug('Found /etc/machine-id, '
-                     'but not %s', constants.machine_id_file)
-        machine_id_file = open("/etc/machine-id", "r")
-        machine_id = machine_id_file.read()
-        machine_id_file.close()
-        _write_machine_id(machine_id)
-    elif ((not os.path.isfile('/etc/machine-id') and not
-           os.path.isfile(constants.machine_id_file)) or
-          new):
+    else:
         logger.debug('Could not find machine-id file, creating')
         machine_id = str(uuid.uuid4())
         _write_machine_id(machine_id)
@@ -128,8 +122,6 @@ def delete_machine_id():
     '''
     if os.path.isfile(constants.machine_id_file):
         os.remove(constants.machine_id_file)
-    if os.path.isfile('/etc/machine-id'):
-        os.remove('/etc/machine-id')
 
 
 def _expand_paths(path):
@@ -203,3 +195,8 @@ def validate_remove_file():
         print "Remove file parsed contents"
         print rm_conf
     logger.info("JSON parsed correctly")
+
+
+def generate_container_id(container_name):
+    # container id is a uuid in the namespace of the machine
+    return str(uuid.uuid5(uuid.UUID(generate_machine_id()), container_name))
