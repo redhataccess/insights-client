@@ -54,7 +54,7 @@ class InsightsArchive(object):
         """
         Returns the full archive path
         """
-        return os.path.join(self.archive_dir, path[1:])
+        return os.path.join(self.archive_dir, path.lstrip('/'))
 
     def _copy_file(self, path):
         """
@@ -92,7 +92,7 @@ class InsightsArchive(object):
         """
         for directory in path:
             if os.path.isdir(path):
-                full_path = os.path.join(self.archive_dir, directory[1:])
+                full_path = os.path.join(self.archive_dir, directory.lstrip('/'))
                 logger.debug("Copying %s to %s", directory, full_path)
                 shutil.copytree(directory, full_path)
             else:
@@ -143,9 +143,9 @@ class InsightsArchive(object):
         Use DataCollector.run_command_get_output to run the command
         """
         if archive_file_name:
-            file_on_disk = os.path.join(self.archive_dir, os.path.relpath(archive_file_name, '/'))
+            file_on_disk = os.path.join(self.archive_dir, archive_file_name.lstrip('/'))
         else:
-            file_on_disk = os.path.join(self.cmd_dir, command['cmd'])
+            file_on_disk = os.path.join(self.cmd_dir, command['cmd'].lstrip('/'))
 
         logger.debug("Writing %s to %s", command['cmd'], file_on_disk)
         cmd_out = self._open_ensure_dirs(file_on_disk)
