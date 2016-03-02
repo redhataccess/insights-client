@@ -21,6 +21,7 @@ from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
                        write_lastupload_file,
+                       write_registered_file,
                        delete_registered_file,
                        delete_unregistered_file,
                        delete_machine_id)
@@ -29,7 +30,7 @@ from data_collector import DataCollector
 from schedule import InsightsSchedule
 from connection import InsightsConnection
 from archive import InsightsArchive
-from support import InsightsSupport
+from support import InsightsSupport, registration_check
 
 from constants import InsightsConstants as constants
 
@@ -491,15 +492,22 @@ def handle_startup(options, config):
         if os.path.isfile(constants.registered_file):
             logger.info('This host has already been registered.')
         else:
-            message, hostname, opt_group, display_name = register(config, options)
-            if options.display_name is None and options.group is None:
-                logger.info('Successfully registered %s', hostname)
-            elif options.display_name is None:
-                logger.info('Successfully registered %s in group %s', hostname, opt_group)
+            # double check reg status with the API
+            reg_check, status = registration_check(config)
+            if not status:
+                message, hostname, opt_group, display_name = register(config, options)
+                if options.display_name is None and options.group is None:
+                    logger.info('Successfully registered %s', hostname)
+                elif options.display_name is None:
+                    logger.info('Successfully registered %s in group %s', hostname, opt_group)
+                else:
+                    logger.info('Successfully registered %s as %s in group %s', hostname, display_name,
+                                opt_group)
+                logger.info(message)
             else:
-                logger.info('Successfully registered %s as %s in group %s', hostname, display_name,
-                            opt_group)
-            logger.info(message)
+                logger.info('This host has already been registered.')
+                # regenerate the .registered file
+                write_registered_file()
         if not options.no_schedule and not config.getboolean(
                 APP_NAME, 'no_schedule'):
             InsightsSchedule()
@@ -513,8 +521,7 @@ def handle_startup(options, config):
 
     # Just check registration status
     if options.status:
-        support = InsightsSupport(config)
-        reg_check = support.registration_check()
+        reg_check, status = registration_check(config)
         logger.info('\n'.join(reg_check))
         sys.exit(0)
 

@@ -14,38 +14,41 @@ APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
 
 
+def registration_check(config):
+    # check local registration record
+    if os.path.isfile(constants.registered_file):
+        local_record = 'System is registered.'
+        with open(constants.registered_file) as reg_file:
+            local_record += ' Registered at ' + reg_file.readline()
+    else:
+        local_record = 'System is NOT registered.'
+    if os.path.isfile(constants.unregistered_file):
+        with open(constants.unregistered_file) as reg_file:
+            local_record += ' Unregistered at ' + reg_file.readline()
+
+    pconn = InsightsConnection(config)
+    api_reg_status = pconn.api_registration_check()
+    if type(api_reg_status) is bool:
+        if api_reg_status:
+            api_record = 'Insights API confirms registration.'
+        else:
+            api_record = 'Insights API could not be reached to confirm registration status.'
+    elif api_reg_status is None:
+        api_record = 'Insights API says this machine is NOT registered.'
+        api_reg_status = False
+    else:
+        api_record = 'Insights API says this machine was unregistered at ' + api_reg_status
+        api_reg_status = False
+
+    return [local_record, api_record], api_reg_status
+
+
 class InsightsSupport(object):
     '''
     Build the support logfile
     '''
     def __init__(self, config):
         self.config = config
-
-    def registration_check(self):
-        # check local registration record
-        if os.path.isfile(constants.registered_file):
-            local_record = 'System is registered.'
-            with open(constants.registered_file) as reg_file:
-                local_record += ' Registered at ' + reg_file.readline()
-        else:
-            local_record = 'System is NOT registered.'
-        if os.path.isfile(constants.unregistered_file):
-            with open(constants.unregistered_file) as reg_file:
-                local_record += ' Unregistered at ' + reg_file.readline()
-
-        pconn = InsightsConnection(self.config)
-        api_reg_status = pconn.api_registration_check()
-        if type(api_reg_status) is bool:
-            if api_reg_status:
-                api_record = 'Insights API confirms registration.'
-            else:
-                api_record = 'Insights API could not be reached to confirm registration status.'
-        elif api_reg_status is None:
-            api_record = 'Insights API says this machine is NOT registered.'
-        else:
-            api_record = 'Insights API says this machine was unregistered at ' + api_reg_status
-
-        return [local_record, api_record]
 
     def collect_support_info(self):
         '''
@@ -55,7 +58,7 @@ class InsightsSupport(object):
         cfg_block = []
 
         logger.info('Insights version: %s' % (constants.version))
-        cfg_block += self.registration_check()
+        cfg_block += registration_check(self.config)
 
         lastupload = 'never'
         if os.path.isfile(constants.lastupload_file):

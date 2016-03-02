@@ -541,15 +541,17 @@ class InsightsConnection(object):
             res = self.session.get(self.api_url + '/v1/systems/' + machine_id)
         except request.ConnectionError as e:
             return False
-        # check the 'unregistered_at' attribute of the response
+        # check the 'unregistered_at' key of the response
         try:
             unreg_status = json.loads(res.content)['unregistered_at']
-        except AttributeError:
+        except KeyError:
             # no record of this machine, machine was never registered
             return None
         if unreg_status is None:
+            # unregistered_at = null, means this machine IS registered
             return True
         else:
+            # machine has been unregistered, this is a timestamp
             return unreg_status
 
     def unregister(self):
