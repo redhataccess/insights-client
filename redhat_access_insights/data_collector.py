@@ -329,13 +329,31 @@ class DataCollector(object):
             self.copy_file_with_pattern(_file['file'], pattern, exclude)
         logger.debug("File copy complete")
 
-    def write_branch_info(self, branch_info):
+    def write_branch_info(self, branch_info, collection_rules=None):
         """
         Write branch information to file
+        collection_rules is None if we are doing a VERSION0 collection
         """
+        if not collection_rules:
+            branch_info_location = '/branch_info'
+        else:
+            branch_info_location = collection_rules['meta_specs']['branch_info']['archive_file_name']
+
         logger.debug("Writing branch information to workdir")
-        full_path = self.archive.get_full_archive_path('/branch_info')
+        full_path = self.archive.get_full_archive_path(branch_info_location)
         write_file_with_text(full_path, json.dumps(branch_info))
+
+    def write_analysis_target(self, analysis_target, collection_rules):
+        analysis_target_location = collection_rules['meta_specs']['analysis_target']['archive_file_name']
+        logger.debug("Writing analysis_target, '%s' information to: %s" % (analysis_target, analysis_target_location))
+        full_path = self.archive.get_full_archive_path(analysis_target_location)
+        write_file_with_text(full_path, analysis_target)
+
+    def write_machine_id(self, machine_id, collection_rules):
+        machine_id_location = collection_rules['meta_specs']['machine-id']['archive_file_name']
+        logger.debug("Writing machine_id, '%s' information to: %s" % (machine_id, machine_id_location))
+        full_path = self.archive.get_full_archive_path(machine_id_location)
+        write_file_with_text(full_path, machine_id)
 
     def _copy_file_with_pattern(self, path_on_disk, patterns, exclude,
                                 container_fs=None,
@@ -517,10 +535,18 @@ class DataCollector(object):
 
         logger.debug("specs processing complete")
 
-    def done(self, config, rm_conf):
+    def done(self, config, rm_conf, collection_rules=None):
         """
         Do finalization stuff
         """
+
+        # Only copy the log after all else is copied
+        # collection_rules is None if we are doing an old style "VERSION0" collection
+        if collection_rules:
+            path_in_archive = self.archive.get_full_archive_path(collection_rules['meta_specs']['uploader_log']['archive_file_name'])
+            content = open("/var/log/redhat-access-insights/redhat-access-insights.log").read().strip()
+            write_file_with_text(path_in_archive, content.decode('utf-8', 'ignore'))
+
         if config.getboolean(APP_NAME, "obfuscate"):
             cleaner = SOSCleaner(quiet=True)
             clean_opts = CleanOptions(self.archive.tmp_dir, config, rm_conf)

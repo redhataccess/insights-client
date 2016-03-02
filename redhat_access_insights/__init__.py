@@ -20,6 +20,7 @@ import atexit
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
+                       generate_analysis_target_id,
                        write_lastupload_file,
                        delete_registered_file,
                        delete_unregistered_file,
@@ -159,7 +160,6 @@ def handle_exit(archive, keep_archive):
     if not keep_archive:
         archive.delete_tmp_dir()
 
-
 def collect_data_and_upload(config, options, rc=0):
     """
     All the heavy lifting done here
@@ -205,19 +205,29 @@ def collect_data_and_upload(config, options, rc=0):
         elapsed = (time.clock() - start)
         logger.debug("File Collection Elapsed Time: %s", elapsed)
 
+        dc.write_branch_info(branch_info)
+
     else:
         start = time.clock()
         dc.process_specs(collection_rules, rm_conf, options)
         elapsed = (time.clock() - start)
         logger.debug("Data Collection Elapsed Time: %s", elapsed)
 
-    dc.write_branch_info(branch_info)
+        dc.write_analysis_target(options.collection_target, collection_rules)
+        dc.write_machine_id(
+            generate_analysis_target_id(options.collection_target, options.container_name),
+            collection_rules)
+        dc.write_branch_info(branch_info, collection_rules)
+
     obfuscate = config.getboolean(APP_NAME, "obfuscate")
 
     collection_duration = (time.clock() - collection_start)
 
     if not options.no_tar_file:
-        tar_file = dc.done(config, rm_conf)
+        if options.collection_target == 'VERSION0':
+            tar_file = dc.done(config, rm_conf)
+        else:
+            tar_file = dc.done(config, rm_conf, collection_rules=collection_rules)
         if not options.no_upload:
             logger.info('Uploading Insights data,'
                         ' this may take a few minutes')
