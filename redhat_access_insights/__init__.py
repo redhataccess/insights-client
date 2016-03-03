@@ -20,7 +20,6 @@ import atexit
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
-                       write_lastupload_file,
                        delete_registered_file,
                        delete_unregistered_file,
                        delete_machine_id)
@@ -30,6 +29,7 @@ from schedule import InsightsSchedule
 from connection import InsightsConnection
 from archive import InsightsArchive
 from support import InsightsSupport
+from upload import collect_data_and_upload
 
 from constants import InsightsConstants as constants
 
@@ -140,122 +140,6 @@ def lineno():
     Get lineno
     """
     return inspect.currentframe().f_back.f_lineno
-
-
-def handle_branch_info_error(msg, options):
-    if options.no_upload:
-        logger.warning(msg)
-        logger.warning("Assuming remote branch and leaf value of -1")
-        branch_info = {}
-        branch_info['remote_branch'] = branch_info['remote_leaf'] = -1
-        return branch_info
-    else:
-        logger.error("ERROR: %s", msg)
-        sys.exit()
-
-
-def handle_exit(archive, keep_archive):
-    # delete the archive on exit so we don't keep crap around
-    if not keep_archive:
-        archive.delete_tmp_dir()
-
-
-def collect_data_and_upload(config, options, rc=0):
-    """
-    All the heavy lifting done here
-    """
-    collection_start = time.clock()
-
-    pconn = InsightsConnection(config)
-    try:
-        branch_info = pconn.branch_info()
-    except requests.ConnectionError:
-        branch_info = handle_branch_info_error(
-            "Could not connect to determine branch information", options)
-    except LookupError:
-        branch_info = handle_branch_info_error(
-            "Could not determine branch information", options)
-    pc = InsightsConfig(config, pconn)
-    archive = InsightsArchive(compressor=options.compressor)
-    dc = DataCollector(archive)
-
-    # register the exit handler here to delete the archive
-    atexit.register(handle_exit, archive, options.keep_archive or options.no_upload)
-
-    stdin_config = json.load(sys.stdin) if options.from_stdin else {}
-
-    start = time.clock()
-    collection_rules, rm_conf = pc.get_conf(options.update, stdin_config)
-    elapsed = (time.clock() - start)
-    logger.debug("Collection Rules Elapsed Time: %s", elapsed)
-
-    # if options.container_mode and not os.path.isdir(options.container_fs):
-    #     logger.error('Invalid path specified for --fs')
-    #     sys.exit(1)
-
-    start = time.clock()
-    logger.info('Starting to collect Insights data')
-    dc.run_commands(collection_rules, rm_conf)
-    elapsed = (time.clock() - start)
-    logger.debug("Command Collection Elapsed Time: %s", elapsed)
-
-    start = time.clock()
-    dc.copy_files(collection_rules, rm_conf)
-    elapsed = (time.clock() - start)
-    logger.debug("File Collection Elapsed Time: %s", elapsed)
-
-    dc.write_branch_info(branch_info)
-    obfuscate = config.getboolean(APP_NAME, "obfuscate")
-
-    collection_duration = (time.clock() - collection_start)
-
-    if not options.no_tar_file:
-        tar_file = dc.done(config, rm_conf)
-        if not options.no_upload:
-            logger.info('Uploading Insights data,'
-                        ' this may take a few minutes')
-            for tries in range(options.retries):
-                upload = pconn.upload_archive(tar_file, collection_duration)
-                if upload.status_code == 201:
-                    write_lastupload_file()
-                    logger.info("Upload completed successfully!")
-                    break
-                elif upload.status_code == 412:
-                    pconn.handle_fail_rcs(upload)
-                else:
-                    logger.error("Upload attempt %d of %d failed! Status Code: %s",
-                                 tries + 1, options.retries, upload.status_code)
-                    if tries + 1 != options.retries:
-                        logger.info("Waiting %d seconds then retrying",
-                                    constants.sleep_time)
-                        time.sleep(constants.sleep_time)
-                    else:
-                        logger.error("All attempts to upload have failed!")
-                        logger.error("Please see %s for additional information",
-                                     constants.default_log_file)
-                        rc = 1
-
-            if (not obfuscate and not options.keep_archive):
-                dc.archive.delete_tmp_dir()
-            else:
-                if obfuscate:
-                    logger.info('Obfuscated Insights data retained in %s',
-                                os.path.dirname(tar_file))
-                else:
-                    logger.info('Insights data retained in %s', tar_file)
-        else:
-            handle_file_output(options, tar_file)
-    else:
-        logger.info('See Insights data in %s', dc.archive.archive_dir)
-    return rc
-
-
-def handle_file_output(options, tar_file):
-    if options.to_stdout:
-        shutil.copyfileobj(open(tar_file, 'rb'), sys.stdout)
-        os.unlink(tar_file)
-    else:
-        logger.info('See Insights data in %s', tar_file)
 
 
 def register(config, group_id=None):
@@ -606,7 +490,11 @@ def _main():
     handle_startup(options, config)
 
     # do work
-    rc = collect_data_and_upload(config, options)
+    if options.container_mode:
+        # rc = InsightsContainer(config, options).collect_data_and_upload()
+        pass
+    else:
+        rc = collect_data_and_upload(config, options)
 
     # Roll log over on successful upload
     handler.doRollover()
