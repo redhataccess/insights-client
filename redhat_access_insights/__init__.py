@@ -176,7 +176,7 @@ def collect_data_and_upload(config, options, rc=0):
     except LookupError:
         branch_info = handle_branch_info_error(
             "Could not determine branch information", options)
-    pc = InsightsConfig(config, pconn)
+    pc = InsightsConfig(config, pconn, custom_rules=options.rules)
     archive = InsightsArchive(compressor=options.compressor)
     dc = DataCollector(archive)
 
@@ -186,7 +186,7 @@ def collect_data_and_upload(config, options, rc=0):
     stdin_config = json.load(sys.stdin) if options.from_stdin else {}
 
     start = time.clock()
-    collection_rules, rm_conf = pc.get_conf(options.update, stdin_config)
+    collection_rules, rm_conf = pc.get_conf(options.update, stdin_config=stdin_config)
     elapsed = (time.clock() - start)
     logger.debug("Collection Rules Elapsed Time: %s", elapsed)
 
@@ -359,6 +359,10 @@ def set_up_options(parser):
                       help="Pass a custom config file",
                       dest="conf",
                       default=constants.default_conf_file)
+    parser.add_option('-r', '--rules',
+                      help="Pass a custom rules json file",
+                      dest="rules",
+                      default=None)
     parser.add_option('--to-stdout',
                       help='print archive to stdout; '
                            'sets --silent and --no-upload',

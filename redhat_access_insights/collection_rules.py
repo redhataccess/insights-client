@@ -20,13 +20,14 @@ class InsightsConfig(object):
     Insights configuration
     """
 
-    def __init__(self, config, conn):
+    def __init__(self, config, conn, custom_rules=None):
         """
         Load config from parent
         """
         self.fallback_file = constants.collection_fallback_file
         self.remove_file = constants.collection_remove_file
         self.collection_rules_file = constants.collection_rules_file
+        self.custom_rules = custom_rules
         protocol = "https://"
         insecure_connection = config.getboolean(APP_NAME, "insecure_connection")
         if insecure_connection:
@@ -181,6 +182,14 @@ class InsightsConfig(object):
             else:
                 logger.error("Unable to validate GPG signature in from_stdin mode.")
                 raise Exception("from_stdin mode failed to validate GPG sig")
+        elif self.custom_rules:
+            logger.debug('Using custom rules file...')
+            if os.path.isfile(self.custom_rules):
+                with open(self.custom_rules) as rule_json:
+                    return json.load(rule_json), rm_conf
+            else:
+                logger.error('File %s does not exist' % self.custom_rules)
+                sys.exit(1)
         elif update:
             dyn_conf = self.get_collection_rules()
             version = dyn_conf.get('version', None)
