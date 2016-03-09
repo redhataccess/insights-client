@@ -527,7 +527,8 @@ def handle_startup(options, config):
     if options.status:
         reg_check, status = registration_check(config)
         logger.info('\n'.join(reg_check))
-        sys.exit(0)
+        # exit with !status, 0 for True, 1 for False
+        sys.exit(!status)
 
     # Set offline mode for OSP use
     offline_mode = False
