@@ -546,7 +546,11 @@ class InsightsConnection(object):
             unreg_status = json.loads(res.content)['unregistered_at']
         except KeyError:
             # no record of this machine, machine was never registered
+            # empty json object
             return None
+        except ValueError:
+            # bad response, no json object
+            return False
         if unreg_status is None:
             # unregistered_at = null, means this machine IS registered
             return True
