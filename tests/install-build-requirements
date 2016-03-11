@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+set -ex
+
 # Install the build requirements
 
 # this is needed for docker, atomic, and python-docker-py
@@ -21,5 +23,8 @@ for each in atomic docker python-docker-py; do
         yum install -y $each
     fi
 done
+
+systemctl enable docker
+systemctl start docker
 
 
