@@ -158,7 +158,7 @@ def generate_analysis_target_id(analysis_target, name):
     if analysis_target == "host":
         return generate_machine_id()
     elif analysis_target == "docker_image" or analysis_target == "docker_container":
-        return str(uuid.uuid5(uuid.UUID(generate_machine_id()), name))
+        return str(uuid.uuid5(uuid.UUID(generate_machine_id()), name.encode('utf8')))
     else:
         raise ValueError("Unknown analysis target: %s" % analysis_target)
 

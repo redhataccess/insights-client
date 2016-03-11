@@ -17,6 +17,9 @@ import sys
 import time
 import traceback
 import atexit
+
+import containers
+
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
@@ -212,7 +215,7 @@ def collect_data_and_upload(config, options, rc=0):
     logger.debug("Collection Rules Elapsed Time: %s", elapsed)
 
     if options.container_fs and not os.path.isdir(options.container_fs):
-        logger.error('Invalid path specified for --fs')
+        logger.error('Invalid path specified for --fs: %s' % options.container_fs)
         sys.exit(1)
 
     if options.collection_target == 'VERSION0' or "specs" not in collection_rules:
@@ -254,7 +257,10 @@ def collect_data_and_upload(config, options, rc=0):
             logger.info('Uploading Insights data,'
                         ' this may take a few minutes')
             for tries in range(options.retries):
-                upload = pconn.upload_archive(tar_file, collection_duration)
+                upload = pconn.upload_archive(tar_file, collection_duration,
+                                              base_name=generate_analysis_target_id(
+                                                  options.collection_target, options.container_name))
+
                 if upload.status_code == 201:
                     write_lastupload_file()
                     logger.info("Upload completed successfully!")
@@ -424,6 +430,10 @@ def set_up_options(parser):
                       help='offline mode for OSP use',
                       dest='offline', action='store_true',
                       default=False)
+    parser.add_option('--analyse-docker-image',
+                      help='Analyse a docker image',
+                      action='store',
+                      dest='analyse_docker_image')
     parser.add_option('--collection-target',
                       help='One of "host", "docker_container", "docker_image", or "VERSION0".  "VERSION0" collects exactly as this program did before this option was added.',
                       action='store',
@@ -482,6 +492,11 @@ def set_up_options(parser):
                      help="Do not delete archive after upload",
                      action="store_true",
                      dest="keep_archive",
+                     default=False)
+    group.add_option('--run-here',
+                     help="Don't transfer into a container, even for docker analysis",
+                     action="store_true",
+                     dest="run_here",
                      default=False)
     parser.add_option_group(group)
 
@@ -593,6 +608,32 @@ def handle_startup(options, config):
         logger.error('Can\'t use both --from-stdin and --from-file.')
         sys.exit(1)
 
+    options.image_connection = None
+    if options.analyse_docker_image:
+        if options.run_here:
+            if (not options.collection_target or \
+                options.collection_target == "docker_image") and \
+                not options.container_fs:
+                options.image_connection = containers.open_image(options.analyse_docker_image)
+                if options.image_connection:
+                    options.collection_target = "docker_image"
+                    options.container_fs = options.image_connection.get_fs()
+                    if not options.container_name:
+                        options.container_name = options.image_connection.get_name()
+                else:
+                    logger.error('Could not open image for analysis: %s' % options.analyse_docker_image)
+                    sys.exit(1)
+
+            else:
+                logger.error('Some specified options are incompatible with --analyse-docker-image')
+                if options.container_fs:
+                    logger.error('--container_fs is incompatible with --analyse-docker-image')
+                if options.collection_target:
+                    logger.error('--collection_target = %s is incompatible with --analyse-docker-image' % options.collection_target)
+                sys.exit(1)
+        else:
+            sys.exit(containers.run_in_container(options))
+
     if not options.collection_target:
         options.collection_target = "host"
 
@@ -615,6 +656,12 @@ def handle_startup(options, config):
         sys.exit(1)
 
 
+def handle_shutdown(options, config):
+    if options.image_connection:
+        options.image_connection.close()
+        options.image_connection = None
+
+
 def _main():
     """
     Main entry point
@@ -635,6 +682,8 @@ def _main():
         parser.error("Unknown arguments: %s" % args)
         sys.exit(1)
 
+    options.all_args = sys.argv[1:]
+
     # from_stdin mode implies to_stdout
     options.to_stdout = options.to_stdout or options.from_stdin or options.from_file
 
@@ -650,12 +699,15 @@ def _main():
 
     # Handle all the options
     handle_startup(options, config)
+    try:
+        # do work
+        rc = collect_data_and_upload(config, options)
 
-    # do work
-    rc = collect_data_and_upload(config, options)
+        # Roll log over on successful upload
+        handler.doRollover()
 
-    # Roll log over on successful upload
-    handler.doRollover()
+    finally:
+        handle_shutdown(options, config)
 
     sys.exit(rc)
 
