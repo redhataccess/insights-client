@@ -22,7 +22,8 @@ from utilities import (validate_remove_file,
                        generate_machine_id,
                        delete_registered_file,
                        delete_unregistered_file,
-                       delete_machine_id)
+                       delete_machine_id,
+                       get_containers)
 from collection_rules import InsightsConfig
 from data_collector import DataCollector
 from schedule import InsightsSchedule
@@ -30,7 +31,6 @@ from connection import InsightsConnection
 from archive import InsightsArchive
 from support import InsightsSupport
 from upload import collect_data_and_upload
-
 from constants import InsightsConstants as constants
 
 __author__ = 'Jeremy Crafts <jcrafts@redhat.com>'
@@ -491,11 +491,16 @@ def _main():
 
     # do work
     if options.container_mode:
-        # rc = InsightsContainer(config, options).collect_data_and_upload()
-        pass
+        targets = get_containers()
+        if targets:
+            # use host-limited as the type for container host data
+            targets.append({'type': 'host-limited', 'name': None})
+        else:
+            logger.error('No images found.')
+            sys.exit(1)
+        rc = collect_data_and_upload(config, options, targets=targets)
     else:
         rc = collect_data_and_upload(config, options)
-
     # Roll log over on successful upload
     handler.doRollover()
 

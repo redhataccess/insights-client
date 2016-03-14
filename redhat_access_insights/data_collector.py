@@ -329,7 +329,7 @@ class DataCollector(object):
             return
         logger.debug("Copying %s to %s with filters %s", real_path, archive_path, str(patterns))
 
-        if self.container_name and path_to_collect == "/etc/redhat-access-insights/machine-id":
+        if self.container_name and relative_path == "/etc/redhat-access-insights/machine-id":
             # make a container machine-id
             # TODO: could use container ID instead
             output = generate_container_id(self.container_name)

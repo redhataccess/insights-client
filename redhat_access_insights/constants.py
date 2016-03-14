@@ -25,4 +25,4 @@ class InsightsConstants(object):
     lastupload_file = default_conf_dir + '.lastupload'
     pub_gpg_path = default_conf_dir + 'redhattools.pub.gpg'
     machine_id_file = default_conf_dir + 'machine-id'
-    default_target = [{'mp': None, 'name': None}]
+    default_target = [{'type': 'host', 'name': None}]
