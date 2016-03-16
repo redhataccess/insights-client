@@ -101,6 +101,41 @@ An example additions to uploader.json
 """
 
 
+#
+# The collection rules have some optional stuff in them now, so the following simplify indexing
+# into dictionaries that might not have the indexes that you are looking for.
+#
+# so for example you want to write:
+#
+#    foo = d['meta_specs']['uploader_log']['something_else']
+#
+# but d might not have 'meta_specs' and that might not have 'uploader_log' and ...
+# so write this instead
+#
+#   idx = ('meta_specs','uploader_log','something_else')
+#   if dictmultihas(d, idx):
+#      foo = dictmultiget(d, idx)
+#   else:
+#      ....
+#
+
+def dictmultihas(d, idx):
+    # 'idx' is a tuple of strings, indexing into 'd'
+    #  if d doesn't have these indexes, return False
+    for each in idx[:-1]:
+        if d and each in d:
+            d = d[each]
+    if d and len(idx) > 0 and idx[-1] in d:
+        return True
+    else:
+        return False
+
+def dictmultiget(d, idx):
+    # 'idx' is a tuple of strings, indexing into 'd'
+    for each in idx[:-1]:
+        d = d[each]
+    return d[idx[-1]]
+
 
 
 
@@ -373,26 +408,32 @@ class DataCollector(object):
         Write branch information to file
         collection_rules is None if we are doing a VERSION0 collection
         """
-        if not collection_rules:
+
+        idx = ('meta_specs','branch_info','archive_file_name')
+        if not dictmultihas(collection_rules, idx):
             branch_info_location = '/branch_info'
         else:
-            branch_info_location = collection_rules['meta_specs']['branch_info']['archive_file_name']
+            branch_info_location = dictmultiget(collection_rules, idx)
 
         logger.debug("Writing branch information to workdir")
         full_path = self.archive.get_full_archive_path(branch_info_location)
         write_file_with_text(full_path, json.dumps(branch_info))
 
     def write_analysis_target(self, analysis_target, collection_rules):
-        analysis_target_location = collection_rules['meta_specs']['analysis_target']['archive_file_name']
-        logger.debug("Writing analysis_target, '%s' information to: %s" % (analysis_target, analysis_target_location))
-        full_path = self.archive.get_full_archive_path(analysis_target_location)
-        write_file_with_text(full_path, analysis_target)
+        idx = ('meta_specs','analysis_target','archive_file_name')
+        if dictmultihas(collection_rules, idx):
+            analysis_target_location = dictmultiget(collection_rules, idx)
+            logger.debug("Writing analysis_target, '%s' information to: %s" % (analysis_target, analysis_target_location))
+            full_path = self.archive.get_full_archive_path(analysis_target_location)
+            write_file_with_text(full_path, analysis_target)
 
     def write_machine_id(self, machine_id, collection_rules):
-        machine_id_location = collection_rules['meta_specs']['machine-id']['archive_file_name']
-        logger.debug("Writing machine_id, '%s' information to: %s" % (machine_id, machine_id_location))
-        full_path = self.archive.get_full_archive_path(machine_id_location)
-        write_file_with_text(full_path, machine_id)
+        idx = ('meta_specs','machine-id','archive_file_name')
+        if dictmultihas(collection_rules, idx):
+            machine_id_location = dictmultiget(collection_rules, idx)
+            logger.debug("Writing machine_id, '%s' information to: %s" % (machine_id, machine_id_location))
+            full_path = self.archive.get_full_archive_path(machine_id_location)
+            write_file_with_text(full_path, machine_id)
 
     def _copy_file_with_pattern(self, path_on_disk, patterns, exclude,
                                 container_fs=None,
@@ -581,8 +622,9 @@ class DataCollector(object):
 
         # Only copy the log after all else is copied
         # collection_rules is None if we are doing an old style "VERSION0" collection
-        if collection_rules:
-            path_in_archive = self.archive.get_full_archive_path(collection_rules['meta_specs']['uploader_log']['archive_file_name'])
+        idx = ('meta_specs', 'uploader_log')
+        if dictmultihas(collection_rules, idx):
+            path_in_archive = self.archive.get_full_archive_path(dictmultiget(collection_rules, idx)['archive_file_name'])
             content = open("/var/log/redhat-access-insights/redhat-access-insights.log").read().strip()
             write_file_with_text(path_in_archive, content.decode('utf-8', 'ignore'))
 
