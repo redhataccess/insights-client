@@ -539,7 +539,7 @@ class InsightsConnection(object):
         machine_id = generate_machine_id()
         try:
             res = self.session.get(self.api_url + '/v1/systems/' + machine_id)
-        except request.ConnectionError as e:
+        except requests.ConnectionError as e:
             return False
         # check the 'unregistered_at' key of the response
         try:
