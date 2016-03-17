@@ -28,9 +28,12 @@ install: $(RPM)
 	else                                  \
 	  sudo yum install -y $(RPM);         \
 	fi
-	if sudo docker info >/dev/null; then  \
-	  sudo docker build -t redhat-insights/insights-client .  ;\
-	fi
+
+install-docker-image:
+	sudo docker build -t redhat-insights/insights-client .
+
+uninstall-docker-image:
+	sudo docker rmi redhat-insights/insights-client
 
 clean:
 	rm -rf dist
