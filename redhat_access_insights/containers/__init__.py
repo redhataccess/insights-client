@@ -137,13 +137,9 @@ if HaveDocker:
             return True
 
     def runcommand(cmd):
-        print cmd
+        logger.debug("Running Command: %s" % cmd)
         proc = subprocess.Popen(cmd)
         returncode = proc.wait()
-        if returncode != 0:
-            print "command had non-zero return code"
-            print cmd
-            print "return code", returncode
         return returncode
 
     def run_in_container(options):
