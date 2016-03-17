@@ -238,7 +238,7 @@ def collect_data_and_upload(config, options, rc=0):
                                      constants.default_log_file)
                         rc = 1
 
-            if (not obfuscate and not options.keep_archive) or options.no_upload:
+            if not obfuscate and not options.keep_archive:
                 dc.archive.delete_tmp_dir()
             else:
                 if obfuscate:
@@ -247,16 +247,16 @@ def collect_data_and_upload(config, options, rc=0):
                 else:
                     logger.info('Insights data retained in %s', tar_file)
         else:
-            handle_file_output(options, tar_file)
+            handle_file_output(options, tar_file, archive)
     else:
         logger.info('See Insights data in %s', dc.archive.archive_dir)
     return rc
 
 
-def handle_file_output(options, tar_file):
+def handle_file_output(options, tar_file, archive):
     if options.to_stdout:
         shutil.copyfileobj(open(tar_file, 'rb'), sys.stdout)
-        os.unlink(tar_file)
+        archive.delete_tmp_dir()
     else:
         logger.info('See Insights data in %s', tar_file)
 
