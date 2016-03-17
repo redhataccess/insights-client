@@ -108,8 +108,12 @@ def set_up_logging(config, options):
     handler.setFormatter(formatter)
     logging.root.setLevel(logging.WARNING)
     my_logger = logging.getLogger(APP_NAME)
-    config_level = config.get(APP_NAME, 'loglevel')
-    if config_level in valid_levels and not options.verbose:
+    if options.verbose:
+        config_level = 'DEBUG'
+    else:
+        config_level = config.get(APP_NAME, 'loglevel')
+
+    if config_level in valid_levels:
         init_log_level = logging.getLevelName(config_level)
     else:
         print "Invalid log level %s, defaulting to DEBUG" % config_level
