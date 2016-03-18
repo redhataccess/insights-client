@@ -199,36 +199,6 @@ def validate_remove_file():
     logger.info("JSON parsed correctly")
 
 
-def get_containers():
-    try:
-        docker_images = Popen(shlex.split('docker images'), stdout=PIPE)
-        stdout, stderr = docker_images.communicate()
-        if stderr:
-            # docker already returns a nice error message
-            logger.error(stderr.strip())
-            sys.exit(1)
-    except OSError:
-        logger.error('The \"docker\" command was not found.')
-        sys.exit(1)
-
-    def _split(line):
-        # split over >1 spaces -- for docker images output
-        return [s.strip() for s in line.split('  ') if s.strip()]
-
-    containers = []
-    imgs_output = stdout.splitlines()
-    # Keys:
-    # REPOSITORY - name of image
-    # TAG - revision
-    # IMAGE ID - image ID
-    # CREATED - time since creation
-    # SIZE - duh
-    keys = _split(imgs_output[0])
-    for line in imgs_output[1:]:
-        containers.append({'type': 'image', 'name': _split(line)[0]})
-    return containers
-
-
 def generate_container_id(container_name):
     # container id is a uuid in the namespace of the machine
     return str(uuid.uuid5(uuid.UUID(generate_machine_id()), container_name))

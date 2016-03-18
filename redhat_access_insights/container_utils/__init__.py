@@ -171,8 +171,21 @@ if HaveDocker:
 
         return runcommand(docker_args + [ "--run-here" ] + options.all_args)
 
+    def get_images():
+        # just use the RepoTags for naming scheme for now, can change later
+        # will probably want to use ID in some fashion
+        images = []
+        docker_images = docker.Client(base_url='unix://var/run/docker.sock').images()
+        for d in docker_images:
+            images.append({'type': 'image', 'name': d['RepoTags']})
+        return docker_images
 
 else:
+    def get_images():
+        logger.error('Could not connect to docker to obtain image list.')
+        logger.error('Docker is either not installed or not accessable')
+        return None
+
     def open_image(image_name):
         logger.error('Could not connect to docker to examine image %s' % image_name)
         logger.error('Docker is either not installed or not accessable')

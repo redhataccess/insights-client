@@ -33,7 +33,7 @@ from connection import InsightsConnection
 from archive import InsightsArchive
 from support import InsightsSupport
 from constants import InsightsConstants as constants
-from container_utils import open_image, unmount_obj, force_clean
+from container_utils import open_image, unmount_obj, force_clean, get_images
 
 __author__ = 'Jeremy Crafts <jcrafts@redhat.com>'
 
@@ -410,16 +410,6 @@ def set_up_options(parser):
                       help='Run Insights in container mode.',
                       action='store_true',
                       dest='container_mode')
-    # parser.add_option('--fs',
-    #                   help='Absolute path to mounted filesystem to run Insights against. '
-    #                        'Only valid when --container is used',
-    #                   action='store',
-    #                   dest='container_fs')
-    # parser.add_option('--name',
-    #                   help='Name to use for mounted container filesystem. '
-    #                        'Only valid when --container is used',
-    #                   action='store',
-    #                   dest='container_name')
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
                      help='Test connectivity to Red Hat',
@@ -632,12 +622,12 @@ def _main():
 
     # do work
     if options.container_mode:
-        targets = get_containers()
+        targets = get_images()
         if targets:
-            # use host-limited as the type for container host data
+            # TODO: use host-limited as the type for container host data
             targets.append({'type': 'host', 'name': None})
         else:
-            logger.error('No images found.')
+            # no images, abort mission
             sys.exit(1)
         rc = collect_data_and_upload(config, options, targets=targets)
     else:
