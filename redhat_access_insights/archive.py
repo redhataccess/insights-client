@@ -115,7 +115,7 @@ class InsightsArchive(object):
         ext = "" if self.compressor == "none" else ".%s" % self.compressor
         tar_file_name = tar_file_name + ".tar" + ext
         logger.debug("Tar File: " + tar_file_name)
-        subprocess.call(shlex.split("tar c%sf %s -C %s ." % (
+        subprocess.call(shlex.split("tar c%sfS %s -C %s ." % (
             self.get_compression_flag(self.compressor),
             tar_file_name,
             self.tmp_dir)), stderr=subprocess.PIPE)
