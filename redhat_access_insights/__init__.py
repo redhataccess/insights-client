@@ -93,6 +93,9 @@ def set_up_logging(config, options):
     handler = logging.handlers.RotatingFileHandler(logging_file,
                                                    backupCount=3)
 
+    if options.to_stdout and not options.verbose:
+        options.quiet = True
+
     # Send anything INFO+ to stdout and log
     stdout_handler = logging.StreamHandler(sys.stdout)
     if not options.verbose:
@@ -187,13 +190,20 @@ def collect_data_and_upload(config, options, rc=0):
     # register the exit handler here to delete the archive
     atexit.register(handle_exit, archive, options.keep_archive or options.no_upload)
 
-    if options.from_file:
-        with open(options.from_file, 'r') as f:
-            stdin_config = json.load(f)
-    elif options.from_stdin:
-        stdin_config = json.load(sys.stdin)
-    else:
+    try:
         stdin_config = {}
+        if options.from_file:
+            with open(options.from_file, 'r') as f:
+                stdin_config = json.load(f)
+        elif options.from_stdin:
+            stdin_config = json.load(sys.stdin)
+        if ('uploader.json' not in stdin_config or
+           'sig' not in stdin_config):
+            raise ValueError
+    except:
+        logger.error('ERROR: Invalid config for %s! Exiting...' %
+                     ('--from-file' if options.from_file else '--from-stdin'))
+        sys.exit(1)
 
     start = time.clock()
     collection_rules, rm_conf = pc.get_conf(options.update, stdin_config)
@@ -218,7 +228,7 @@ def collect_data_and_upload(config, options, rc=0):
 
     if not options.no_tar_file:
         tar_file = dc.done(config, rm_conf)
-        if not options.no_upload:
+        if not options.offline:
             logger.info('Uploading Insights data,'
                         ' this may take a few minutes')
             for tries in range(options.retries):
@@ -541,10 +551,8 @@ def handle_startup(options, config):
         sys.exit(not status)
 
     # Set offline mode for OSP/RHEV use
-    offline_mode = False
-    if (options.offline and
-       (options.from_stdin or options.from_file)) or options.no_upload:
-        offline_mode = True
+    if options.no_upload:
+        options.offline = True
 
     # Can't use both
     if options.from_stdin and options.from_file:
@@ -555,7 +563,7 @@ def handle_startup(options, config):
     # Ignore if in offline mode
     if (not os.path.isfile(constants.registered_file) and
        not os.path.isfile(constants.unregistered_file) and
-       not options.register and not offline_mode):
+       not options.register and not options.offline):
         logger.error('This machine has not yet been registered.')
         logger.error('Use --register to register this machine.')
         logger.error("Exiting")
@@ -563,7 +571,7 @@ def handle_startup(options, config):
 
     # Check for .unregistered file
     if (os.path.isfile(constants.unregistered_file) and
-       not options.register and not offline_mode):
+       not options.register and not options.offline):
         logger.error("This machine has been unregistered.")
         logger.error("Use --register if you would like to re-register this machine.")
         logger.error("Exiting")
@@ -592,10 +600,6 @@ def _main():
 
     # from_stdin mode implies to_stdout
     options.to_stdout = options.to_stdout or options.from_stdin or options.from_file
-
-    if options.to_stdout:
-        options.silent = True
-        options.no_upload = True
 
     config = parse_config_file(options.conf)
     logger, handler = set_up_logging(config, options)

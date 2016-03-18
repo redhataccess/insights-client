@@ -4,7 +4,7 @@
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                1.0.8
-Release:                6%{?dist}
+Release:                7%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -83,6 +83,10 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Fri Mar 18 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.8-7
+- Fix bugs related to --from-stdin and --to-stdout options
+- Resolves: bz1319015
+
 * Fri Mar 04 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.8-0
 - Fix scheduling-related issues
 - Add status check for registration with API
