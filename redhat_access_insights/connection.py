@@ -286,7 +286,11 @@ class InsightsConnection(object):
             sock.send(connect_str)
             sock.recv(4096)
         else:
-            sock.connect((hostname[0], 443))
+            try:
+                sock.connect((hostname[0], 443))
+            except socket.gaierror:
+                logger.error('Error: Failed to connect to %s. Invalid hostname.' % base_url)
+                sys.exit(1)
         ctx = SSL.Context(SSL.TLSv1_METHOD)
         if type(self.cert_verify) is not bool:
             ctx.load_verify_locations(self.cert_verify, None)
