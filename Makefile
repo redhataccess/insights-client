@@ -3,6 +3,7 @@ PKGNAME=redhat-access-insights
 SRPM=$(RPMTOP)/SRPMS/$(PKGNAME)-*.src.rpm
 TARBALL=$(RPMTOP)/$(PKGNAME)-*.tar.gz
 RPM=$(RPMTOP)/RPMS/noarch/$(PKGNAME)*.rpm
+RPMVERSION=$(basename $(notdir $(RPM)))
 
 all: rpm
 
@@ -23,7 +24,7 @@ $(RPM): $(SRPM)
 	rpmbuild --buildroot $(RPMTOP)/BUILDROOT --define="_topdir $(RPMTOP)" --rebuild $<
 
 install: $(RPM)
-	if rpm -q $(PKGNAME) >/dev/null; then \
+	if rpm -q $(RPMVERSION) >/dev/null; then \
 	  sudo yum reinstall -y $(RPM);       \
 	else                                  \
 	  sudo yum install -y $(RPM);         \
