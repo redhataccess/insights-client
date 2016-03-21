@@ -197,8 +197,9 @@ def collect_data_and_upload(config, options, rc=0):
                 stdin_config = json.load(f)
         elif options.from_stdin:
             stdin_config = json.load(sys.stdin)
-        if ('uploader.json' not in stdin_config or
-           'sig' not in stdin_config):
+        if ((options.from_file or options.from_stdin) and
+            ('uploader.json' not in stdin_config or
+             'sig' not in stdin_config)):
             raise ValueError
     except:
         logger.error('ERROR: Invalid config for %s! Exiting...' %
