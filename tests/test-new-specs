@@ -19,23 +19,20 @@ if [ -z "$cmd" ]; then
 fi
 
 DIR1=$(mktemp -d)
-$cmd --verbose --to-stdout >$DIR1/archive.tar.gz
+$cmd --offline --to-stdout | tar --directory $DIR1 --extract --gzip
 pushd $DIR1
-tar axf *
 mv insights-* archive_dir_one
 popd
 
 DIR2=$(mktemp -d)
-$cmd --verbose --collection-target "host" --to-stdout >$DIR2/archive.tar.gz
+$cmd --offline --collection-target "host" --to-stdout | tar --directory $DIR2 --extract --gzip 
 pushd $DIR2
-tar axf *
 mv insights-* archive_dir_two
 popd
 
 DIR3=$(mktemp -d)
-$cmd --verbose --collection-target "VERSION0" --to-stdout >$DIR3/archive.tar.gz
+$cmd --offline --collection-target "VERSION0" --to-stdout | tar --directory $DIR3 --extract --gzip 
 pushd $DIR3
-tar axf *
 mv insights-* archive_dir_three
 popd
 
