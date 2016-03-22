@@ -4,7 +4,7 @@
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                1.0.8
-Release:                9%{?dist}
+Release:                10%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -85,14 +85,7 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %changelog
 * Fri Mar 18 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.8-7
 - Fix bugs related to --from-stdin and --to-stdout options
-- Resolves: bz1319015
-
-* Fri Mar 04 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.8-0
-- Fix scheduling-related issues
-- Add status check for registration with API
-- Fix connectivity bug
-- Improved debug messaging
-- Resolves: bz1257238, bz1267303, bz1268002, bz1276058, bz1295928, bz1295931, bz1295932, bz1295934, bz1295940, bz1310242, bz1310243
+- Resolves: bz1319015, bz1248023, bz1308916, bz1308942
 
 * Wed Jan 06 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.7-3
 - New config options trace and no_schedule
@@ -103,10 +96,6 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 - OpenStack cluster support
 - Remember time of last successful upload
 - Resolves: bz1237112, bz1243028, bz1244113, bz1246919, bz1250384, bz1257242, bz1267299, bz1276055, bz1276130, bz1280353, bz1295929, bz1295935, bz1295939 
-
-* Tue Aug 11 2015 Dan Varga <dvarga@redhat.com> - 1.0.6-0
-- Fix unregister -> reregister flow
-- Resolves: bz1252435
 
 * Wed Jul 29 2015 Dan Varga <dvarga@redhat.com> - 1.0.5-0
 - Automatically retry failed uploads when invoked via cron
