@@ -673,7 +673,7 @@ def _main():
         sys.exit("Red Hat Access Insights must be run as root")
 
     global logger
-    #sys.excepthook = handle_exception
+    sys.excepthook = handle_exception
 
     parser = optparse.OptionParser()
     set_up_options(parser)
