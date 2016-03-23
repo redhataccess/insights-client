@@ -26,7 +26,6 @@ from utilities import (validate_remove_file,
                        delete_registered_file,
                        delete_unregistered_file,
                        delete_machine_id,
-                       get_containers,
                        determine_hostname,
                        write_lastupload_file)
 from collection_rules import InsightsConfig
@@ -222,7 +221,7 @@ def collect_data_and_upload(config, options, rc=0, targets=constants.default_tar
         # default mountpoint to None
         mp = None
         # mount if target is an image
-        if t['type'] is 'docker_image':
+        if t['type'] == 'docker_image':
             mounted_image = open_image(t['name'])
             mp = mounted_image.mount_point
             # unmount on unexpected exit
@@ -249,7 +248,7 @@ def collect_data_and_upload(config, options, rc=0, targets=constants.default_tar
 
             dc.write_analysis_target(options.collection_target, collection_rules)
             dc.write_machine_id(
-                generate_analysis_target_id(options.collection_target, options.container_name),
+                generate_analysis_target_id(t['type'], t['name']),
                 collection_rules)
             dc.write_branch_info(branch_info, collection_rules)
         else:
@@ -258,6 +257,7 @@ def collect_data_and_upload(config, options, rc=0, targets=constants.default_tar
             logger.debug("Command Collection Elapsed Time: %s", elapsed)
 
             start = time.clock()
+            dc.copy_files(collection_rules, rm_conf, stdin_config)
             elapsed = (time.clock() - start)
             logger.debug("File Collection Elapsed Time: %s", elapsed)
 
@@ -268,7 +268,7 @@ def collect_data_and_upload(config, options, rc=0, targets=constants.default_tar
         collection_duration = (time.clock() - collection_start) + collection_elapsed
 
         # unmount image when we are finished
-        if t['type'] is 'docker_image':
+        if t['type'] == 'docker_image':
             mounted_image.close()
 
         if not options.no_tar_file:
@@ -636,12 +636,6 @@ def handle_startup(options, config):
         sys.exit(1)
 
 
-def handle_shutdown(options, config):
-    if options.image_connection:
-        options.image_connection.close()
-        options.image_connection = None
-
-
 def _main():
     """
     Main entry point
@@ -679,27 +673,21 @@ def _main():
 
     # Handle all the options
     handle_startup(options, config)
-    try:
-        # do work
-        rc = collect_data_and_upload(config, options)
-        # do work
-        if options.container_mode:
-            targets = get_images()
-            if targets:
-                # TODO: use host-limited as the type for container host data
-                targets.append({'type': 'host', 'name': None})
-            else:
-                # no images, abort mission
-                sys.exit(1)
-            rc = collect_data_and_upload(config, options, targets=targets)
+    # do work
+    if options.container_mode:
+        targets = get_images()
+        if targets:
+            # TODO: use host-limited as the type for container host data
+            targets.append({'type': 'host', 'name': None})
         else:
-            rc = collect_data_and_upload(config, options)
-        # Roll log over on successful upload
-        handler.doRollover()
-
-    finally:
-        handle_shutdown(options, config)
-        sys.exit(rc)
+            # no images, abort mission
+            sys.exit(1)
+        rc = collect_data_and_upload(config, options, targets=targets)
+    else:
+        rc = collect_data_and_upload(config, options)
+    # Roll log over on successful upload
+    handler.doRollover()
+    sys.exit(rc)
 
 
 def trace_calls(frame, event, arg):

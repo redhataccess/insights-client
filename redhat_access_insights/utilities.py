@@ -165,7 +165,7 @@ def generate_analysis_target_id(analysis_target, name):
     if analysis_target == "host":
         return generate_machine_id()
     elif analysis_target == "docker_image" or analysis_target == "docker_container":
-        return str(uuid.uuid5(uuid.UUID(generate_machine_id()), name.encode('utf8')))
+        return generate_container_id(name)
     else:
         raise ValueError("Unknown analysis target: %s" % analysis_target)
 
@@ -259,4 +259,4 @@ def magic_plan_b(filename):
 
 def generate_container_id(container_name):
     # container id is a uuid in the namespace of the machine
-    return str(uuid.uuid5(uuid.UUID(generate_machine_id()), container_name))
+    return str(uuid.uuid5(uuid.UUID(generate_machine_id()), container_name.encode('utf8')))

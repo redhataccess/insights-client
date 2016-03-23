@@ -476,61 +476,64 @@ class DataCollector(object):
             archive_file_name.format(
                 EXPANDED_FILE_NAME=relative_path) if archive_file_name else relative_path)
 
-        if not os.path.isfile(real_path):
-            logger.debug("File %s does not exist", real_path)
-            return
-        logger.debug("Copying %s to %s with filters %s", real_path, archive_path, str(patterns))
-
-        if self.container_name and relative_path == "/etc/redhat-access-insights/machine-id":
+        if self.target_type == 'docker_image' and relative_path == '/etc/redhat-access-insights/machine-id':
             # make a container machine-id
             # TODO: could use container ID instead
             output = generate_container_id(self.container_name)
-        else:
-            cmd = []
-            # shlex.split doesn't handle special characters well
-            cmd.append("/bin/sed".encode('utf-8'))
-            cmd.append("-rf".encode('utf-8'))
-            cmd.append(constants.default_sed_file.encode('utf-8'))
-            cmd.append(real_path.encode('utf8'))
-            sedcmd = Popen(cmd,
-                           stdout=PIPE)
+            write_file_with_text(archive_path, output.decode('utf-8', 'ignore').strip())
+            return
+
+        if not os.path.isfile(real_path):
+            logger.debug("File %s does not exist", real_path)
+            return
+
+        logger.debug("Copying %s to %s with filters %s", real_path, archive_path, str(patterns))
+
+        cmd = []
+        # shlex.split doesn't handle special characters well
+        cmd.append("/bin/sed".encode('utf-8'))
+        cmd.append("-rf".encode('utf-8'))
+        cmd.append(constants.default_sed_file.encode('utf-8'))
+        cmd.append(real_path.encode('utf8'))
+        sedcmd = Popen(cmd,
+                       stdout=PIPE)
+
+        if exclude is not None:
+            exclude_file = NamedTemporaryFile()
+            exclude_file.write("\n".join(exclude))
+            exclude_file.flush()
+
+            cmd = "/bin/grep -v -F -f %s" % exclude_file.name
+            args = shlex.split(cmd.encode("utf-8"))
+            proc = Popen(args, stdin=sedcmd.stdout, stdout=PIPE)
+            sedcmd.stdout.close()
+            stdin = proc.stdout
+            if patterns is None:
+                output = proc.communicate()[0]
+            else:
+                sedcmd = proc
+
+        if patterns is not None:
+            pattern_file = NamedTemporaryFile()
+            pattern_file.write("\n".join(patterns))
+            pattern_file.flush()
+
+            cmd = "/bin/grep -F -f %s" % pattern_file.name
+            args = shlex.split(cmd.encode("utf-8"))
+            proc1 = Popen(args, stdin=sedcmd.stdout, stdout=PIPE)
+            sedcmd.stdout.close()
 
             if exclude is not None:
-                exclude_file = NamedTemporaryFile()
-                exclude_file.write("\n".join(exclude))
-                exclude_file.flush()
+                stdin.close()
 
-                cmd = "/bin/grep -v -F -f %s" % exclude_file.name
-                args = shlex.split(cmd.encode("utf-8"))
-                proc = Popen(args, stdin=sedcmd.stdout, stdout=PIPE)
-                sedcmd.stdout.close()
-                stdin = proc.stdout
-                if patterns is None:
-                    output = proc.communicate()[0]
-                else:
-                    sedcmd = proc
+            output = proc1.communicate()[0]
 
-            if patterns is not None:
-                pattern_file = NamedTemporaryFile()
-                pattern_file.write("\n".join(patterns))
-                pattern_file.flush()
-
-                cmd = "/bin/grep -F -f %s" % pattern_file.name
-                args = shlex.split(cmd.encode("utf-8"))
-                proc1 = Popen(args, stdin=sedcmd.stdout, stdout=PIPE)
-                sedcmd.stdout.close()
-
-                if exclude is not None:
-                    stdin.close()
-
-                output = proc1.communicate()[0]
-
-            if patterns is None and exclude is None:
-                output = sedcmd.communicate()[0]
+        if patterns is None and exclude is None:
+            output = sedcmd.communicate()[0]
 
         write_file_with_text(archive_path, output.decode('utf-8', 'ignore').strip())
 
-    def copy_file_with_pattern(self, paths_to_collect, patterns, exclude):
+    def copy_file_with_pattern(self, path, patterns, exclude):
         """
         Copy a single file or regex, creating the necessary directories
         But grepping for pattern(s)
@@ -561,10 +564,11 @@ class DataCollector(object):
         else:
             archive_file_name = None
 
-        files_to_collect = spec['file']
+        # stub this out, the real path is determined in
+        #  copy_file_with_pattern
+        files_to_collect = spec['file'].format(CONTAINER_MOUNT_POINT='')
 
         self.copy_file_with_pattern(files_to_collect, pattern, exclude,
-                                    options.container_fs,
                                     archive_file_name=archive_file_name)
 
     def _process_command_spec(self, spec, exclude, options):
@@ -573,7 +577,7 @@ class DataCollector(object):
             self._handle_commands(spec, exclude)
 
         else:
-            command = spec['command']
+            command = spec['command'].format(CONTAINER_MOUNT_POINT=self.mountpoint)
             filters = spec['pattern']
 
             if 'archive_file_name' in spec:

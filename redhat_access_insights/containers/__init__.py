@@ -61,7 +61,7 @@ if HaveDocker:
                 if has_label(matching_images[0]):
                     image_label = get_label(matching_images[0])
                 else:
-                    image_label = name
+                    image_label = image_name
                 mount_point = tempfile.mkdtemp()
                 cid = mount_obj(client, mount_point, image_id)
                 logger.debug("Opening Image %s %s %s %s" % (image_name, image_id, image_label, mount_point))
@@ -83,13 +83,13 @@ if HaveDocker:
             to prevent memory corruption """
 
         # unmount path
-        Mount.unmount_path(mount_point,force=True)
+        Mount.unmount_path(mount_point, force=True)
 
         # if device mapper, do second unmount and remove device
         if cid and client.info()['Driver'] == 'devicemapper':
-            Mount.unmount_path(mount_point,force=True)
+            Mount.unmount_path(mount_point, force=True)
             device = client.inspect_container(cid)['GraphDriver']['Data']['DeviceName']
-            Mount.remove_thin_device(device,force=True)
+            Mount.remove_thin_device(device, force=True)
 
     def mount_obj(client, path, obj):
         """ mounts the obj to the given path """
@@ -123,18 +123,18 @@ if HaveDocker:
         tags = i['RepoTags']
         for each in tags:
             l = trimlabels(each)
-            if l != '' and l != '<none>':
+            if l not in ['', '<none>']:
                 return l
         return None
 
     def has_label(i):
         # This takes an Image description (as returned by docker.images), and
-        #   returns True/False does the image have a name
+        #   returns True/False(none) does the image have a name
         l = get_label(i)
-        if l == None:
-            return False
-        else:
+        if l:
             return True
+        else:
+            return False
 
     def runcommand(cmd):
         logger.debug("Running Command: %s" % cmd)
@@ -167,6 +167,12 @@ if HaveDocker:
 
         return runcommand(docker_args + options.all_args)
 
+    def get_images():
+        images = []
+        docker_images = docker.Client(base_url='unix://var/run/docker.sock').images()
+        for d in docker_images:
+            images.append({'type': 'docker_image', 'name': get_label(d)})
+        return images
 
 else:
     def open_image(image_name):
