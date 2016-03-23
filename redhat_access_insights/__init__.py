@@ -17,9 +17,6 @@ import sys
 import time
 import traceback
 import atexit
-
-import containers
-
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
@@ -28,15 +25,18 @@ from utilities import (validate_remove_file,
                        write_registered_file,
                        delete_registered_file,
                        delete_unregistered_file,
-                       delete_machine_id)
+                       delete_machine_id,
+                       get_containers,
+                       determine_hostname,
+                       write_lastupload_file)
 from collection_rules import InsightsConfig
 from data_collector import DataCollector
 from schedule import InsightsSchedule
 from connection import InsightsConnection
 from archive import InsightsArchive
 from support import InsightsSupport, registration_check
-
 from constants import InsightsConstants as constants
+from containers import open_image, get_images, run_in_container
 
 __author__ = 'Jeremy Crafts <jcrafts@redhat.com>'
 
@@ -171,12 +171,20 @@ def handle_exit(archive, keep_archive):
     if not keep_archive:
         archive.delete_tmp_dir()
 
-def collect_data_and_upload(config, options, rc=0):
+
+def unmount_on_exit(mounted_image):
+    try:
+        mounted_image.close()
+    except:
+        # it was already unmounted
+        pass
+
+
+def collect_data_and_upload(config, options, rc=0, targets=constants.default_target):
     """
     All the heavy lifting done here
+    Run through "targets" - could be just one (host, default) or many (containers+host)
     """
-    collection_start = time.clock()
-
     pconn = InsightsConnection(config)
     try:
         branch_info = pconn.branch_info()
@@ -187,11 +195,6 @@ def collect_data_and_upload(config, options, rc=0):
         branch_info = handle_branch_info_error(
             "Could not determine branch information", options)
     pc = InsightsConfig(config, pconn)
-    archive = InsightsArchive(compressor=options.compressor)
-    dc = DataCollector(archive)
-
-    # register the exit handler here to delete the archive
-    atexit.register(handle_exit, archive, options.keep_archive or options.no_upload)
 
     try:
         stdin_config = {}
@@ -211,87 +214,101 @@ def collect_data_and_upload(config, options, rc=0):
 
     start = time.clock()
     collection_rules, rm_conf = pc.get_conf(options.update, stdin_config)
-    elapsed = (time.clock() - start)
-    logger.debug("Collection Rules Elapsed Time: %s", elapsed)
+    collection_elapsed = (time.clock() - start)
+    logger.debug("Collection Rules Elapsed Time: %s", collection_elapsed)
 
-    if options.container_fs and not os.path.isdir(options.container_fs):
-        logger.error('Invalid path specified for --fs: %s' % options.container_fs)
-        sys.exit(1)
+    # targets = collection targes (host, containers, etc)
+    for t in targets:
+        # default mountpoint to None
+        mp = None
+        # mount if target is an image
+        if t['type'] is 'docker_image':
+            mounted_image = open_image(t['name'])
+            mp = mounted_image.mount_point
+            # unmount on unexpected exit
+            atexit.register(unmount_on_exit, mounted_image)
 
-    if options.collection_target == 'VERSION0' or "specs" not in collection_rules:
+        collection_start = time.clock()
+
+        # new archive for each container
+        archive = InsightsArchive(compressor=options.compressor, container_name=t['name'])
+        dc = DataCollector(archive, mountpoint=mp, container_name=t['name'], target_type=t['type'])
+
+        # register the exit handler here to delete the archive
+        atexit.register(handle_exit, archive, options.keep_archive or options.no_upload)
+
         start = time.clock()
-        logger.info('Starting to collect Insights data')
-        dc.run_commands(collection_rules, rm_conf)
-        elapsed = (time.clock() - start)
-        logger.debug("Command Collection Elapsed Time: %s", elapsed)
+        logger.info('Starting to collect Insights data for %s' % (determine_hostname()
+                                                                  if t['name'] is None else t['name']))
 
-        start = time.clock()
-        dc.copy_files(collection_rules, rm_conf, stdin_config)
-        elapsed = (time.clock() - start)
-        logger.debug("File Collection Elapsed Time: %s", elapsed)
+        # handle new spec
+        if 'specs' in collection_rules:
+            dc.process_specs(collection_rules, rm_conf, options)
+            elapsed = (time.clock() - start)
+            logger.debug("Data Collection Elapsed Time: %s", elapsed)
 
-        dc.write_branch_info(branch_info)
+            dc.write_analysis_target(options.collection_target, collection_rules)
+            dc.write_machine_id(
+                generate_analysis_target_id(options.collection_target, options.container_name),
+                collection_rules)
+            dc.write_branch_info(branch_info, collection_rules)
+        else:
+            dc.run_commands(collection_rules, rm_conf)
+            elapsed = (time.clock() - start)
+            logger.debug("Command Collection Elapsed Time: %s", elapsed)
 
-    else:
-        start = time.clock()
-        dc.process_specs(collection_rules, rm_conf, options)
-        elapsed = (time.clock() - start)
-        logger.debug("Data Collection Elapsed Time: %s", elapsed)
+            start = time.clock()
+            elapsed = (time.clock() - start)
+            logger.debug("File Collection Elapsed Time: %s", elapsed)
 
-        dc.write_analysis_target(options.collection_target, collection_rules)
-        dc.write_machine_id(
-            generate_analysis_target_id(options.collection_target, options.container_name),
-            collection_rules)
-        dc.write_branch_info(branch_info, collection_rules)
+            dc.write_branch_info(branch_info)
+            obfuscate = config.getboolean(APP_NAME, "obfuscate")
 
-    obfuscate = config.getboolean(APP_NAME, "obfuscate")
+        # include rule refresh time in the duration
+        collection_duration = (time.clock() - collection_start) + collection_elapsed
 
-    collection_duration = (time.clock() - collection_start)
+        # unmount image when we are finished
+        if t['type'] is 'docker_image':
+            mounted_image.close()
 
-    if not options.no_tar_file:
-        if options.collection_target == 'VERSION0':
+        if not options.no_tar_file:
             tar_file = dc.done(config, rm_conf)
-        else:
-            tar_file = dc.done(config, rm_conf, collection_rules=collection_rules)
-        if not options.offline:
-            logger.info('Uploading Insights data,'
-                        ' this may take a few minutes')
-            for tries in range(options.retries):
-                upload = pconn.upload_archive(tar_file, collection_duration,
-                                              base_name=generate_analysis_target_id(
-                                                  options.collection_target, options.container_name))
-
-                if upload.status_code == 201:
-                    write_lastupload_file()
-                    logger.info("Upload completed successfully!")
-                    break
-                elif upload.status_code == 412:
-                    pconn.handle_fail_rcs(upload)
-                else:
-                    logger.error("Upload attempt %d of %d failed! Status Code: %s",
-                                 tries + 1, options.retries, upload.status_code)
-                    if tries + 1 != options.retries:
-                        logger.info("Waiting %d seconds then retrying",
-                                    constants.sleep_time)
-                        time.sleep(constants.sleep_time)
+            if not options.offline:
+                logger.info('Uploading Insights data,'
+                            ' this may take a few minutes')
+                for tries in range(options.retries):
+                    upload = pconn.upload_archive(tar_file, collection_duration)
+                    if upload.status_code == 201:
+                        write_lastupload_file()
+                        logger.info("Upload completed successfully!")
+                        break
+                    elif upload.status_code == 412:
+                        pconn.handle_fail_rcs(upload)
                     else:
-                        logger.error("All attempts to upload have failed!")
-                        logger.error("Please see %s for additional information",
-                                     constants.default_log_file)
-                        rc = 1
+                        logger.error("Upload attempt %d of %d failed! Status Code: %s",
+                                     tries + 1, options.retries, upload.status_code)
+                        if tries + 1 != options.retries:
+                            logger.info("Waiting %d seconds then retrying",
+                                        constants.sleep_time)
+                            time.sleep(constants.sleep_time)
+                        else:
+                            logger.error("All attempts to upload have failed!")
+                            logger.error("Please see %s for additional information",
+                                         constants.default_log_file)
+                            rc = 1
 
-            if not obfuscate and not options.keep_archive:
-                dc.archive.delete_tmp_dir()
-            else:
-                if obfuscate:
-                    logger.info('Obfuscated Insights data retained in %s',
-                                os.path.dirname(tar_file))
+                if not obfuscate and not options.keep_archive:
+                    dc.archive.delete_tmp_dir()
                 else:
-                    logger.info('Insights data retained in %s', tar_file)
+                    if obfuscate:
+                        logger.info('Obfuscated Insights data retained in %s',
+                                    os.path.dirname(tar_file))
+                    else:
+                        logger.info('Insights data retained in %s', tar_file)
+            else:
+                handle_file_output(options, tar_file, archive)
         else:
-            handle_file_output(options, tar_file, archive)
-    else:
-        logger.info('See Insights data in %s', dc.archive.archive_dir)
+            logger.info('See Insights data in %s', dc.archive.archive_dir)
     return rc
 
 
@@ -430,22 +447,10 @@ def set_up_options(parser):
                       help='offline mode for OSP use',
                       dest='offline', action='store_true',
                       default=False)
-    parser.add_option('--analyse-docker-image',
-                      help='Analyse a docker image',
-                      action='store',
-                      dest='analyse_docker_image')
-    parser.add_option('--collection-target',
-                      help='One of "host", "docker_container", "docker_image", or "VERSION0".  "VERSION0" collects exactly as this program did before this option was added.',
-                      action='store',
-                      dest='collection_target')
-    parser.add_option('--fs',
-                      help='Absolute path to mounted filesystem to collect data from (instead of /).',
-                      action='store',
-                      dest='container_fs')
-    parser.add_option('--name',
-                      help='Name to use for uploaded data (instead of hostname).',
-                      action='store',
-                      dest='container_name')
+    parser.add_option('--container',
+                      help='Run Insights in container mode.',
+                      action='store_true',
+                      dest='container_mode')
     group = optparse.OptionGroup(parser, "Debug options")
     group.add_option('--test-connection',
                      help='Test connectivity to Red Hat',
@@ -493,10 +498,10 @@ def set_up_options(parser):
                      action="store_true",
                      dest="keep_archive",
                      default=False)
-    group.add_option('--run-here',
-                     help="Don't transfer into a container, even for docker analysis",
+    group.add_option('--run-as-container',
+                     help="Run analysis from a container",
                      action="store_true",
-                     dest="run_here",
+                     dest="run_as_container",
                      default=False)
     parser.add_option_group(group)
 
@@ -505,6 +510,10 @@ def handle_startup(options, config):
     """
     Handle startup options
     """
+    # run from a container instead
+    if options.run_as_container:
+        options.run_as_container = False
+        sys.exit(run_in_container(options))
 
     if options.version:
         print constants.version
@@ -608,35 +617,6 @@ def handle_startup(options, config):
         logger.error('Can\'t use both --from-stdin and --from-file.')
         sys.exit(1)
 
-    options.image_connection = None
-    if options.analyse_docker_image:
-        if options.run_here:
-            if (not options.collection_target or \
-                options.collection_target == "docker_image") and \
-                not options.container_fs:
-                options.image_connection = containers.open_image(options.analyse_docker_image)
-                if options.image_connection:
-                    options.collection_target = "docker_image"
-                    options.container_fs = options.image_connection.get_fs()
-                    if not options.container_name:
-                        options.container_name = options.image_connection.get_name()
-                else:
-                    logger.error('Could not open image for analysis: %s' % options.analyse_docker_image)
-                    sys.exit(1)
-
-            else:
-                logger.error('Some specified options are incompatible with --analyse-docker-image')
-                if options.container_fs:
-                    logger.error('--container_fs is incompatible with --analyse-docker-image')
-                if options.collection_target:
-                    logger.error('--collection_target = %s is incompatible with --analyse-docker-image' % options.collection_target)
-                sys.exit(1)
-        else:
-            sys.exit(containers.run_in_container(options))
-
-    if not options.collection_target:
-        options.collection_target = "host"
-
     # First startup, no .registered or .unregistered
     # Ignore if in offline mode
     if (not os.path.isfile(constants.registered_file) and
@@ -673,7 +653,7 @@ def _main():
         sys.exit("Red Hat Access Insights must be run as root")
 
     global logger
-    #sys.excepthook = handle_exception
+    sys.excepthook = handle_exception
 
     parser = optparse.OptionParser()
     set_up_options(parser)
@@ -702,14 +682,24 @@ def _main():
     try:
         # do work
         rc = collect_data_and_upload(config, options)
-
+        # do work
+        if options.container_mode:
+            targets = get_images()
+            if targets:
+                # TODO: use host-limited as the type for container host data
+                targets.append({'type': 'host', 'name': None})
+            else:
+                # no images, abort mission
+                sys.exit(1)
+            rc = collect_data_and_upload(config, options, targets=targets)
+        else:
+            rc = collect_data_and_upload(config, options)
         # Roll log over on successful upload
         handler.doRollover()
 
     finally:
         handle_shutdown(options, config)
-
-    sys.exit(rc)
+        sys.exit(rc)
 
 
 def trace_calls(frame, event, arg):

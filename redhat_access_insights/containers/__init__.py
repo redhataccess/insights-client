@@ -165,7 +165,7 @@ if HaveDocker:
 
         docker_args = shlex.split("docker run --rm -t --privileged=true -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights redhat-insights/insights-client redhat-access-insights")
 
-        return runcommand(docker_args + [ "--run-here" ] + options.all_args)
+        return runcommand(docker_args + options.all_args)
 
 
 else:
