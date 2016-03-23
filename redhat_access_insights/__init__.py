@@ -187,7 +187,8 @@ def collect_data_and_upload(config, options, rc=0):
         branch_info = handle_branch_info_error(
             "Could not determine branch information", options)
     pc = InsightsConfig(config, pconn)
-    archive = InsightsArchive(compressor=options.compressor)
+    archive = InsightsArchive(compressor=options.compressor,
+                              container_name=options.container_name)
     dc = DataCollector(archive)
 
     # register the exit handler here to delete the archive
