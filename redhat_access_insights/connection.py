@@ -289,7 +289,7 @@ class InsightsConnection(object):
             try:
                 sock.connect((hostname[0], 443))
             except socket.gaierror:
-                logger.error('Error: Failed to connect to %s. Invalid hostname.' % base_url)
+                logger.error('Error: Failed to connect to %s. Invalid hostname.' % self.base_url)
                 sys.exit(1)
         ctx = SSL.Context(SSL.TLSv1_METHOD)
         if type(self.cert_verify) is not bool:
