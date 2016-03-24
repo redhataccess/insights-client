@@ -83,9 +83,12 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Tue Mar 22 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.8-11
+- Resolves: bz1308916, bz1308942
+
 * Fri Mar 18 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.8-7
 - Fix bugs related to --from-stdin and --to-stdout options
-- Resolves: bz1319015, bz1248023, bz1308916, bz1308942
+- Resolves: bz1319015
 
 * Wed Jan 06 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.7-3
 - New config options trace and no_schedule
