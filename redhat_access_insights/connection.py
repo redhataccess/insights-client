@@ -293,7 +293,11 @@ class InsightsConnection(object):
                 sys.exit(1)
         ctx = SSL.Context(SSL.TLSv1_METHOD)
         if type(self.cert_verify) is not bool:
-            ctx.load_verify_locations(self.cert_verify, None)
+            if os.path.isfile(self.cert_verify):
+                ctx.load_verify_locations(self.cert_verify, None)
+            else:
+                logger.error('Error: Invalid cert path: %s' % self.cert_verify)
+                sys.exit(1)
         ctx.set_verify(SSL.VERIFY_PEER, self._verify_check)
         ssl_conn = SSL.Connection(ctx, sock)
         ssl_conn.set_connect_state()
