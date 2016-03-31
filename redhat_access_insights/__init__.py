@@ -426,7 +426,7 @@ def set_up_options(parser):
                       default=constants.default_conf_file)
     parser.add_option('--to-stdout',
                       help='print archive to stdout; '
-                           'sets --silent and --no-upload',
+                           'sets --quiet and --no-upload',
                       dest='to_stdout',
                       default=False,
                       action='store_true')
@@ -522,6 +522,9 @@ def handle_startup(options, config):
     if options.validate:
         validate_remove_file()
         sys.exit()
+
+    if options.to_stdout:
+        options.no_upload = True
 
     # Generate /etc/machine-id if it does not exist
     new = False
