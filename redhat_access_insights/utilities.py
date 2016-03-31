@@ -7,36 +7,42 @@ import sys
 import logging
 import uuid
 import datetime
+import shlex
+from subprocess import Popen, PIPE
 from constants import InsightsConstants as constants
 
 logger = logging.getLogger(constants.app_name)
 
 
-def determine_hostname():
+def determine_hostname(container=None):
     """
     Find fqdn if we can
     """
-    socket_gethostname = socket.gethostname()
-    socket_fqdn = socket.getfqdn()
+    if container:
+        # use container name as "hostname" for container
+        return container
+    else:
+        socket_gethostname = socket.gethostname()
+        socket_fqdn = socket.getfqdn()
 
-    try:
-        socket_ex = socket.gethostbyname_ex(socket_gethostname)[0]
-    except LookupError:
-        socket_ex = ''
-    except socket.gaierror:
-        socket_ex = ''
+        try:
+            socket_ex = socket.gethostbyname_ex(socket_gethostname)[0]
+        except LookupError:
+            socket_ex = ''
+        except socket.gaierror:
+            socket_ex = ''
 
-    gethostname_len = len(socket_gethostname)
-    fqdn_len = len(socket_fqdn)
-    ex_len = len(socket_ex)
+        gethostname_len = len(socket_gethostname)
+        fqdn_len = len(socket_fqdn)
+        ex_len = len(socket_ex)
 
-    if fqdn_len > gethostname_len or ex_len > gethostname_len:
-        if "localhost" not in socket_ex and len(socket_ex):
-            return socket_ex
-        if "localhost" not in socket_fqdn:
-            return socket_fqdn
+        if fqdn_len > gethostname_len or ex_len > gethostname_len:
+            if "localhost" not in socket_ex and len(socket_ex):
+                return socket_ex
+            if "localhost" not in socket_fqdn:
+                return socket_fqdn
 
-    return socket_gethostname
+        return socket_gethostname
 
 
 def _write_machine_id(machine_id):
@@ -118,6 +124,50 @@ def delete_machine_id():
     '''
     if os.path.isfile(constants.machine_id_file):
         os.remove(constants.machine_id_file)
+
+
+def generate_analysis_target_id(analysis_target, name):
+    # this function generates 'machine-id's for analysis target's that
+    # might not be hosts.
+    #
+    # 'machine_id' is what Insights uses to uniquely identify
+    # the thing-to-be-analysed.  Primarily it determines when two uploads
+    # are for the 'same thing', and so the latest upload should update the
+    # later one Up till now that has only been hosts (machines), and so a
+    # random uuid (uuid4) machine-id was generated for the host as its machine-id,
+    # and written to a file on the host, and reused for all insights
+    # uploads for that host.
+    #
+    # For docker images and containers, it will be difficult to impossible
+    # to save their machine id's anywhere.  Also, while containers change
+    # over time just like hosts, images don't change over time, though they
+    # can be rebuilt.  So for images we want the 'machine-id' for an 'image'
+    # to follow the rebuilt image, not change every time the image is rebuilt.
+    # Typically when an image is rebuilt, the rebuilt image will have the same
+    # name as its predicessor, but a different version (tag).
+    #
+    # So for images and containers, instead of random uuids, we use namespace uuids
+    # (uuid5's).  This generates a new uuid based on a combination of another
+    # uuid, and a name (a character string).  This will always generate the
+    # same uuid for the same given base uuid and name.  This saves us from
+    # having to save the image's uuid anywhere, and lets us control the created uuid
+    # by controlling the name used to generate it.  Keep the name and base uuid) the
+    # same, we get the same uuid.
+    #
+    # For the base uuid we use the uuid of the host we are running on.
+    # For containers this is the obvious choice, for images it is less obviously
+    # what base uuid is correct.  For now we will just go with the host's uuid also.
+    #
+    # For the name, we leave that outside this function, but in general it should
+    # be the name of the container or the name of the image, and if you want to
+    # replace the results on the insights server, you have to use the same name
+
+    if analysis_target == "host":
+        return generate_machine_id()
+    elif analysis_target == "docker_image" or analysis_target == "docker_container":
+        return generate_container_id(name)
+    else:
+        raise ValueError("Unknown analysis target: %s" % analysis_target)
 
 
 def _expand_paths(path):
@@ -205,3 +255,8 @@ def magic_plan_b(filename):
     stdout, stderr = Popen(cmd, stdout=PIPE).communicate()
     mime_str = stdout.split(filename + ': ')[1].strip()
     return mime_str
+
+
+def generate_container_id(container_name):
+    # container id is a uuid in the namespace of the machine
+    return str(uuid.uuid5(uuid.UUID(generate_machine_id()), container_name.encode('utf8')))

@@ -12,7 +12,7 @@ import logging
 import six
 from tempfile import NamedTemporaryFile
 from soscleaner import SOSCleaner
-from utilities import determine_hostname, _expand_paths, write_file_with_text
+from utilities import determine_hostname, _expand_paths, write_file_with_text, generate_container_id
 from constants import InsightsConstants as constants
 
 APP_NAME = constants.app_name
@@ -25,14 +25,134 @@ SOSCLEANER_LOGGER = logging.getLogger('redhat_access_insights.soscleaner')
 SOSCLEANER_LOGGER.setLevel(logging.ERROR)
 
 
+"""
+
+An example additions to uploader.json
+
+    "specs": {
+        ...
+        "rpm_-V_packages": {
+            "host": [
+                {
+                    "pattern": [],
+                    "command": "/bin/rpm -V coreutils procps procps-ng shadow-utils passwd sudo",
+                    "archive_file_name": "/insights_commands/rpm_-V_coreutils_procps_procps-ng_shadow-utils_passwd_sudo"
+                }
+            ],
+            "docker_image": [
+                {
+                    "pattern": [],
+                    "command": "/bin/rpm --root={CONTAINER_MOUNT_POINT} -V coreutils procps procps-ng shadow-utils passwd sudo",
+                    "archive_file_name": "/insights_data/image/commands/rpm_-V_coreutils_procps_procps-ng_shadow-utils_passwd_sudo"
+                }
+            ]
+        },
+        "httpd.conf": {
+            "host": [
+                {
+                    "pattern": [
+                        "SSLProtocol",
+                        "SSLCipherSuite",
+                        "NSSProtocol"
+                    ],
+                    "archive_file_name": "/{EXPANDED_FILE_NAME}",
+                    "file": "/etc/httpd/conf/httpd.conf"
+                }
+            ],
+            "docker_image": [
+                {
+                    "pattern": [
+                        "SSLProtocol",
+                        "SSLCipherSuite",
+                        "NSSProtocol"
+                    ],
+                    "archive_file_name": "/insights_data/image/rootfs/{EXPANDED_FILE_NAME}",
+                    "file": "{CONTAINER_MOUNT_POINT}/etc/httpd/conf/httpd.conf"
+                }
+            ]
+        },
+        ...
+
+    "specs" is a new top level section combining the function of both the existing sections "commands"
+    and "files".
+
+    "httpd.conf" and "rpm_-V_packages" are the symbolic names of two specs we can collect.
+
+    "host" and "docker_image" are analysis targets.  The "host" section should directly echo
+    the "commands" and "files" sections in the same file.
+
+     "file" and "command" have the same meanings as they do in the existing "files" and "commands"
+     sections, with the exception that they may now contain symbolic names of things only the
+     client can determine.
+
+     "archive_file_name" is the location where the output of this spec should be located for
+     this analysis target.  It may contain symbolic names.
+
+
+     "{CONTAINER_MOUNT_POINT}" only defined in "file" and "command", for docker_container and
+     docker_image, the location on the host where the root file system of the container or image
+     is mounted.
+
+     "{EXPANDED_FILE_NAME}" only defined in "archive_file_name" in sections also containing "file".
+     Since "file" can contain a pattern, and can collect multiple files with names not known till
+     collected, this provides a way to place these files in the archive.  If "file" contains
+     "{CONTAINER_MOUNT_POINT}" it will not be included in the expansion of "{EXPADED_FILE_NAME}".
+
+"""
+
+
+#
+# The collection rules have some optional stuff in them now, so the following simplify indexing
+# into dictionaries that might not have the indexes that you are looking for.
+#
+# so for example you want to write:
+#
+#    foo = d['meta_specs']['uploader_log']['something_else']
+#
+# but d might not have 'meta_specs' and that might not have 'uploader_log' and ...
+# so write this instead
+#
+#   idx = ('meta_specs','uploader_log','something_else')
+#   if dictmultihas(d, idx):
+#      foo = dictmultiget(d, idx)
+#   else:
+#      ....
+#
+
+def dictmultihas(d, idx):
+    # 'idx' is a tuple of strings, indexing into 'd'
+    #  if d doesn't have these indexes, return False
+    for each in idx[:-1]:
+        if d and each in d:
+            d = d[each]
+    if d and len(idx) > 0 and idx[-1] in d:
+        return True
+    else:
+        return False
+
+
+def dictmultiget(d, idx):
+    # 'idx' is a tuple of strings, indexing into 'd'
+    for each in idx[:-1]:
+        d = d[each]
+    return d[idx[-1]]
+
+
 class DataCollector(object):
     """
     Run commands and collect files
     """
 
-    def __init__(self, archive_=None):
+    def __init__(self, archive_=None, mountpoint=None, container_name=None, target_type='host'):
+        # in --container mode, this will be instantiated in a different way than
+        #  in the normal collect_data_and_upload function in __init__.py
         self._set_black_list()
         self.archive = archive_ if archive_ else archive.InsightsArchive()
+        self.mountpoint = '/'
+        if mountpoint:
+            self.mountpoint = mountpoint
+        self.container_name = container_name
+        self.target_type = target_type
 
     def _set_black_list(self):
         """
@@ -54,11 +174,17 @@ class DataCollector(object):
                                command,
                                exclude=None,
                                filters=None,
-                               nolog=False):
+                               nolog=False,
+                               mangled_command=None):
         """
         Execute a command through the system shell. First checks to see if the
         requested command is executable. Returns (returncode, stdout, 0)
         """
+
+        # mangle the command if it's not pre-mangled
+        if not mangled_command:
+            mangled_command = self._mangle_command(command)
+
         # ensure consistent locale for collected command output
         cmd_env = {'LC_ALL': 'C'}
         if not six.PY3:
@@ -74,7 +200,7 @@ class DataCollector(object):
         except OSError as err:
             if err.errno == errno.ENOENT:
                 logger.debug("Command %s not found", command)
-                return {'cmd': self._mangle_command(command),
+                return {'cmd': mangled_command,
                         'status': 127,
                         'output': "Command not found"}
             else:
@@ -127,7 +253,7 @@ class DataCollector(object):
         logger.debug("stderr: %s", stderr)
 
         return {
-            'cmd': self._mangle_command(command),
+            'cmd': mangled_command,
             'status': proc0.returncode,
             'output': stdout.decode('utf-8', 'ignore')
         }
@@ -136,7 +262,9 @@ class DataCollector(object):
         """
         Handle special commands
         """
-        if 'ethtool' in command['command']:
+        if 'rpm' in command['command']:
+            self._handle_rpm(command, exclude)
+        elif 'ethtool' in command['command']:
             # Get the ethtool flag
             flag = None
             try:
@@ -201,6 +329,21 @@ class DataCollector(object):
                 interfaces[iface] = True
         return interfaces
 
+    def _handle_rpm(self, command, exclude):
+        '''
+        Helper to handle rpm
+        '''
+        cmd = command['command'].replace('rpm', 'rpm --root=' + self.mountpoint, 1)
+        filters = command['pattern']
+        # pre-mangle rpm command separately so that we don't get '--root=' in it
+        mangled_rpm = self._mangle_command(command['command'])
+        output = self.run_command_get_output(
+            cmd,
+            filters=filters,
+            exclude=exclude,
+            mangled_command=mangled_rpm)
+        self.archive.add_command_output(output)
+
     def _handle_parted(self):
         """
         Helper to handle parted
@@ -231,7 +374,7 @@ class DataCollector(object):
         self.archive.add_command_output({
             'cmd': self._mangle_command(command),
             'status': 0,
-            'output': determine_hostname()
+            'output': determine_hostname(self.container_name)
         })
 
     def _handle_ethtool(self, flag):
@@ -282,32 +425,76 @@ class DataCollector(object):
                 except KeyError:
                     logger.debug('No machine-id from stdin.  Using regular file')
             self.copy_file_with_pattern(_file['file'], pattern, exclude)
+
+        # maybe tack the machine-id for containers here, instead of in the copy file func
         logger.debug("File copy complete")
 
-    def write_branch_info(self, branch_info):
+    def write_branch_info(self, branch_info, collection_rules=None):
         """
         Write branch information to file
+        collection_rules is None if we are doing a VERSION0 collection
         """
+
+        idx = ('meta_specs', 'branch_info', 'archive_file_name')
+        if not dictmultihas(collection_rules, idx):
+            branch_info_location = '/branch_info'
+        else:
+            branch_info_location = dictmultiget(collection_rules, idx)
+
         logger.debug("Writing branch information to workdir")
-        full_path = self.archive.get_full_archive_path('/branch_info')
+        full_path = self.archive.get_full_archive_path(branch_info_location)
         write_file_with_text(full_path, json.dumps(branch_info))
 
-    def _copy_file_with_pattern(self, path, patterns, exclude):
+    def write_analysis_target(self, analysis_target, collection_rules):
+        idx = ('meta_specs', 'analysis_target', 'archive_file_name')
+        if dictmultihas(collection_rules, idx):
+            analysis_target_location = dictmultiget(collection_rules, idx)
+            logger.debug("Writing analysis_target, '%s' information to: %s" % (analysis_target, analysis_target_location))
+            full_path = self.archive.get_full_archive_path(analysis_target_location)
+            write_file_with_text(full_path, analysis_target)
+
+    def write_machine_id(self, machine_id, collection_rules):
+        idx = ('meta_specs', 'machine-id', 'archive_file_name')
+        if dictmultihas(collection_rules, idx):
+            machine_id_location = dictmultiget(collection_rules, idx)
+            logger.debug("Writing machine_id, '%s' information to: %s" % (machine_id, machine_id_location))
+            full_path = self.archive.get_full_archive_path(machine_id_location)
+            write_file_with_text(full_path, machine_id)
+
+    def _copy_file_with_pattern(self, real_path, patterns, exclude, archive_file_name=None):
         """
-        Copy file, selecting only lines we are interested in
+        Copy real_path into archive, selecting only lines we are interested in
         """
-        full_path = self.archive.get_full_archive_path(path)
-        if not os.path.isfile(path):
-            logger.debug("File %s does not exist", path)
+        # we're given the real path, so strip it back to relative path
+        relative_path = os.path.join('/',
+                                     os.path.relpath(real_path, self.mountpoint))
+        # the file's destination inside the archive is based on
+        #  the relative location of the file to the mountpoint
+        # if we use the proposed 'archive_file_name' spec ->
+        #  archive_path = archive_file_name.format(EXPANDED_FILE_NAME=relative_path)
+        archive_path = self.archive.get_full_archive_path(
+            archive_file_name.format(
+                EXPANDED_FILE_NAME=relative_path) if archive_file_name else relative_path)
+
+        if self.target_type == 'docker_image' and relative_path == '/etc/redhat-access-insights/machine-id':
+            # make a container machine-id
+            # TODO: could use container ID instead
+            output = generate_container_id(self.container_name)
+            write_file_with_text(archive_path, output.decode('utf-8', 'ignore').strip())
             return
-        logger.debug("Copying %s to %s with filters %s", path, full_path, str(patterns))
+
+        if not os.path.isfile(real_path):
+            logger.debug("File %s does not exist", real_path)
+            return
+
+        logger.debug("Copying %s to %s with filters %s", real_path, archive_path, str(patterns))
 
         cmd = []
         # shlex.split doesn't handle special characters well
         cmd.append("/bin/sed".encode('utf-8'))
         cmd.append("-rf".encode('utf-8'))
         cmd.append(constants.default_sed_file.encode('utf-8'))
-        cmd.append(path.encode('utf8'))
+        cmd.append(real_path.encode('utf8'))
         sedcmd = Popen(cmd,
                        stdout=PIPE)
 
@@ -344,27 +531,113 @@ class DataCollector(object):
         if patterns is None and exclude is None:
             output = sedcmd.communicate()[0]
 
-        write_file_with_text(full_path, output.decode('utf-8', 'ignore').strip())
+        write_file_with_text(archive_path, output.decode('utf-8', 'ignore').strip())
 
     def copy_file_with_pattern(self, path, patterns, exclude):
         """
         Copy a single file or regex, creating the necessary directories
         But grepping for pattern(s)
         """
-        if "*" in path:
-            paths = _expand_paths(path)
-            if not paths:
-                logger.debug("Could not expand %s", path)
-                return
-            for path in paths:
-                self._copy_file_with_pattern(path, patterns, exclude)
-        else:
-            self._copy_file_with_pattern(path, patterns, exclude)
+        # the actual location of the file
+        # need to append this here for _expand_paths to work
+        real_path = os.path.join(self.mountpoint,
+                                 path.lstrip('/'))
 
-    def done(self, config, rm_conf):
+        if "*" in path:
+            expanded_paths = _expand_paths(real_path)
+            if not expanded_paths:
+                logger.debug("Could not expand %s", real_path)
+                return
+            for p in expanded_paths:
+                self._copy_file_with_pattern(p, patterns, exclude)
+        else:
+            self._copy_file_with_pattern(real_path, patterns, exclude)
+
+    def _process_file_spec(self, spec, exclude, options):
+
+        pattern = None
+        if len(spec['pattern']) > 0:
+            pattern = spec['pattern']
+
+        if 'archive_file_name' in spec:
+            archive_file_name = spec['archive_file_name']
+        else:
+            archive_file_name = None
+
+        # stub this out, the real path is determined in
+        #  copy_file_with_pattern
+        files_to_collect = spec['file'].format(CONTAINER_MOUNT_POINT='')
+
+        self.copy_file_with_pattern(files_to_collect, pattern, exclude,
+                                    archive_file_name=archive_file_name)
+
+    def _process_command_spec(self, spec, exclude, options):
+
+        if self.target_type == "host":
+            self._handle_commands(spec, exclude)
+
+        else:
+            command = spec['command'].format(CONTAINER_MOUNT_POINT=self.mountpoint)
+            filters = spec['pattern']
+
+            if 'archive_file_name' in spec:
+                archive_file_name = spec['archive_file_name']
+                mangled_command = None
+            else:
+                archive_file_name = None
+                mangled_command = self._mangle_command(specs['command'])
+
+            output = self.run_command_get_output(command, filters=filters, exclude=exclude,
+                                                 mangled_command=mangled_command)
+            self.archive.add_command_output(output, archive_file_name=archive_file_name)
+
+    def process_specs(self, conf, rm_conf, options):
+        logger.debug("Beginning to process specs...")
+
+        if rm_conf:
+            try:
+                exclude = rm_conf['patterns']
+            except LookupError:
+                exclude = None
+        else:
+            exclude = None
+
+        for spec_group in conf['specs']:
+            if self.target_type in spec_group:
+                spec = spec_group[self.target_type]
+                if 'file' in spec:
+                    if rm_conf:
+                        try:
+                            if spec['file'] in rm_conf['files']:
+                                logger.warn("WARNING: Skipping file %s", spec['file'])
+                                continue
+                        except LookupError:
+                            pass
+                    self._process_file_spec(each_spec, exclude, options)
+                elif 'command' in spec:
+                    if rm_conf:
+                        try:
+                            if each_spec['command'] in rm_conf['commands']:
+                                logger.warn("WARNING: Skipping command %s", each_spec['command'])
+                                continue
+                        except LookupError:
+                            pass
+                    self._process_command_spec(each_spec, exclude, options)
+        logger.debug("Specs processing complete.")
+
+    def done(self, config, rm_conf, collection_rules=None):
         """
         Do finalization stuff
         """
+
+        # Only copy the log after all else is copied
+        # collection_rules is None if we are doing an old style "VERSION0" collection
+        idx = ('meta_specs', 'uploader_log')
+        if dictmultihas(collection_rules, idx):
+            path_in_archive = self.archive.get_full_archive_path(dictmultiget(collection_rules, idx)['archive_file_name'])
+            content = open("/var/log/redhat-access-insights/redhat-access-insights.log").read().strip()
+            write_file_with_text(path_in_archive, content.decode('utf-8', 'ignore'))
+
         if config.getboolean(APP_NAME, "obfuscate"):
             cleaner = SOSCleaner(quiet=True)
             clean_opts = CleanOptions(self.archive.tmp_dir, config, rm_conf)
