@@ -534,6 +534,30 @@ class DataCollector(object):
                                          archive_file_name=archive_file_name)
 
 
+
+    def _replace_variables(self, file_or_command, options):
+        # the file or command in a spec can have variables in the form {NAME}
+        #   placed there by the server
+        #   to be filled in with information only the client knows
+        #
+        # {CONTAINER_MOUNT_POINT} for docker_container and docker_image,
+        #     the location on the host where the root file system of the container or image
+        #     is mounted.
+        # {DOCKER_IMAGE_NAME} for docker_image
+        #     the name of the docker image, suitable for use on a docker inspect command
+        # {DOCKER_CONTAINER_NAME} for docker_container
+        #     the name of the docker image, suitable for use on a docker inspect command
+
+        new_file_or_command = file_or_command
+        if options.collection_target == 'docker_image' or options.collection_target == 'docker_container':
+            new_file_or_command = new_file_or_command.replace("{CONTAINER_MOUNT_POINT}", options.container_fs)
+
+        if options.collection_target == 'docker_image':
+            new_file_or_command = new_file_or_command.replace("{DOCKER_IMAGE_NAME}", options.container_name)
+        if options.collection_target == 'docker_container':
+            new_file_or_command = new_file_or_command.replace("{DOCKER_CONTAINER_NAME}", options.container_name)
+        return new_file_or_command
+
     def _process_file_spec(self, spec, exclude, options):
 
         pattern = None
@@ -545,10 +569,7 @@ class DataCollector(object):
         else:
             archive_file_name = None
 
-        if options.container_fs:
-            files_to_collect = spec['file'].replace("{CONTAINER_MOUNT_POINT}", options.container_fs)
-        else:
-            files_to_collect = spec['file']
+        files_to_collect = self._replace_variables(spec['file'], options)
 
         self.copy_file_with_pattern(files_to_collect, pattern, exclude,
                                     options.container_fs,
@@ -561,8 +582,7 @@ class DataCollector(object):
             self._handle_commands(spec, exclude)
 
         else:
-            if options.container_fs:
-                command = spec['command'].replace("{CONTAINER_MOUNT_POINT}", options.container_fs)
+            command = self._replace_variables(spec['command'], options)
 
             filters = spec['pattern']
 

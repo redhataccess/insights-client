@@ -78,6 +78,38 @@ if HaveDocker:
             logger.error('Could not connect to docker to examine image %s' % image_name)
             return None
 
+    def open_container(container_name):
+        client = docker.Client(base_url='unix://var/run/docker.sock')
+        if client:
+            matching_containers = []
+            for each in client.containers(all=True, trunc=False):
+                if container_name == each['Id']:
+                    matching_containers = [ each ]
+                    break
+            if len(matching_containers) == 1:
+                print matching_containers[0]
+                container_id = matching_containers[0]['Id']
+                if 'Names' in matching_containers[0] and len(matching_containers[0]['Names']) > 0 and \
+                   len(matching_containers[0]['Names'][0]) > 0:
+                    container_label = matching_containers[0]['Names'][0]
+                else:
+                    container_label = container_id
+                mount_point = tempfile.mkdtemp()
+                cid = mount_obj(client, mount_point, container_id)
+                logger.debug("Opening Container %s %s %s %s" % (container_name, container_id, container_label, mount_point))
+                return ImageConnection(client, container_name, container_id, container_label, mount_point, cid)
+            else:
+                if len(matching_containers) > 1:
+                    logger.error('%s containers match name %s' % (len(matching_containers), container_name))
+                    for each in matching_containers:
+                        logger.error('   %s %s' % (get_label(each), each['Id']))
+                else:
+                    logger.error('no containers match name %s' % container_name)
+                return None
+        else:
+            logger.error('Could not connect to docker to examine container %s' % container_name)
+            return None
+
     def force_clean(client, cid, mount_point):
         """ force unmounts and removes any block devices
             to prevent memory corruption """
