@@ -194,8 +194,9 @@ if HaveDocker:
         #    /var/lib/docker      ---- so we can mount docker images and containers
         #    /dev/                ----   also so we can mount docker images and containers
         #    /etc/redhat-access-insights --- so we can use the host's configuration and machine-id
+        #    /etc/pki --- so we can use the host's Sat6 certs (if any)
 
-        docker_args = shlex.split("docker run --rm -t --privileged=true -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights redhat-insights/insights-client redhat-access-insights")
+        docker_args = shlex.split("docker run --rm -t --privileged=true -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights -v /etc/pki/:/etc/pki/ redhat-insights/insights-client redhat-access-insights")
 
         return runcommand(docker_args + [ "--run-here" ] + options.all_args)
 
