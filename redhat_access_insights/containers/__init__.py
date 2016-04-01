@@ -195,8 +195,11 @@ if HaveDocker:
         #    /dev/                ----   also so we can mount docker images and containers
         #    /etc/redhat-access-insights --- so we can use the host's configuration and machine-id
         #    /etc/pki --- so we can use the host's Sat6 certs (if any)
+        if options.analyse_docker_image and options.from_file:
+            logger.error('--from-file is incompatible with --analyse-docker-image (without --run-here)')
+            return 1
 
-        docker_args = shlex.split("docker run --rm -t --privileged=true -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights -v /etc/pki/:/etc/pki/ redhat-insights/insights-client redhat-access-insights")
+        docker_args = shlex.split("docker run --privileged=true -i -a stdin -a stdout -a stderr --rm -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights -v /etc/pki/:/etc/pki/ redhat-insights/insights-client redhat-access-insights")
 
         return runcommand(docker_args + [ "--run-here" ] + options.all_args)
 
