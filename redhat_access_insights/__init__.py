@@ -1,11 +1,10 @@
 #!/usr/bin/python
 """
- Gather and Upload Insights Data for
- Red Hat Access Insights
+ Gather and upload Insights data for
+ Red Hat Insights
 """
 import ConfigParser
 import getpass
-import inspect
 import json
 import logging
 import logging.handlers
@@ -44,45 +43,8 @@ APP_NAME = constants.app_name
 logger = None
 
 
-def parse_config_file(conf_file):
-    """
-    Parse the configuration from the file
-    """
-    parsedconfig = ConfigParser.RawConfigParser(
-        {'loglevel': constants.log_level,
-         'trace': 'False',
-         'app_name': constants.app_name,
-         'auto_config': 'True',
-         'authmethod': constants.auth_method,
-         'base_url': constants.base_url,
-         'upload_url': None,
-         'api_url': None,
-         'branch_info_url': None,
-         'auto_update': 'True',
-         'collection_rules_url': None,
-         'obfuscate': 'False',
-         'obfuscate_hostname': 'False',
-         'cert_verify': constants.default_ca_file,
-         'gpg': 'True',
-         'username': '',
-         'password': '',
-         'systemid': None,
-         'proxy': None,
-         'insecure_connection': 'False',
-         'no_schedule': 'False'})
-    try:
-        parsedconfig.read(conf_file)
-    except ConfigParser.Error:
-        logger.error("ERROR: Could not read configuration file, using defaults")
-    try:
-        # Try to add the redhat_access_insights section
-        parsedconfig.add_section(APP_NAME)
-    except ConfigParser.Error:
-        pass
-    return parsedconfig
-
-
 def set_up_logging(config, options):
+    # TODO: come back to this
     """
     Initialize Logging
     """
@@ -90,12 +52,14 @@ def set_up_logging(config, options):
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, 0700)
     logging_file = os.path.join(log_dir, APP_NAME + '.log')
-
     valid_levels = ['ERROR', 'DEBUG', 'INFO', 'WARNING', 'CRITICAL']
-
     handler = logging.handlers.RotatingFileHandler(logging_file,
                                                    backupCount=3)
 
+    # from_stdin mode implies to_stdout
+    options.to_stdout = (options.to_stdout or
+                         options.from_stdin or
+                         options.from_file)
     if options.to_stdout and not options.verbose:
         options.quiet = True
 
@@ -131,244 +95,13 @@ def set_up_logging(config, options):
     return my_logger, handler
 
 
-def handle_exception(exc_type, exc_value, exc_traceback):
-    """
-    Exception handler so exception messages land in our log instead of them
-    vanishing into thin air, or abrt picking them up
-    """
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.exit(1)
-    if logger:
-        logger.error(
-            traceback.format_exception(exc_type, exc_value, exc_traceback))
-    else:
-        print traceback.format_exception(exc_type, exc_value, exc_traceback)
-        sys.exit('Caught unhandled exception, check log for more information')
-
-
-def lineno():
-    """
-    Get lineno
-    """
-    return inspect.currentframe().f_back.f_lineno
-
-
-def handle_branch_info_error(msg, options):
-    if options.no_upload:
-        logger.warning(msg)
-        logger.warning("Assuming remote branch and leaf value of -1")
-        branch_info = {}
-        branch_info['remote_branch'] = branch_info['remote_leaf'] = -1
-        return branch_info
-    else:
-        logger.error("ERROR: %s", msg)
-        sys.exit()
-
-
-def handle_exit(archive, keep_archive):
-    # delete the archive on exit so we don't keep crap around
-    if not keep_archive:
-        archive.delete_tmp_dir()
-
-
-def unmount_on_exit(mounted_image):
-    try:
-        mounted_image.close()
-    except:
-        # it was already unmounted
-        pass
-
-
-def collect_data_and_upload(config, options, rc=0, targets=constants.default_target):
-    """
-    All the heavy lifting done here
-    Run through "targets" - could be just one (host, default) or many (containers+host)
-    """
-    pconn = InsightsConnection(config)
-    try:
-        branch_info = pconn.branch_info()
-    except requests.ConnectionError:
-        branch_info = handle_branch_info_error(
-            "Could not connect to determine branch information", options)
-    except LookupError:
-        branch_info = handle_branch_info_error(
-            "Could not determine branch information", options)
-    pc = InsightsConfig(config, pconn)
-
-    try:
-        stdin_config = {}
-        if options.from_file:
-            with open(options.from_file, 'r') as f:
-                stdin_config = json.load(f)
-        elif options.from_stdin:
-            stdin_config = json.load(sys.stdin)
-        if ((options.from_file or options.from_stdin) and
-            ('uploader.json' not in stdin_config or
-             'sig' not in stdin_config)):
-            raise ValueError
-    except:
-        logger.error('ERROR: Invalid config for %s! Exiting...' %
-                     ('--from-file' if options.from_file else '--from-stdin'))
-        sys.exit(1)
-
-    start = time.clock()
-    collection_rules, rm_conf = pc.get_conf(options.update, stdin_config)
-    collection_elapsed = (time.clock() - start)
-    logger.debug("Collection Rules Elapsed Time: %s", collection_elapsed)
-
-    # targets = collection targes (host, containers, etc)
-    for t in targets:
-        # default mountpoint to None
-        mp = None
-        # mount if target is an image
-        if t['type'] == 'docker_image':
-            mounted_image = open_image(t['name'])
-            mp = mounted_image.mount_point
-            # unmount on unexpected exit
-            atexit.register(unmount_on_exit, mounted_image)
-
-        collection_start = time.clock()
-
-        # new archive for each container
-        archive = InsightsArchive(compressor=options.compressor, container_name=t['name'])
-        dc = DataCollector(archive, mountpoint=mp, container_name=t['name'], target_type=t['type'])
-
-        # register the exit handler here to delete the archive
-        atexit.register(handle_exit, archive, options.keep_archive or options.no_upload)
-
-        start = time.clock()
-        logger.info('Starting to collect Insights data for %s' % (determine_hostname()
-                                                                  if t['name'] is None else t['name']))
-
-        # handle new spec
-        if 'specs' in collection_rules:
-            dc.process_specs(collection_rules, rm_conf, options)
-            elapsed = (time.clock() - start)
-            logger.debug("Data Collection Elapsed Time: %s", elapsed)
-
-            dc.write_analysis_target(options.collection_target, collection_rules)
-            dc.write_machine_id(
-                generate_analysis_target_id(t['type'], t['name']),
-                collection_rules)
-            dc.write_branch_info(branch_info, collection_rules)
-        else:
-            dc.run_commands(collection_rules, rm_conf)
-            elapsed = (time.clock() - start)
-            logger.debug("Command Collection Elapsed Time: %s", elapsed)
-
-            start = time.clock()
-            dc.copy_files(collection_rules, rm_conf, stdin_config)
-            elapsed = (time.clock() - start)
-            logger.debug("File Collection Elapsed Time: %s", elapsed)
-
-            dc.write_branch_info(branch_info)
-            obfuscate = config.getboolean(APP_NAME, "obfuscate")
-
-        # include rule refresh time in the duration
-        collection_duration = (time.clock() - collection_start) + collection_elapsed
-
-        # unmount image when we are finished
-        if t['type'] == 'docker_image':
-            mounted_image.close()
-
-        if not options.no_tar_file:
-            tar_file = dc.done(config, rm_conf)
-            if not options.offline:
-                logger.info('Uploading Insights data,'
-                            ' this may take a few minutes')
-                for tries in range(options.retries):
-                    upload = pconn.upload_archive(tar_file, collection_duration)
-                    if upload.status_code == 201:
-                        write_lastupload_file()
-                        logger.info("Upload completed successfully!")
-                        break
-                    elif upload.status_code == 412:
-                        pconn.handle_fail_rcs(upload)
-                    else:
-                        logger.error("Upload attempt %d of %d failed! Status Code: %s",
-                                     tries + 1, options.retries, upload.status_code)
-                        if tries + 1 != options.retries:
-                            logger.info("Waiting %d seconds then retrying",
-                                        constants.sleep_time)
-                            time.sleep(constants.sleep_time)
-                        else:
-                            logger.error("All attempts to upload have failed!")
-                            logger.error("Please see %s for additional information",
-                                         constants.default_log_file)
-                            rc = 1
-
-                if not obfuscate and not options.keep_archive:
-                    dc.archive.delete_tmp_dir()
-                else:
-                    if obfuscate:
-                        logger.info('Obfuscated Insights data retained in %s',
-                                    os.path.dirname(tar_file))
-                    else:
-                        logger.info('Insights data retained in %s', tar_file)
-            else:
-                handle_file_output(options, tar_file, archive)
-        else:
-            logger.info('See Insights data in %s', dc.archive.archive_dir)
-    return rc
-
-
-def handle_file_output(options, tar_file, archive):
-    if options.to_stdout:
-        shutil.copyfileobj(open(tar_file, 'rb'), sys.stdout)
-        archive.delete_tmp_dir()
-    else:
-        logger.info('See Insights data in %s', tar_file)
-
-
-def register(config, group_id=None):
-    """
-    Do registration using basic auth
-    """
-    username = config.get(APP_NAME, 'username')
-    password = config.get(APP_NAME, 'password')
-    if ((
-            username == "" and
-            password == "" and
-            config.get(APP_NAME, 'authmethod') == 'BASIC')
-        and
-            not config.get(APP_NAME, 'auto_config')):
-        # Get input from user
-        print "Please enter your Red Hat Customer Portal Credentials"
-        sys.stdout.write('User Name: ')
-        username = raw_input().strip()
-        password = getpass.getpass()
-        sys.stdout.write("Would you like to save these credentials? (y/n) ")
-        save = raw_input().strip()
-        config.set(APP_NAME, 'username', username)
-        config.set(APP_NAME, 'password', password)
-        logger.debug("savestr: %s", save)
-        if save.lower() == "y" or save.lower() == "yes":
-            logger.debug("writing user/pass to config file")
-            cmd = ("/bin/sed -e 's/^username.*=.*$/username=" +
-                   username + "/' " +
-                   "-e 's/^password.*=.*$/password=" + password + "/' " +
-                   constants.default_conf_file)
-            status = DataCollector().run_command_get_output(cmd, nolog=True)
-            config_file = open(constants.default_conf_file, 'w')
-            config_file.write(status['output'])
-            config_file.flush()
-
-    pconn = InsightsConnection(config)
-    return pconn.register(group_id)
-
-
 def set_up_options(parser):
     """
     Add options to the option parser
     """
-    parser.add_option('--version',
-                      help="Display version",
-                      action="store_true",
-                      dest="version",
-                      default=False)
     parser.add_option('--register',
                       help=('Register system to the Red Hat '
-                            'Access Insights Service'),
+                            'Insights Service'),
                       action="store_true",
                       dest="register",
                       default=False)
@@ -415,11 +148,6 @@ def set_up_options(parser):
                       action="store_true",
                       dest="silent",
                       default=False)
-    parser.add_option('--no-schedule',
-                      help='Disable automatic scheduling',
-                      action='store_true',
-                      dest='no_schedule',
-                      default=False)
     parser.add_option('-c', '--conf',
                       help="Pass a custom config file",
                       dest="conf",
@@ -451,7 +179,17 @@ def set_up_options(parser):
                       help='Run Insights in container mode.',
                       action='store_true',
                       dest='container_mode')
+    parser.add_option('--run-as-container',
+                      help="Run analysis from a container",
+                      action="store_true",
+                      dest="run_as_container",
+                      default=False)
     group = optparse.OptionGroup(parser, "Debug options")
+    parser.add_option('--version',
+                      help="Display version",
+                      action="store_true",
+                      dest="version",
+                      default=False)
     group.add_option('--test-connection',
                      help='Test connectivity to Red Hat',
                      action="store_true",
@@ -498,142 +236,436 @@ def set_up_options(parser):
                      action="store_true",
                      dest="keep_archive",
                      default=False)
-    group.add_option('--run-as-container',
-                     help="Run analysis from a container",
-                     action="store_true",
-                     dest="run_as_container",
-                     default=False)
     parser.add_option_group(group)
+    '''
+    [main options]
+    --version (move to debug section?)
+    --register
+    --unregister
+    --update-collection-rules
+    --display-name
+    --group
+    --retry
+    --validate
+    --quiet
+    --silent
+    --no-schedule <-- change this to something more usable
+    ?--enable-schedule
+    ?--disable-schedule
+    ?--schedule=True/False
+    --conf / -c
+    --to-stdout
+    --compressor
+    --from-stdin
+    --from-file
+    --offline
+    --no-upload (redundant w/ --offline)
+    --container (change to --docker?)
+    --run-as-container
+    [debug options]
+    --test-connection
+    --force-reregister
+    --verbose
+    --support
+    --status
+    --no-gpg
+    --no-upload
+    --no-tar-file
+    --keep-archive
+    '''
 
 
-def handle_startup(options, config):
+def parse_config_file(conf_file):
+    """
+    Parse the configuration from the file
+    """
+    parsedconfig = ConfigParser.RawConfigParser(
+        {'loglevel': constants.log_level,
+         'trace': 'False',
+         'app_name': constants.app_name,
+         'auto_config': 'True',
+         'authmethod': constants.auth_method,
+         'base_url': constants.base_url,
+         'upload_url': None,
+         'api_url': None,
+         'branch_info_url': None,
+         'auto_update': 'True',
+         'collection_rules_url': None,
+         'obfuscate': 'False',
+         'obfuscate_hostname': 'False',
+         'cert_verify': constants.default_ca_file,
+         'gpg': 'True',
+         'username': '',
+         'password': '',
+         'systemid': None,
+         'proxy': None,
+         'insecure_connection': 'False',
+         'no_schedule': 'False'})
+    try:
+        parsedconfig.read(conf_file)
+    except ConfigParser.Error:
+        logger.error("ERROR: Could not read configuration file, using defaults")
+    try:
+        # Try to add the redhat_access_insights section
+        parsedconfig.add_section(APP_NAME)
+    except ConfigParser.Error:
+        pass
+    return parsedconfig
+
+
+def handle_startup(config, options):
     """
     Handle startup options
     """
-    # run from a container instead
-    if options.run_as_container:
-        options.run_as_container = False
-        sys.exit(run_in_container(options))
-
+    # ----do X and exit options----
+    # show version and exit
     if options.version:
         print constants.version
         sys.exit()
+
+    if options.run_as_container:
+        options.run_as_container = False
+        sys.exit(run_in_container(sys.argv[1:]))
 
     if options.validate:
         validate_remove_file()
         sys.exit()
 
-    # Generate /etc/machine-id if it does not exist
-    new = False
-    # force-reregister -- remove machine-id files nd registration files before trying to register again
-    if options.reregister:
-        new = True
-        options.register = True
-        delete_registered_file()
-        delete_unregistered_file()
-        delete_machine_id()
-    logger.debug("Machine-ID: " + generate_machine_id(new))
-
-    # Disable GPG verification
-    if options.no_gpg:
-        logger.warn("WARNING: GPG VERIFICATION DISABLED")
-        config.set(APP_NAME, 'gpg', 'False')
-
-    # Log config except the password
-    # and proxy as it might have a pw as well
-    for item, value in config.items(APP_NAME):
-        if item != 'password' and item != 'proxy':
-            logger.debug("%s:%s", item, value)
-
-    if config.getboolean(APP_NAME, 'auto_update'):
-        options.update = True
-
-    if config.getboolean(APP_NAME, 'auto_config'):
-        # Try to discover if we are connected to a satellite or not
-        try_auto_configuration(config)
-
-    if options.no_schedule and not options.register:
-        InsightsSchedule(set_cron=False).remove_scheduling()
-        logger.info('Automatic scheduling for Insights has been removed.')
-        sys.exit()
-
-    # Test connection, useful for proxy debug
     if options.test_connection:
         pconn = InsightsConnection(config)
-        pconn.test_connection()
+        rc = pconn.test_connection()
+        sys.exit(rc)
 
-    if options.unregister:
-        pconn = InsightsConnection(config)
-        pconn.unregister()
-        sys.exit()
-
-    # Handle registration, grouping, and display name
-    if options.register:
-        # Set the schedule
-        opt_group = options.group
-        if os.path.isfile(constants.registered_file):
-            logger.info('This host has already been registered.')
-        else:
-            # double check reg status with the API
-            reg_check, status = registration_check(config)
-            if not status:
-                message, hostname, opt_group, display_name = register(config, options)
-                if options.display_name is None and options.group is None:
-                    logger.info('Successfully registered %s', hostname)
-                elif options.display_name is None:
-                    logger.info('Successfully registered %s in group %s', hostname, opt_group)
-                else:
-                    logger.info('Successfully registered %s as %s in group %s', hostname, display_name,
-                                opt_group)
-                logger.info(message)
-            else:
-                logger.info('This host has already been registered.')
-                # regenerate the .registered file
-                write_registered_file()
-        if not options.no_schedule and not config.getboolean(
-                APP_NAME, 'no_schedule'):
-            InsightsSchedule()
-            logger.info('Automatic daily scheduling for Insights has been enabled.')
-
-    # Collect debug/log information
-    if options.support:
-        support = InsightsSupport(config)
-        support.collect_support_info()
-        sys.exit(0)
-
-    # Just check registration status
     if options.status:
         reg_check, status = registration_check(config)
         logger.info('\n'.join(reg_check))
         # exit with !status, 0 for True, 1 for False
         sys.exit(not status)
 
-    # Set offline mode for OSP/RHEV use
+    if options.support:
+        support = InsightsSupport(config)
+        support.collect_support_info()
+        sys.exit()
+
+    # ----config options----
+    # log the config
+    # ignore password and proxy -- proxy might have pw
+    for item, value in config.items(APP_NAME):
+        if item != 'password' and item != 'proxy':
+            logger.debug("%s:%s", item, value)
+
+    if config.getboolean(APP_NAME, 'auto_update'):
+        # TODO: config updates option, but in GPG option, the option updates
+        # the config.  make this consistent
+        options.update = True
+
+    if config.getboolean(APP_NAME, 'auto_config'):
+        # Try to discover if we are connected to a satellite or not
+        try_auto_configuration(config)
+
+    # ----modifier options----
+    if options.no_gpg:
+        logger.warn("WARNING: GPG VERIFICATION DISABLED")
+        config.set(APP_NAME, 'gpg', 'False')
+
     if options.no_upload:
         options.offline = True
 
-    # Can't use both
     if options.from_stdin and options.from_file:
         logger.error('Can\'t use both --from-stdin and --from-file.')
         sys.exit(1)
 
-    # First startup, no .registered or .unregistered
-    # Ignore if in offline mode
-    if (not os.path.isfile(constants.registered_file) and
-       not os.path.isfile(constants.unregistered_file) and
-       not options.register and not options.offline):
-        logger.error('This machine has not yet been registered.')
-        logger.error('Use --register to register this machine.')
-        logger.error("Exiting")
+    # ----register options----
+    # put this first to avoid conflicts with register
+    if options.unregister:
+        pconn = InsightsConnection(config)
+        pconn.unregister()
+        sys.exit()
+
+    # force-reregister -- remove machine-id files nd registration files before trying to register again
+    # TODO: I don't like the way this looks
+    new = False
+    if options.reregister:
+        new = True
+        options.register = True
+        delete_registered_file()
+        delete_unregistered_file()
+        delete_machine_id()
+    logger.debug('Machine-id: %s' % generate_machine_id(new))
+
+    if options.register:
+        try_register(config, options)
+
+
+def handle_branch_info_error(msg, options):
+    if options.offline:
+        logger.warning(msg)
+        logger.warning("Assuming remote branch and leaf value of -1")
+        return {'remote_branch': -1,
+                'remote_leaf': -1}
+    else:
+        logger.error("ERROR: %s", msg)
+        sys.exit()
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """
+    Exception handler so exception messages land in our log instead of them
+    vanishing into thin air, or abrt picking them up
+    """
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.exit(1)
+    if logger:
+        logger.error(
+            traceback.format_exception(exc_type, exc_value, exc_traceback))
+    else:
+        print traceback.format_exception(exc_type, exc_value, exc_traceback)
+        sys.exit('Caught unhandled exception, check log for more information')
+
+
+def trace_calls(frame, event, arg):
+    if event != 'call':
+        return
+    co = frame.f_code
+    func_name = co.co_name
+    if func_name == 'write':
+        return
+    func_line_no = frame.f_lineno
+    func_filename = co.co_filename
+    caller = frame.f_back
+    caller_line_no = caller.f_lineno
+    caller_filename = caller.f_code.co_filename
+    print 'Call to %s on line %s of %s from line %s of %s' % \
+        (func_name, func_line_no, func_filename,
+         caller_line_no, caller_filename)
+    return
+
+
+def _delete_archive(archive, keep_archive):
+    # delete the archive on exit so we don't keep crap around
+    if not keep_archive:
+        archive.delete_tmp_dir()
+
+
+def _unmount_image(image):
+    try:
+        mounted_image.close()
+    except:
+        # it was already unmounted
+        pass
+
+
+def try_register(config, options):
+    if os.path.isfile(constants.registered_file):
+        logger.info('This host has already been registered.')
+        return
+    # check reg status with API
+    reg_check, status = registration_check(config)
+    if status:
+        logger.info('This host has already been registered.')
+        # regenerate the .registered file
+        write_registered_file()
+        return
+    message, hostname, group, display_name = register(config, options)
+    if options.display_name is None and options.group is None:
+        logger.info('Successfully registered %s' % hostname)
+    elif options.display_name is None:
+        logger.info('Successfully registered %s in group %s' % (hostname, group))
+    else:
+        logger.info('Successfully registered %s as %s in group %s' % (
+            hostname, display_name, group))
+    if message:
+        logger.info(message)
+
+
+def register(config, options):
+    """
+    Do registration using basic auth
+    """
+    username = config.get(APP_NAME, 'username')
+    password = config.get(APP_NAME, 'password')
+    authmethod = config.get(APP_NAME, 'authmethod')
+    # TODO validate this is boolean somewhere in config load
+    auto_config = config.getboolean(APP_NAME, 'auto_config')
+    if not username and not password and not auto_config and authmethod == 'BASIC':
+        print 'Please enter your Red Hat Customer Portal Credentials'
+        sys.stdout.write('Username: ')
+        username = raw_input().strip()
+        password = getpass.getpass()
+        sys.stdout.write('Would you like to save these credentials? (y/n) ')
+        save = raw_input().strip()
+        config.set(APP_NAME, 'username', username)
+        config.set(APP_NAME, 'password', password)
+        logger.debug('savestr: %s' % save)
+        if save.lower() == 'y' or save.lower() == 'yes':
+            logger.debug('Writing user/pass to config')
+            cmd = ('/bin/sed -e \'s/^username.*=.*$/username=' +
+                   username + '/\' ' +
+                   '-e \'s/^password.*=.*$/password=' + password + '/\' ' +
+                   constants.default_conf_file)
+            status = DataCollector().run_command_get_output(cmd, nolog=True)
+            with open(constants.default_conf_file, 'w') as config_file:
+                config_file.write(status['output'])
+                config_file.flush()
+    pconn = InsightsConnection(config)
+    return pconn.register(options)
+
+
+def collect_data_and_upload(config, options, rc=0):
+    """
+    All the heavy lifting done here
+    Run through "targets" - could be just one (host, default) or many (containers+host)
+    """
+    # initialize collection targets
+    if options.container_mode:
+        targets = get_images()
+        if targets:
+            # TODO: use 'host-limited' as the type for container host data
+            # or something else Gavin may have concocted
+            targets.append({'type': 'host', 'name': None})
+        else:
+            # container mode, but no images, abort
+            # error msg will come from get_images()
+            sys.exit(1)
+    else:
+        targets = constants.default_target
+
+    pconn = InsightsConnection(config)
+    # TODO: change these err msgs to be more meaningful , i.e.
+    # "could not determine login information"
+    try:
+        branch_info = pconn.branch_info()
+    except requests.ConnectionError:
+        branch_info = handle_branch_info_error(
+            "Could not connect to determine branch information", options)
+    except LookupError:
+        branch_info = handle_branch_info_error(
+            "Could not determine branch information", options)
+    pc = InsightsConfig(config, pconn)
+
+    # load config from stdin/file if specified
+    try:
+        stdin_config = {}
+        if options.from_file:
+            with open(options.from_file, 'r') as f:
+                stdin_config = json.load(f)
+        elif options.from_stdin:
+            stdin_config = json.load(sys.stdin)
+        if ((options.from_file or options.from_stdin) and
+            ('uploader.json' not in stdin_config or
+             'sig' not in stdin_config)):
+            raise ValueError
+    except:
+        logger.error('ERROR: Invalid config for %s! Exiting...' %
+                     ('--from-file' if options.from_file else '--from-stdin'))
         sys.exit(1)
 
-    # Check for .unregistered file
-    if (os.path.isfile(constants.unregistered_file) and
-       not options.register and not options.offline):
-        logger.error("This machine has been unregistered.")
-        logger.error("Use --register if you would like to re-register this machine.")
-        logger.error("Exiting")
-        sys.exit(1)
+    start = time.clock()
+    collection_rules, rm_conf = pc.get_conf(options.update, stdin_config)
+    collection_elapsed = (time.clock() - start)
+    logger.debug("Rules configuration loaded. Elapsed time: %s", collection_elapsed)
+
+    for t in targets:
+        # default mountpoint
+        mp = None
+        # mount if the target is an image
+        if t['type'] == 'docker_image':
+            mounted_image = open_image(t['name'])
+            mp = mounted_image.mount_point
+            # unmount on unexpected exit
+            atexit.register(_unmount_image, mounted_image)
+
+        collection_start = time.clock()
+        archive = InsightsArchive(compressor=options.compressor, container_name=t['name'])
+        dc = DataCollector(archive, mountpoint=mp, container_name=t['name'], target_type=t['type'])
+        logging_name = determine_hostname() if t['name'] is None else t['name']
+
+        # delete the archive on unexpected exit
+        atexit.register(_delete_archive, archive, options.keep_archive or options.no_upload)
+
+        logger.info('Starting to collect Insights data for %s' % logging_name)
+
+        # spec version
+        if 'specs' in collection_rules:
+            dc.process_specs(collection_rules, rm_conf, options)
+            elapsed = (time.clock() - start)
+            logger.debug("Data collection complete. Elapsed time: %s", elapsed)
+
+            dc.write_analysis_target(options.collection_target, collection_rules)
+            dc.write_machine_id(
+                generate_analysis_target_id(t['type'], t['name']),
+                collection_rules)
+            dc.write_branch_info(branch_info, collection_rules)
+        # original version
+        else:
+            dc.run_commands(collection_rules, rm_conf)
+            elapsed = (time.clock() - start)
+            logger.debug("Command execution complete. Elapsed time: %s", elapsed)
+
+            start = time.clock()
+            dc.copy_files(collection_rules, rm_conf, stdin_config)
+            elapsed = (time.clock() - start)
+            logger.debug("File collection complete. Elapsed time: %s", elapsed)
+
+            dc.write_branch_info(branch_info)
+            obfuscate = config.getboolean(APP_NAME, "obfuscate")
+
+        # include rule refresh time in the duration
+        collection_duration = (time.clock() - collection_start) + collection_elapsed
+
+        # unmount image when we are finished
+        if t['type'] == 'docker_image':
+            mounted_image.close()
+
+        if options.no_tar_file:
+            logger.info('See Insights data in %s', dc.archive.archive_dir)
+            return rc
+
+        tar_file = dc.done(config, rm_conf)
+
+        if options.offline:
+            handle_file_output(options, tar_file, archive)
+            return rc
+
+        # do the upload
+        logger.info('Uploading Insights data,'
+                    ' this may take a few minutes')
+        for tries in range(options.retries):
+            upload = pconn.upload_archive(tar_file, collection_duration)
+            if upload.status_code == 201:
+                write_lastupload_file()
+                logger.info("Upload completed successfully!")
+                break
+            elif upload.status_code == 412:
+                pconn.handle_fail_rcs(upload)
+            else:
+                logger.error("Upload attempt %d of %d failed! Status Code: %s",
+                             tries + 1, options.retries, upload.status_code)
+                if tries + 1 != options.retries:
+                    logger.info("Waiting %d seconds then retrying",
+                                constants.sleep_time)
+                    time.sleep(constants.sleep_time)
+                else:
+                    logger.error("All attempts to upload have failed!")
+                    logger.error("Please see %s for additional information",
+                                 constants.default_log_file)
+                    rc = 1
+
+        if obfuscate:
+            logger.info('Obfuscated Insights data retained in %s',
+                        os.path.dirname(tar_file))
+        elif options.keep_archive:
+            logger.info('Insights data retained in %s', tar_file)
+        else:
+            dc.archive.delete_tmp_dir()
+
+
+def handle_file_output(options, tar_file, archive):
+    if options.to_stdout:
+        shutil.copyfileobj(open(tar_file, 'rb'), sys.stdout)
+        archive.delete_tmp_dir()
+    else:
+        logger.info('See Insights data in %s', tar_file)
 
 
 def _main():
@@ -655,12 +687,6 @@ def _main():
     if len(args) > 0:
         parser.error("Unknown arguments: %s" % args)
         sys.exit(1)
-
-    options.all_args = sys.argv[1:]
-
-    # from_stdin mode implies to_stdout
-    options.to_stdout = options.to_stdout or options.from_stdin or options.from_file
-
     config = parse_config_file(options.conf)
     logger, handler = set_up_logging(config, options)
 
@@ -672,40 +698,14 @@ def _main():
     logger.debug("Version: " + constants.version)
 
     # Handle all the options
-    handle_startup(options, config)
-    # do work
-    if options.container_mode:
-        targets = get_images()
-        if targets:
-            # TODO: use host-limited as the type for container host data
-            targets.append({'type': 'host', 'name': None})
-        else:
-            # no images, abort mission
-            sys.exit(1)
-        rc = collect_data_and_upload(config, options, targets=targets)
-    else:
-        rc = collect_data_and_upload(config, options)
+    handle_startup(config, options)
+
+    # Vaccuum up the data
+    rc = collect_data_and_upload(config, options)
+
     # Roll log over on successful upload
     handler.doRollover()
     sys.exit(rc)
-
-
-def trace_calls(frame, event, arg):
-    if event != 'call':
-        return
-    co = frame.f_code
-    func_name = co.co_name
-    if func_name == 'write':
-        return
-    func_line_no = frame.f_lineno
-    func_filename = co.co_filename
-    caller = frame.f_back
-    caller_line_no = caller.f_lineno
-    caller_filename = caller.f_code.co_filename
-    print 'Call to %s on line %s of %s from line %s of %s' % \
-        (func_name, func_line_no, func_filename,
-         caller_line_no, caller_filename)
-    return
 
 if __name__ == '__main__':
     _main()
