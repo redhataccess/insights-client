@@ -26,3 +26,7 @@ class InsightsConstants(object):
     pub_gpg_path = default_conf_dir + 'redhattools.pub.gpg'
     machine_id_file = default_conf_dir + 'machine-id'
     default_target = [{'type': 'host', 'name': None}]
+    default_meta_spec = {'analysis_target': '/insights_data/analysis_target',
+                         'branch_info': '/branch_info',
+                         'machine-id': '/insights_data/machine-id',
+                         'uploader_log': '/insights_data/insights_logs/insights.log'}
