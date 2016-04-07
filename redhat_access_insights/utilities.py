@@ -191,22 +191,6 @@ def _expand_paths(path):
         logger.debug("Could not expand %s", path)
 
 
-def write_file_with_text(path, text):
-    """
-    Write to file with text
-    """
-    try:
-        os.makedirs(os.path.dirname(path))
-    except OSError:
-        # This is really chatty
-        # logger.debug("Could not create dir for %s", os.path.dirname(path))
-        pass
-
-    file_from_text = open(path, 'w')
-    file_from_text.write(text.encode('utf8'))
-    file_from_text.close()
-
-
 def write_lastupload_file():
     """
     Write .lastupload out to disk

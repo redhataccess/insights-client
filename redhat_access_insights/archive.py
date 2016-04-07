@@ -10,6 +10,7 @@ import shlex
 import logging
 from utilities import determine_hostname, _expand_paths
 from constants import InsightsConstants as constants
+from insights_spec import InsightsFile, InsightsCommand
 
 logger = logging.getLogger(constants.app_name)
 
@@ -41,6 +42,7 @@ class InsightsArchive(object):
         """
         archive_dir = os.path.join(self.tmp_dir, self.archive_name)
         os.makedirs(archive_dir, 0o700)
+        print archive_dir
         return archive_dir
 
     def create_command_dir(self):
@@ -138,23 +140,30 @@ class InsightsArchive(object):
         logger.debug("Deleting: " + self.archive_dir)
         shutil.rmtree(self.archive_dir, True)
 
-    def add_command_output(self, command, archive_file_name=None):
-        """
-        Add command output to file
-        Use DataCollector.run_command_get_output to run the command
-        """
-        if archive_file_name:
-            file_on_disk = os.path.join(self.archive_dir, archive_file_name.lstrip('/'))
+    def add_to_archive(self, spec):
+        '''
+        Add files and commands to archive
+        '''
+        if spec.archive_path:
+            archive_path = os.path.join(self.archive_dir, spec.archive_path.lstrip('/'))
         else:
-            file_on_disk = os.path.join(self.cmd_dir, command['cmd'].lstrip('/'))
+            if isinstance(spec, InsightsCommand):
+                archive_path = os.path.join(self.cmd_dir, spec.mangled_command.lstrip('/'))
+            if isinstance(spec, InsightsFile):
+                archive_path = os.path.join(self.archive_dir, spec.relative_path.lstrip('/'))
 
-        logger.debug("Writing %s to %s", command['cmd'], file_on_disk)
-        cmd_out = self._open_ensure_dirs(file_on_disk)
-        cmd_out.write(command['output'].encode('utf8'))
-        cmd_out.close()
+        try:
+            os.makedirs(os.path.dirname(archive_path), 0o700)
+        except OSError:
+            # already exists
+            pass
 
-    def _open_ensure_dirs(self, file_on_disk):
-        dirname = os.path.dirname(file_on_disk)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname, 0o700)
-        return open(file_on_disk, 'w')
+        with open(archive_path, 'w') as _file:
+            if isinstance(spec, InsightsCommand):
+                logger.debug('Writing %s to %s', spec.mangled_command, archive_path)
+                _file.write(spec.get_output()['output'].encode('utf8'))
+            if isinstance(spec, InsightsFile):
+                logger.debug('Writing %s to %s', spec.relative_path, archive_path)
+                file_content = spec.copy_files()
+                if file_content:
+                    _file.write(spec.copy_files().encode('utf8'))

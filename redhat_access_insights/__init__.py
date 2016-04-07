@@ -587,28 +587,28 @@ def collect_data_and_upload(config, options, rc=0):
 
         # spec version
         if 'specs' in collection_rules:
-            dc.process_specs(collection_rules, rm_conf, options)
+            dc.run_collection(collection_rules, rm_conf)
             elapsed = (time.clock() - start)
             logger.debug("Data collection complete. Elapsed time: %s", elapsed)
 
-            dc.write_analysis_target(options.collection_target, collection_rules)
+            # dc.write_analysis_target(options.collection_target, collection_rules)
             dc.write_machine_id(
                 generate_analysis_target_id(t['type'], t['name']),
                 collection_rules)
             dc.write_branch_info(branch_info, collection_rules)
         # original version
-        else:
-            dc.run_commands(collection_rules, rm_conf)
-            elapsed = (time.clock() - start)
-            logger.debug("Command execution complete. Elapsed time: %s", elapsed)
+        # else:
+        #     dc.run_commands(collection_rules, rm_conf)
+        #     elapsed = (time.clock() - start)
+        #     logger.debug("Command execution complete. Elapsed time: %s", elapsed)
 
-            start = time.clock()
-            dc.copy_files(collection_rules, rm_conf, stdin_config)
-            elapsed = (time.clock() - start)
-            logger.debug("File collection complete. Elapsed time: %s", elapsed)
+        #     start = time.clock()
+        #     dc.copy_files(collection_rules, rm_conf, stdin_config)
+        #     elapsed = (time.clock() - start)
+        #     logger.debug("File collection complete. Elapsed time: %s", elapsed)
 
-            dc.write_branch_info(branch_info)
-            obfuscate = config.getboolean(APP_NAME, "obfuscate")
+        #     dc.write_branch_info(branch_info)
+        obfuscate = config.getboolean(APP_NAME, "obfuscate")
 
         # include rule refresh time in the duration
         collection_duration = (time.clock() - collection_start) + collection_elapsed
@@ -621,7 +621,7 @@ def collect_data_and_upload(config, options, rc=0):
             logger.info('See Insights data in %s', dc.archive.archive_dir)
             return rc
 
-        tar_file = dc.done(config, rm_conf)
+        tar_file = dc.done(config, collection_rules, rm_conf)
 
         if options.offline:
             handle_file_output(options, tar_file, archive)
