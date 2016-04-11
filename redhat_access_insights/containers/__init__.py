@@ -184,3 +184,6 @@ else:
         logger.error('Could not connect to docker to examine image %s' % options.analyse_docker_image)
         logger.error('Docker is either not installed or not accessable')
         return 1
+
+    def get_images():
+        return None

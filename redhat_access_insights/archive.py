@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import shlex
 import logging
-from utilities import determine_hostname, _expand_paths
+from utilities import determine_hostname, _expand_paths, write_data_to_file
 from constants import InsightsConstants as constants
 from insights_spec import InsightsFile, InsightsCommand
 
@@ -22,13 +22,13 @@ class InsightsArchive(object):
     and files to the insights archive
     """
 
-    def __init__(self, compressor="gz", container_name=None):
+    def __init__(self, compressor="gz", target_name=None):
         """
         Initialize the Insights Archive
         Create temp dir, archive dir, and command dir
         """
         self.tmp_dir = tempfile.mkdtemp(prefix='/var/tmp/')
-        name = determine_hostname(container_name)
+        name = determine_hostname(target_name)
         self.archive_name = ("insights-%s-%s" %
                              (name,
                               time.strftime("%Y%m%d%H%M%S")))
@@ -42,7 +42,6 @@ class InsightsArchive(object):
         """
         archive_dir = os.path.join(self.tmp_dir, self.archive_name)
         os.makedirs(archive_dir, 0o700)
-        print archive_dir
         return archive_dir
 
     def create_command_dir(self):
@@ -143,27 +142,24 @@ class InsightsArchive(object):
     def add_to_archive(self, spec):
         '''
         Add files and commands to archive
+        Use InsightsSpec.get_output() to get data
         '''
         if spec.archive_path:
-            archive_path = os.path.join(self.archive_dir, spec.archive_path.lstrip('/'))
+            archive_path = self.get_full_archive_path(spec.archive_path.lstrip('/'))
         else:
+            # should never get here if the spec is correct
             if isinstance(spec, InsightsCommand):
                 archive_path = os.path.join(self.cmd_dir, spec.mangled_command.lstrip('/'))
             if isinstance(spec, InsightsFile):
-                archive_path = os.path.join(self.archive_dir, spec.relative_path.lstrip('/'))
+                archive_path = self.get_full_archive_path(spec.relative_path.lstrip('/'))
 
-        try:
-            os.makedirs(os.path.dirname(archive_path), 0o700)
-        except OSError:
-            # already exists
-            pass
+        output = spec.get_output()
+        if output:
+            write_data_to_file(output, archive_path)
 
-        with open(archive_path, 'w') as _file:
-            if isinstance(spec, InsightsCommand):
-                logger.debug('Writing %s to %s', spec.mangled_command, archive_path)
-                _file.write(spec.get_output()['output'].encode('utf8'))
-            if isinstance(spec, InsightsFile):
-                logger.debug('Writing %s to %s', spec.relative_path, archive_path)
-                file_content = spec.copy_files()
-                if file_content:
-                    _file.write(spec.copy_files().encode('utf8'))
+    def add_metadata_to_archive(self, metadata, meta_path):
+        '''
+        Add metadata to archive
+        '''
+        archive_path = self.get_full_archive_path(meta_path.lstrip('/'))
+        write_data_to_file(metadata, archive_path)

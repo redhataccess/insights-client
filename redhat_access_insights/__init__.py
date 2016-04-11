@@ -368,9 +368,11 @@ def handle_startup(config, options):
         logger.warn("WARNING: GPG VERIFICATION DISABLED")
         config.set(APP_NAME, 'gpg', 'False')
 
+    # --no-upload deprecated, use --offline
     if options.no_upload:
         options.offline = True
 
+    # can't use bofa
     if options.from_stdin and options.from_file:
         logger.error('Can\'t use both --from-stdin and --from-file.')
         sys.exit(1)
@@ -382,8 +384,7 @@ def handle_startup(config, options):
         pconn.unregister()
         sys.exit()
 
-    # force-reregister -- remove machine-id files nd registration files before trying to register again
-    # TODO: I don't like the way this looks
+    # force-reregister -- remove machine-id files and registration files before trying to register again
     new = False
     if options.reregister:
         new = True
@@ -395,6 +396,25 @@ def handle_startup(config, options):
 
     if options.register:
         try_register(config, options)
+
+    # check registration before doing any uploads
+    # First startup, no .registered or .unregistered
+    # Ignore if in offline mode
+    if (not os.path.isfile(constants.registered_file) and
+       not os.path.isfile(constants.unregistered_file) and
+       not options.register and not options.offline):
+        logger.error('This machine has not yet been registered.')
+        logger.error('Use --register to register this machine.')
+        logger.error("Exiting")
+        sys.exit(1)
+
+    # Check for .unregistered file
+    if (os.path.isfile(constants.unregistered_file) and
+       not options.register and not options.offline):
+        logger.error("This machine has been unregistered.")
+        logger.error("Use --register if you would like to re-register this machine.")
+        logger.error("Exiting")
+        sys.exit(1)
 
 
 def handle_branch_info_error(msg, options):
@@ -576,8 +596,8 @@ def collect_data_and_upload(config, options, rc=0):
             atexit.register(_unmount_image, mounted_image)
 
         collection_start = time.clock()
-        archive = InsightsArchive(compressor=options.compressor, container_name=t['name'])
-        dc = DataCollector(archive, mountpoint=mp, container_name=t['name'], target_type=t['type'])
+        archive = InsightsArchive(compressor=options.compressor, target_name=t['name'])
+        dc = DataCollector(archive, mountpoint=mp, target_name=t['name'], target_type=t['type'])
         logging_name = determine_hostname() if t['name'] is None else t['name']
 
         # delete the archive on unexpected exit
@@ -587,15 +607,10 @@ def collect_data_and_upload(config, options, rc=0):
 
         # spec version
         if 'specs' in collection_rules:
-            dc.run_collection(collection_rules, rm_conf)
+            dc.run_collection(collection_rules, rm_conf, branch_info)
             elapsed = (time.clock() - start)
             logger.debug("Data collection complete. Elapsed time: %s", elapsed)
 
-            # dc.write_analysis_target(options.collection_target, collection_rules)
-            dc.write_machine_id(
-                generate_analysis_target_id(t['type'], t['name']),
-                collection_rules)
-            dc.write_branch_info(branch_info, collection_rules)
         # original version
         # else:
         #     dc.run_commands(collection_rules, rm_conf)

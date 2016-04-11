@@ -227,6 +227,20 @@ def validate_remove_file():
     logger.info("JSON parsed correctly")
 
 
+def write_data_to_file(data, filepath):
+        '''
+        Write data to file
+        '''
+        try:
+            os.makedirs(os.path.dirname(filepath), 0o700)
+        except OSError:
+            # already exists
+            pass
+
+        with open(filepath, 'w') as _file:
+            _file.write(data.encode('utf8'))
+
+
 def magic_plan_b(filename):
     '''
     Use this in instances where

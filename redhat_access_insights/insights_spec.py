@@ -10,7 +10,7 @@ import six
 import copy
 from tempfile import NamedTemporaryFile
 from soscleaner import SOSCleaner
-from utilities import determine_hostname, _expand_paths, write_file_with_text, generate_container_id
+from utilities import determine_hostname, _expand_paths
 from constants import InsightsConstants as constants
 
 logger = logging.getLogger(constants.app_name)
@@ -24,9 +24,16 @@ class InsightsSpec(object):
         # exclusions patterns for this spec
         self.exclude = exclude
         # pattern for spec collection
-        self.pattern = spec['pattern']
+        try:
+            self.pattern = spec['pattern']
+        except LookupError:
+            # no pattern defined -- meta spec
+            pass
         # absolute destination inside the archive for this spec
         self.archive_path = spec['archive_file_name']
+
+    def get_output(self):
+        pass
 
 
 class InsightsCommand(InsightsSpec):
@@ -75,8 +82,7 @@ class InsightsCommand(InsightsSpec):
         except OSError as err:
             if err.errno == errno.ENOENT:
                 logger.debug('Command %s not found', self.command)
-                return {'status': 127,
-                        'output': 'Command not found'}
+                return 'Command not found'
             else:
                 raise err
 
@@ -125,11 +131,7 @@ class InsightsCommand(InsightsSpec):
 
         logger.debug("Status: %s", proc0.returncode)
         logger.debug("stderr: %s", stderr)
-
-        return {
-            'status': proc0.returncode,
-            'output': stdout.decode('utf-8', 'ignore')
-        }
+        return stdout.decode('utf-8', 'ignore')
 
 
 class InsightsFile(InsightsSpec):
@@ -143,9 +145,9 @@ class InsightsFile(InsightsSpec):
         self.relative_path = spec['file'].format(CONTAINER_MOUNT_POINT='')
         self.archive_path = self.archive_path.format(EXPANDED_FILE_NAME=self.real_path)
 
-    def copy_files(self):
+    def get_output(self):
         '''
-        Copy file into archive, selecting only lines we are interested in
+        Get file content, selecting only lines we are interested in
         '''
         if not os.path.isfile(self.real_path):
             logger.debug('File %s does not exist' % self.real_path)
