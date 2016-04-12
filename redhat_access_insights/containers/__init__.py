@@ -13,6 +13,7 @@ from redhat_access_insights.constants import InsightsConstants as constants
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(constants.app_name)
+INSIGHTS_CLIENT_IMAGE_NAME = "redhat-insights/insights-client"
 
 HaveDocker = False
 try:
@@ -174,6 +175,11 @@ if HaveDocker:
         returncode = proc.wait()
         return returncode
 
+    def insights_client_container_is_available():
+        client = docker.Client(base_url='unix://var/run/docker.sock')
+        images = client.images(INSIGHTS_CLIENT_IMAGE_NAME)
+        return len(images) > 0
+
     def run_in_container(options):
         # This script runs the insights-client in a docker container.
         #
@@ -195,11 +201,11 @@ if HaveDocker:
         #    /dev/                ----   also so we can mount docker images and containers
         #    /etc/redhat-access-insights --- so we can use the host's configuration and machine-id
         #    /etc/pki --- so we can use the host's Sat6 certs (if any)
-        if options.analyse_docker_image and options.from_file:
-            logger.error('--from-file is incompatible with --analyse-docker-image (without --run-here)')
+        if options.from_file:
+            logger.error('--from-file is incompatible with transfering to a container.')
             return 1
 
-        docker_args = shlex.split("docker run --privileged=true -i -a stdin -a stdout -a stderr --rm -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights -v /etc/pki/:/etc/pki/ redhat-insights/insights-client redhat-access-insights")
+        docker_args = shlex.split("docker run --privileged=true -i -a stdin -a stdout -a stderr --rm -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights -v /etc/pki/:/etc/pki/ " + INSIGHTS_CLIENT_IMAGE_NAME + " redhat-access-insights")
 
         return runcommand(docker_args + [ "--run-here" ] + options.all_args)
 
@@ -209,6 +215,14 @@ else:
         logger.error('Could not connect to docker to examine image %s' % image_name)
         logger.error('Docker is either not installed or not accessable')
         return None
+
+    def open_container(container_name):
+        logger.error('Could not connect to docker to examine container %s' % container_name)
+        logger.error('Docker is either not installed or not accessable')
+        return None
+
+    def insights_client_container_is_available():
+        return False
 
     def run_in_container(options):
         logger.error('Could not connect to docker to examine image %s' % options.analyse_docker_image)

@@ -618,55 +618,54 @@ def handle_startup(options, config):
         logger.error('--analyse-docker-container is incompatible with --analyse-docker-image')
         sys.exit(1)
 
-    if options.analyse_docker_image:
-        if options.run_here:
-            if (not options.collection_target or \
-                options.collection_target == "docker_image") and \
-                not options.container_fs:
-                options.image_connection = containers.open_image(options.analyse_docker_image)
-                if options.image_connection:
-                    options.collection_target = "docker_image"
-                    options.container_fs = options.image_connection.get_fs()
-                    if not options.container_name:
-                        options.container_name = options.image_connection.get_name()
-                else:
-                    logger.error('Could not open image for analysis: %s' % options.analyse_docker_image)
-                    sys.exit(1)
+    if not options.run_here and \
+       (options.analyse_docker_image or options.analyse_docker_container) and \
+       containers.insights_client_container_is_available():
+        sys.exit(containers.run_in_container(options))
 
+    if options.analyse_docker_image:
+        if (not options.collection_target or \
+            options.collection_target == "docker_image") and \
+            not options.container_fs:
+            options.image_connection = containers.open_image(options.analyse_docker_image)
+            if options.image_connection:
+                options.collection_target = "docker_image"
+                options.container_fs = options.image_connection.get_fs()
+                if not options.container_name:
+                    options.container_name = options.image_connection.get_name()
             else:
-                logger.error('Some specified options are incompatible with --analyse-docker-image')
-                if options.container_fs:
-                    logger.error('--container_fs is incompatible with --analyse-docker-image')
-                if options.collection_target:
-                    logger.error('--collection_target = %s is incompatible with --analyse-docker-image' % options.collection_target)
+                logger.error('Could not open image for analysis: %s' % options.analyse_docker_image)
                 sys.exit(1)
+
         else:
-            sys.exit(containers.run_in_container(options))
+            logger.error('Some specified options are incompatible with --analyse-docker-image')
+            if options.container_fs:
+                logger.error('--container_fs is incompatible with --analyse-docker-image')
+            if options.collection_target:
+                logger.error('--collection_target = %s is incompatible with --analyse-docker-image' % options.collection_target)
+            sys.exit(1)
 
     if options.analyse_docker_container:
-        if options.run_here:
-            if (not options.collection_target or \
-                options.collection_target == "docker_container") and \
-                not options.container_fs:
-                options.image_connection = containers.open_container(options.analyse_docker_container)
-                if options.image_connection:
-                    options.collection_target = "docker_container"
-                    options.container_fs = options.image_connection.get_fs()
-                    if not options.container_name:
-                        options.container_name = options.image_connection.get_name()
-                else:
-                    logger.error('Could not open container for analysis: %s' % options.analyse_docker_container)
-                    sys.exit(1)
-
+        if (not options.collection_target or \
+            options.collection_target == "docker_container") and \
+            not options.container_fs:
+            options.image_connection = containers.open_container(options.analyse_docker_container)
+            if options.image_connection:
+                options.collection_target = "docker_container"
+                options.container_fs = options.image_connection.get_fs()
+                if not options.container_name:
+                    options.container_name = options.image_connection.get_name()
             else:
-                logger.error('Some specified options are incompatible with --analyse-docker-container')
-                if options.container_fs:
-                    logger.error('--container_fs is incompatible with --analyse-docker-container')
-                if options.collection_target:
-                    logger.error('--collection_target = %s is incompatible with --analyse-docker-container' % options.collection_target)
+                logger.error('Could not open container for analysis: %s' % options.analyse_docker_container)
                 sys.exit(1)
+
         else:
-            sys.exit(containers.run_in_container(options))
+            logger.error('Some specified options are incompatible with --analyse-docker-container')
+            if options.container_fs:
+                logger.error('--container_fs is incompatible with --analyse-docker-container')
+            if options.collection_target:
+                logger.error('--collection_target = %s is incompatible with --analyse-docker-container' % options.collection_target)
+            sys.exit(1)
 
     if not options.collection_target:
         options.collection_target = "host"
