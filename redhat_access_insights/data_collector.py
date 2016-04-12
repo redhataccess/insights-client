@@ -144,9 +144,16 @@ class DataCollector(object):
     Run commands and collect files
     """
 
-    def __init__(self, archive_=None):
+    def __init__(self,
+                 archive_=None,
+                 collection_target=None,
+                 container_name=None,
+                 container_fs=None):
         self._set_black_list()
         self.archive = archive_ if archive_ else archive.InsightsArchive()
+        self.collection_target = collection_target
+        self.container_name = container_name
+        self.container_fs = container_fs
 
     def _set_black_list(self):
         """
@@ -535,7 +542,7 @@ class DataCollector(object):
 
 
 
-    def _replace_variables(self, file_or_command, options):
+    def _replace_variables(self, file_or_command):
         # the file or command in a spec can have variables in the form {NAME}
         #   placed there by the server
         #   to be filled in with information only the client knows
@@ -549,16 +556,16 @@ class DataCollector(object):
         #     the name of the docker image, suitable for use on a docker inspect command
 
         new_file_or_command = file_or_command
-        if options.collection_target == 'docker_image' or options.collection_target == 'docker_container':
-            new_file_or_command = new_file_or_command.replace("{CONTAINER_MOUNT_POINT}", options.container_fs)
+        if self.collection_target == 'docker_image' or self.collection_target == 'docker_container':
+            new_file_or_command = new_file_or_command.replace("{CONTAINER_MOUNT_POINT}", self.container_fs)
 
-        if options.collection_target == 'docker_image':
-            new_file_or_command = new_file_or_command.replace("{DOCKER_IMAGE_NAME}", options.container_name)
-        if options.collection_target == 'docker_container':
-            new_file_or_command = new_file_or_command.replace("{DOCKER_CONTAINER_NAME}", options.container_name)
+        if self.collection_target == 'docker_image':
+            new_file_or_command = new_file_or_command.replace("{DOCKER_IMAGE_NAME}", self.container_name)
+        if self.collection_target == 'docker_container':
+            new_file_or_command = new_file_or_command.replace("{DOCKER_CONTAINER_NAME}", self.container_name)
         return new_file_or_command
 
-    def _process_file_spec(self, spec, exclude, options):
+    def _process_file_spec(self, spec, exclude):
 
         pattern = None
         if len(spec['pattern']) > 0:
@@ -569,20 +576,20 @@ class DataCollector(object):
         else:
             archive_file_name = None
 
-        files_to_collect = self._replace_variables(spec['file'], options)
+        files_to_collect = self._replace_variables(spec['file'])
 
         self.copy_file_with_pattern(files_to_collect, pattern, exclude,
-                                    options.container_fs,
+                                    self.container_fs,
                                     archive_file_name=archive_file_name)
 
 
-    def _process_command_spec(self, spec, exclude, options):
+    def _process_command_spec(self, spec, exclude):
 
-        if options.collection_target == "host":
+        if self.collection_target == "host":
             self._handle_commands(spec, exclude)
 
         else:
-            command = self._replace_variables(spec['command'], options)
+            command = self._replace_variables(spec['command'])
 
             filters = spec['pattern']
 
@@ -597,7 +604,7 @@ class DataCollector(object):
                                                  mangled_command=mangled_command)
             self.archive.add_command_output(output, archive_file_name=archive_file_name)
 
-    def process_specs(self, conf, rm_conf, options):
+    def process_specs(self, conf, rm_conf):
         logger.debug("Beginning to process specs")
 
         if rm_conf:
@@ -609,8 +616,8 @@ class DataCollector(object):
             exclude = None
 
         for name, spec_group in conf['specs'].items():
-            if options.collection_target in spec_group:
-                for each_spec in spec_group[options.collection_target]:
+            if self.collection_target in spec_group:
+                for each_spec in spec_group[self.collection_target]:
                     if 'file' in each_spec:
                         if rm_conf:
                             try:
@@ -620,7 +627,7 @@ class DataCollector(object):
                             except LookupError:
                                 pass
 
-                        self._process_file_spec(each_spec, exclude, options)
+                        self._process_file_spec(each_spec, exclude)
 
                     elif 'command' in each_spec:
                         if rm_conf:
@@ -631,7 +638,7 @@ class DataCollector(object):
                             except LookupError:
                                 pass
 
-                        self._process_command_spec(each_spec, exclude, options)
+                        self._process_command_spec(each_spec, exclude)
 
         logger.debug("specs processing complete")
 
