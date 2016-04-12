@@ -61,7 +61,7 @@ if HaveDocker:
                 if has_label(matching_images[0]):
                     image_label = get_label(matching_images[0])
                 else:
-                    image_label = image_name
+                    image_label = name
                 mount_point = tempfile.mkdtemp()
                 cid = mount_obj(client, mount_point, image_id)
                 logger.debug("Opening Image %s %s %s %s" % (image_name, image_id, image_label, mount_point))
@@ -78,18 +78,50 @@ if HaveDocker:
             logger.error('Could not connect to docker to examine image %s' % image_name)
             return None
 
+    def open_container(container_name):
+        client = docker.Client(base_url='unix://var/run/docker.sock')
+        if client:
+            matching_containers = []
+            for each in client.containers(all=True, trunc=False):
+                if container_name == each['Id']:
+                    matching_containers = [ each ]
+                    break
+            if len(matching_containers) == 1:
+                print matching_containers[0]
+                container_id = matching_containers[0]['Id']
+                if 'Names' in matching_containers[0] and len(matching_containers[0]['Names']) > 0 and \
+                   len(matching_containers[0]['Names'][0]) > 0:
+                    container_label = matching_containers[0]['Names'][0]
+                else:
+                    container_label = container_id
+                mount_point = tempfile.mkdtemp()
+                cid = mount_obj(client, mount_point, container_id)
+                logger.debug("Opening Container %s %s %s %s" % (container_name, container_id, container_label, mount_point))
+                return ImageConnection(client, container_name, container_id, container_label, mount_point, cid)
+            else:
+                if len(matching_containers) > 1:
+                    logger.error('%s containers match name %s' % (len(matching_containers), container_name))
+                    for each in matching_containers:
+                        logger.error('   %s %s' % (get_label(each), each['Id']))
+                else:
+                    logger.error('no containers match name %s' % container_name)
+                return None
+        else:
+            logger.error('Could not connect to docker to examine container %s' % container_name)
+            return None
+
     def force_clean(client, cid, mount_point):
         """ force unmounts and removes any block devices
             to prevent memory corruption """
 
         # unmount path
-        Mount.unmount_path(mount_point, force=True)
+        Mount.unmount_path(mount_point,force=True)
 
         # if device mapper, do second unmount and remove device
         if cid and client.info()['Driver'] == 'devicemapper':
-            Mount.unmount_path(mount_point, force=True)
+            Mount.unmount_path(mount_point,force=True)
             device = client.inspect_container(cid)['GraphDriver']['Data']['DeviceName']
-            Mount.remove_thin_device(device, force=True)
+            Mount.remove_thin_device(device,force=True)
 
     def mount_obj(client, path, obj):
         """ mounts the obj to the given path """
@@ -123,18 +155,18 @@ if HaveDocker:
         tags = i['RepoTags']
         for each in tags:
             l = trimlabels(each)
-            if l not in ['', '<none>']:
+            if l != '' and l != '<none>':
                 return l
         return None
 
     def has_label(i):
         # This takes an Image description (as returned by docker.images), and
-        #   returns True/False(none) does the image have a name
+        #   returns True/False does the image have a name
         l = get_label(i)
-        if l:
-            return True
-        else:
+        if l == None:
             return False
+        else:
+            return True
 
     def runcommand(cmd):
         logger.debug("Running Command: %s" % cmd)
@@ -162,17 +194,15 @@ if HaveDocker:
         #    /var/lib/docker      ---- so we can mount docker images and containers
         #    /dev/                ----   also so we can mount docker images and containers
         #    /etc/redhat-access-insights --- so we can use the host's configuration and machine-id
+        #    /etc/pki --- so we can use the host's Sat6 certs (if any)
+        if options.analyse_docker_image and options.from_file:
+            logger.error('--from-file is incompatible with --analyse-docker-image (without --run-here)')
+            return 1
 
-        docker_args = shlex.split("docker run --rm -t --privileged=true -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights redhat-insights/insights-client redhat-access-insights")
+        docker_args = shlex.split("docker run --privileged=true -i -a stdin -a stdout -a stderr --rm -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights -v /etc/pki/:/etc/pki/ redhat-insights/insights-client redhat-access-insights")
 
-        return runcommand(docker_args + options.all_args)
+        return runcommand(docker_args + [ "--run-here" ] + options.all_args)
 
-    def get_images():
-        images = []
-        docker_images = docker.Client(base_url='unix://var/run/docker.sock').images()
-        for d in docker_images:
-            images.append({'type': 'docker_image', 'name': get_label(d)})
-        return images
 
 else:
     def open_image(image_name):

@@ -7,42 +7,36 @@ import sys
 import logging
 import uuid
 import datetime
-import shlex
-from subprocess import Popen, PIPE
 from constants import InsightsConstants as constants
 
 logger = logging.getLogger(constants.app_name)
 
 
-def determine_hostname(container=None):
+def determine_hostname():
     """
     Find fqdn if we can
     """
-    if container:
-        # use container name as "hostname" for container
-        return container
-    else:
-        socket_gethostname = socket.gethostname()
-        socket_fqdn = socket.getfqdn()
+    socket_gethostname = socket.gethostname()
+    socket_fqdn = socket.getfqdn()
 
-        try:
-            socket_ex = socket.gethostbyname_ex(socket_gethostname)[0]
-        except LookupError:
-            socket_ex = ''
-        except socket.gaierror:
-            socket_ex = ''
+    try:
+        socket_ex = socket.gethostbyname_ex(socket_gethostname)[0]
+    except LookupError:
+        socket_ex = ''
+    except socket.gaierror:
+        socket_ex = ''
 
-        gethostname_len = len(socket_gethostname)
-        fqdn_len = len(socket_fqdn)
-        ex_len = len(socket_ex)
+    gethostname_len = len(socket_gethostname)
+    fqdn_len = len(socket_fqdn)
+    ex_len = len(socket_ex)
 
-        if fqdn_len > gethostname_len or ex_len > gethostname_len:
-            if "localhost" not in socket_ex and len(socket_ex):
-                return socket_ex
-            if "localhost" not in socket_fqdn:
-                return socket_fqdn
+    if fqdn_len > gethostname_len or ex_len > gethostname_len:
+        if "localhost" not in socket_ex and len(socket_ex):
+            return socket_ex
+        if "localhost" not in socket_fqdn:
+            return socket_fqdn
 
-        return socket_gethostname
+    return socket_gethostname
 
 
 def _write_machine_id(machine_id):
@@ -125,7 +119,6 @@ def delete_machine_id():
     if os.path.isfile(constants.machine_id_file):
         os.remove(constants.machine_id_file)
 
-
 def generate_analysis_target_id(analysis_target, name):
     # this function generates 'machine-id's for analysis target's that
     # might not be hosts.
@@ -165,10 +158,9 @@ def generate_analysis_target_id(analysis_target, name):
     if analysis_target == "host":
         return generate_machine_id()
     elif analysis_target == "docker_image" or analysis_target == "docker_container":
-        return generate_container_id(name)
+        return str(uuid.uuid5(uuid.UUID(generate_machine_id()), name.encode('utf8')))
     else:
         raise ValueError("Unknown analysis target: %s" % analysis_target)
-
 
 def _expand_paths(path):
     """
@@ -255,8 +247,3 @@ def magic_plan_b(filename):
     stdout, stderr = Popen(cmd, stdout=PIPE).communicate()
     mime_str = stdout.split(filename + ': ')[1].strip()
     return mime_str
-
-
-def generate_container_id(container_name):
-    # container id is a uuid in the namespace of the machine
-    return str(uuid.uuid5(uuid.UUID(generate_machine_id()), container_name.encode('utf8')))

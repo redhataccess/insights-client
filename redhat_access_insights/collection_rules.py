@@ -90,8 +90,8 @@ class InsightsConfig(object):
         """
         Download the collection rules
         """
-        logger.debug("Attemping to download collection rules from %s",
-                    self.collection_rules_url)
+        logger.debug("Attempting to download collection rules from %s",
+                     self.collection_rules_url)
 
         req = self.conn.session.get(
             self.collection_rules_url, headers=({'accept': 'text/plain'}))
@@ -119,7 +119,7 @@ class InsightsConfig(object):
             return json.loads(req.text)
 
     def fetch_gpg(self):
-        logger.debug("Attemping to download collection "
+        logger.debug("Attempting to download collection "
                     "rules GPG signature from %s",
                     self.collection_rules_url + ".asc")
 
@@ -170,10 +170,10 @@ class InsightsConfig(object):
                 rm_conf[item] = value.strip().split(',')
             logger.warn("WARNING: Excluding data from files")
         if stdin_config:
-            rules_fp = NamedTemporaryFile(delete=False)
+            rules_fp = NamedTemporaryFile()
             rules_fp.write(stdin_config["uploader.json"])
             rules_fp.flush()
-            sig_fp = NamedTemporaryFile(delete=False)
+            sig_fp = NamedTemporaryFile()
             sig_fp.write(stdin_config["sig"])
             sig_fp.flush()
             if not self.gpg or self.validate_gpg_sig(rules_fp.name, sig_fp.name):
