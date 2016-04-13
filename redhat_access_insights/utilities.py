@@ -44,6 +44,14 @@ def _write_machine_id(machine_id):
     Write machine id out to disk
     """
     logger.debug("Creating %s", constants.machine_id_file)
+
+    # make sure the directory actually exists
+    try:
+        os.makedirs(constants.default_conf_dir)
+    except OSError:
+        # ignore EEXISTS errors
+        pass
+
     machine_id_file = open(constants.machine_id_file, "w")
     machine_id_file.write(machine_id)
     machine_id_file.flush()
