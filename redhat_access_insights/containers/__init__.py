@@ -35,80 +35,68 @@ if HaveDocker:
     from mount import DockerMount, Mount, MountError
 
     class ImageConnection:
-        def __init__(self, client, image_name, image_id, image_label, mount_point, cid):
+        def __init__(self, client, image_id, mount_point, cid):
             self.client = client
-            self.image_name = image_name
             self.image_id = image_id
-            self.image_label = image_label
             self.mount_point = mount_point
             self.cid = cid
 
         def get_fs(self):
             return self.mount_point
 
-        def get_name(self):
-            return self.image_label
-
         def close(self):
-            unmount_obj(self.client, self.mount_point, self.cid)
+            try:
+                unmount_obj(self.client, self.mount_point, self.cid)
+            except Exception as e:
+                logger.debug("exception while unmounting image or container: %s" % e)
             shutil.rmtree(self.mount_point, ignore_errors=True)
 
-    def open_image(image_name):
+    def open_image(image_id):
         client = docker.Client(base_url='unix://var/run/docker.sock')
         if client:
-            matching_images = client.images(image_name)
-            if len(matching_images) == 1:
-                image_id = matching_images[0]['Id']
-                if has_label(matching_images[0]):
-                    image_label = get_label(matching_images[0])
-                else:
-                    image_label = name
-                mount_point = tempfile.mkdtemp()
-                cid = mount_obj(client, mount_point, image_id)
-                logger.debug("Opening Image %s %s %s %s" % (image_name, image_id, image_label, mount_point))
-                return ImageConnection(client, image_name, image_id, image_label, mount_point, cid)
+            mount_point = tempfile.mkdtemp()
+            logger.debug("Opening Image Id %s On %s" % (image_id, mount_point))
+            cid = mount_obj(client, mount_point, image_id)
+            if cid:
+                return ImageConnection(client, image_id, mount_point, cid)
             else:
-                if len(matching_images) > 1:
-                    logger.error('%s images match name %s' % (len(matching_images), image_name))
-                    for each in matching_images:
-                        logger.error('   %s %s' % (get_label(each), each['Id']))
-                else:
-                    logger.error('no images match name %s' % image_name)
+                logger.error('Could mount Image Id %s On %s' % (image_id, mount_point))
+                shutil.rmtree(self.mount_point, ignore_errors=True)
                 return None
+
         else:
-            logger.error('Could not connect to docker to examine image %s' % image_name)
+            logger.error('Could not connect to docker to examine image %s' % image_id)
             return None
 
-    def open_container(container_name):
+    def open_container(container_id):
         client = docker.Client(base_url='unix://var/run/docker.sock')
         if client:
             matching_containers = []
             for each in client.containers(all=True, trunc=False):
-                if container_name == each['Id']:
+                if container_id == each['Id']:
                     matching_containers = [ each ]
                     break
             if len(matching_containers) == 1:
-                print matching_containers[0]
-                container_id = matching_containers[0]['Id']
-                if 'Names' in matching_containers[0] and len(matching_containers[0]['Names']) > 0 and \
-                   len(matching_containers[0]['Names'][0]) > 0:
-                    container_label = matching_containers[0]['Names'][0]
-                else:
-                    container_label = container_id
                 mount_point = tempfile.mkdtemp()
+                logger.debug("Opening Container Id %s On %s" % (container_id, mount_point))
                 cid = mount_obj(client, mount_point, container_id)
-                logger.debug("Opening Container %s %s %s %s" % (container_name, container_id, container_label, mount_point))
-                return ImageConnection(client, container_name, container_id, container_label, mount_point, cid)
+                if cid:
+                    return ImageConnection(client, container_id, mount_point, cid)
+                else:
+                    logger.error('Could mount Container Id %s On %s' % (container_id, mount_point))
+                    shutil.rmtree(self.mount_point, ignore_errors=True)
+                    return None
+
             else:
                 if len(matching_containers) > 1:
-                    logger.error('%s containers match name %s' % (len(matching_containers), container_name))
+                    logger.error('%s containers match name %s' % (len(matching_containers), container_id))
                     for each in matching_containers:
                         logger.error('   %s %s' % (get_label(each), each['Id']))
                 else:
-                    logger.error('no containers match name %s' % container_name)
+                    logger.error('no containers match name %s' % container_id)
                 return None
         else:
-            logger.error('Could not connect to docker to examine container %s' % container_name)
+            logger.error('Could not connect to docker to examine container %s' % container_id)
             return None
 
     def force_clean(client, cid, mount_point):
@@ -209,15 +197,24 @@ if HaveDocker:
 
         return runcommand(docker_args + [ "--run-here" ] + options.all_args)
 
+    def get_targets():
+        client = docker.Client(base_url='unix://var/run/docker.sock')
+        targets = []
+        if client:
+            for d in client.images(quiet=True):
+                targets.append({'type': 'docker_image', 'name': d})
+            for d in client.containers(all=True, trunc=False):
+                targets.append({'type': 'docker_container', 'name': d['Id']})
+        return targets
 
 else:
-    def open_image(image_name):
-        logger.error('Could not connect to docker to examine image %s' % image_name)
+    def open_image(image_id):
+        logger.error('Could not connect to docker to examine image %s' % image_id)
         logger.error('Docker is either not installed or not accessable')
         return None
 
-    def open_container(container_name):
-        logger.error('Could not connect to docker to examine container %s' % container_name)
+    def open_container(container_id):
+        logger.error('Could not connect to docker to examine container %s' % container_id)
         logger.error('Docker is either not installed or not accessable')
         return None
 
@@ -228,3 +225,7 @@ else:
         logger.error('Could not connect to docker to examine image %s' % options.analyse_docker_image)
         logger.error('Docker is either not installed or not accessable')
         return 1
+
+    def get_targets():
+        # Don't print error here, this is the way to tell if docker is installed
+        return []
