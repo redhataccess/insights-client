@@ -26,7 +26,11 @@ def registration_check(config):
         with open(constants.unregistered_file) as reg_file:
             local_record += ' Unregistered at ' + reg_file.readline()
 
-    pconn = InsightsConnection(config)
+    try:
+        pconn = InsightsConnection(config)
+    except InsightsConnectionError:
+        # bad hostnames found in initialization
+        sys.exit(1)
     api_reg_status = pconn.api_registration_check()
     if type(api_reg_status) is bool:
         if api_reg_status:

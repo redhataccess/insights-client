@@ -28,7 +28,7 @@ if __name__ == "__main__":
     setup(
         name="redhat-access-insights",
         version=VERSION,
-        author="Jeremy Crafts",
+        author="Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>",
         author_email="jcrafts@redhat.com",
         license="GPL",
         packages=find_packages(),
@@ -37,7 +37,7 @@ if __name__ == "__main__":
         scripts=[
             "scripts/redhat-access-insights"
         ],
-        entry_points={'console_scripts': ['redhat-access-insights = redhat_access_insights:_main']},
+        entry_points={'console_scripts': ['redhat-access-insights = redhat_access_insights.insights:_main']},
         data_files=[
             # config files
             (confpath, ['etc/redhat-access-insights.conf',

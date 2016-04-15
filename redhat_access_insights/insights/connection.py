@@ -5,7 +5,6 @@ import requests
 import sys
 import os
 import json
-
 import traceback
 import logging
 from utilities import (determine_hostname,
@@ -179,21 +178,23 @@ class InsightsConnection(object):
         try:
             # Ensure we have something in the scheme and netloc
             if endpoint_url.scheme == "" or endpoint_url.netloc == "":
-                logger.error("Invalid upload_url: " + self.upload_url + "\n"
-                             "Be sure to include a protocol "
-                             "(e.g. https://) and a "
-                             "fully qualified domain name in " +
-                             constants.default_conf_file)
-                sys.exit()
+                err_msg = ("Invalid upload_url: " + self.upload_url + "\n"
+                           "Be sure to include a protocol "
+                           "(e.g. https://) and a "
+                           "fully qualified domain name in " +
+                           constants.default_conf_file)
+                logger.error(err_msg)
+                raise InsightsConnectionError(err_msg)
             endpoint_addr = socket.gethostbyname(
                 endpoint_url.netloc.split(':')[0])
             logger.debug(
                 "hostname: %s ip: %s", endpoint_url.netloc, endpoint_addr)
         except socket.gaierror as e:
             logger.debug(e)
-            logger.error(
+            err_msg = (
                 "Could not resolve hostname: %s", endpoint_url.geturl())
-            sys.exit(1)
+            logger.error(err_msg)
+            raise InsightsConnectionError(err_msg)
         if self.proxies is not None:
             proxy_url = urlparse(self.proxies['https'])
             try:
@@ -210,8 +211,9 @@ class InsightsConnection(object):
                     "Proxy hostname: %s ip: %s", proxy_url.netloc, proxy_addr)
             except socket.gaierror as e:
                 logger.debug(e)
-                logger.error("Could not resolve proxy %s", proxy_url.geturl())
-                sys.exit(1)
+                err_msg = ("Could not resolve proxy %s", proxy_url.geturl())
+                logger.error(err_msg)
+                raise InsightsConnectionError(err_msg)
 
     def _test_urls(self, url, method):
         """
@@ -244,11 +246,11 @@ class InsightsConnection(object):
                     return False
             except requests.ConnectionError, exc:
                 last_ex = exc
-                logger.error(
+                err_msg = (
                     "Could not successfully connect to: %s", test_url + ext)
-                print exc
+                logger.error(err_msg)
         if last_ex:
-            raise last_ex
+            raise InsightsConnectionError(err_msg)
 
     def _verify_check(self, conn, cert, err, depth, ret):
         del conn
@@ -287,26 +289,30 @@ class InsightsConnection(object):
                 sock.connect((proxy[0], int(proxy[1])))
             except Exception as e:
                 logger.debug(e)
-                logger.error('Failed to connect to proxy %s. Connection refused.' % self.proxies['https'])
-                sys.exit(1)
+                err_msg = 'Failed to connect to proxy %s. Connection refused.' % self.proxies['https']
+                logger.error(err_msg)
+                raise InsightsConnectionError(err_msg)
             sock.send(connect_str)
             res = sock.recv(4096)
             if 'HTTP/1.0 200 Connection established' not in res:
-                logger.error('Failed to connect to %s. Invalid hostname.' % self.base_url)
-                sys.exit(1)
+                err_msg = 'Failed to connect to %s. Invalid hostname.' % self.base_url
+                logger.error(err_msg)
+                raise InsightsConnectionError(err_msg)
         else:
             try:
                 sock.connect((hostname[0], 443))
             except socket.gaierror:
-                logger.error('Error: Failed to connect to %s. Invalid hostname.' % self.base_url)
-                sys.exit(1)
+                err_msg = 'Error: Failed to connect to %s. Invalid hostname.' % self.base_url
+                logger.error(err_msg)
+                raise InsightsConnectionError(err_msg)
         ctx = SSL.Context(SSL.TLSv1_METHOD)
         if type(self.cert_verify) is not bool:
             if os.path.isfile(self.cert_verify):
                 ctx.load_verify_locations(self.cert_verify, None)
             else:
-                logger.error('Error: Invalid cert path: %s' % self.cert_verify)
-                sys.exit(1)
+                err_msg = 'Error: Invalid cert path: %s' % self.cert_verify
+                logger.error(err_msg)
+                raise InsightsConnectionError(err_msg)
         ctx.set_verify(SSL.VERIFY_PEER, self._verify_check)
         ssl_conn = SSL.Connection(ctx, sock)
         ssl_conn.set_connect_state()
@@ -345,6 +351,12 @@ class InsightsConnection(object):
         """
         Test connection to Red Hat
         """
+        # capture logging output of this function for API calls
+        import StringIO
+        log_capture = StringIO.StringIO()
+        capture_handler = logging.StreamHandler(log_capture)
+        capture_handler.setLevel(logging.INFO)
+        logger.addHandler(capture_handler)
         logger.info("Connection test config:")
         logger.info("Proxy config: %s", self.proxies)
         logger.info("Certificate Verification: %s", self.cert_verify)
@@ -372,50 +384,53 @@ class InsightsConnection(object):
                          'Please check your network configuration')
             logger.error('Additional information may be in'
                          ' /var/log/' + APP_NAME + "/" + APP_NAME + ".log")
-            sys.exit(1)
-        sys.exit(rc)
+            rc = 1
+        logger.removeHandler(capture_handler)
+        capture_handler.flush()
+        log_capture.flush()
+        log_output = log_capture.getvalue()
+        return (log_output, rc)
 
     def handle_fail_rcs(self, req):
         """
         Bail out if we get a 401 and leave a message
         """
         if req.status_code >= 400:
-            logger.error("ERROR: Upload failed!")
+            err_msg = "ERROR: Upload failed!"
+            logger.error(err_msg)
             logger.info("Debug Information:\nHTTP Status Code: %s",
                         req.status_code)
             logger.info("HTTP Status Text: %s", req.reason)
             if req.status_code == 401:
-                logger.error("Authorization Required.")
-                logger.error("Please ensure correct credentials "
-                             "in " + constants.default_conf_file)
-                logger.debug("HTTP Response Text: %s", req.text)
+                err_msg = ("Authorization Required."
+                           "Please ensure correct credentials "
+                           "in " + constants.default_conf_file)
             if req.status_code == 402:
                 # failed registration because of entitlement limit hit
                 from schedule import InsightsSchedule
                 InsightsSchedule(set_cron=False).remove_scheduling()
                 logger.debug('Registration failed by 402 error. Removed automatic scheduling.')
                 try:
-                    logger.error(req.json()["message"])
+                    err_msg = req.json()["message"]
                 except LookupError:
-                    logger.error("Got 402 but no message")
-                    logger.debug("HTTP Response Text: %s", req.text)
+                    err_msg = "Got 402 but no message"
             if req.status_code == 403 and self.auto_config:
                 # Insights disabled in satellite
                 from urlparse import urlparse
                 rhsm_hostname = urlparse(self.base_url).hostname
                 if rhsm_hostname != 'subscription.rhn.redhat.com':
-                    logger.error('Please enable Insights on Satellite server '
-                                 '%s to continue.' %
-                                 rhsm_hostname)
+                    err_msg = ('Please enable Insights on Satellite server '
+                               '%s to continue.' % rhsm_hostname)
             if req.status_code == 412:
                 try:
                     unreg_date = req.json()["unregistered_at"]
-                    logger.error(req.json()["message"])
+                    err_msg = (req.json()["message"])
                 except LookupError:
                     unreg_date = "412, but no unreg_date or message"
-                    logger.debug("HTTP Response Text: %s", req.text)
                 write_unregistered_file(unreg_date)
-            sys.exit(1)
+            logger.error(err_msg)
+            logger.debug("HTTP Response Text: %s", req.text)
+            raise InsightsConnectionError(err_msg)
 
     def get_satellite5_info(self, branch_info):
         """
@@ -472,23 +487,17 @@ class InsightsConnection(object):
             remote_leaf = branch_info['remote_leaf']
 
         except LookupError:
-            logger.error(
-                "ERROR: Could not determine branch information, exiting!")
-            logger.error(
-                "See %s for more information", constants.default_log_file)
-            logger.error(
-                "Could not register system, running configuration test")
-            self.test_connection(1)
+            err_msg = ("ERROR: Could not determine branch information."
+                       "See %s for more information", constants.default_log_file)
+            logger.error(err_msg)
+            raise InsightsConnectionError(err_msg)
 
         except requests.ConnectionError as e:
             logger.debug(e)
-            logger.error(
-                "ERROR: Could not determine branch information, exiting!")
-            logger.error(
-                "See %s for more information", constants.default_log_file)
-            logger.error(
-                "Could not register system, running configuration test")
-            self.test_connection(1)
+            err_msg = ("ERROR: Could not determine branch information."
+                       "See %s for more information", constants.default_log_file)
+            logger.error(err_msg)
+            raise InsightsConnectionError(err_msg)
 
         data = {'machine_id': machine_id,
                 'remote_branch': remote_branch,
@@ -509,9 +518,9 @@ class InsightsConnection(object):
             logger.debug("POST System status: %d", system.status_code)
         except requests.ConnectionError as e:
             logger.debug(e)
-            logger.error(
-                "Could not register system, running configuration test")
-            self.test_connection(1)
+            err_msg = ("ERROR: Could not successfully connect, system was not registered.")
+            logger.error(err_msg)
+            raise InsightsConnectionError(err_msg)
         return system
 
     def do_group(self, group_id):
@@ -615,12 +624,7 @@ class InsightsConnection(object):
         if options.group is not None:
             self.do_group(options.group)
 
-        if options.group is not None:
-            return (message, client_hostname, options.group, options.display_name)
-        elif options.display_name is not None:
-            return (message, client_hostname, "None", options.display_name)
-        else:
-            return (message, client_hostname, "None", "")
+        return message, client_hostname
 
     def upload_archive(self, data_collected, duration, cluster=None):
         """
@@ -654,3 +658,7 @@ class InsightsConnection(object):
                      upload.status_code, upload.reason, upload.text)
         logger.debug("Upload duration: %s", upload.elapsed)
         return upload
+
+
+class InsightsConnectionError(Exception):
+    pass

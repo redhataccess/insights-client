@@ -20,7 +20,11 @@ def verify_connectivity(config, connect_method):
     for item, value in config.items(APP_NAME):
         if item != 'password' and item != 'proxy' and item != 'systemid':
             logger.debug("%s:%s", item, value)
-    ic = InsightsConnection(config)
+    try:
+        ic = InsightsConnection(config)
+    except InsightsConnectionError:
+        # bad hostnames found in initialization
+        sys.exit(1)
     try:
         branch_info = ic.branch_info()
     except requests.ConnectionError as e:
