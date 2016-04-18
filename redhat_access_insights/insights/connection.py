@@ -487,15 +487,15 @@ class InsightsConnection(object):
             remote_leaf = branch_info['remote_leaf']
 
         except LookupError:
-            err_msg = ("ERROR: Could not determine branch information."
-                       "See %s for more information", constants.default_log_file)
+            err_msg = ("ERROR: Could not determine authentication information."
+                       "See %s for more information" % constants.default_log_file)
             logger.error(err_msg)
             raise InsightsConnectionError(err_msg)
 
         except requests.ConnectionError as e:
             logger.debug(e)
-            err_msg = ("ERROR: Could not determine branch information."
-                       "See %s for more information", constants.default_log_file)
+            err_msg = ("ERROR: Could not determine authentication information."
+                       "See %s for more information" % constants.default_log_file)
             logger.error(err_msg)
             raise InsightsConnectionError(err_msg)
 
@@ -593,12 +593,15 @@ class InsightsConnection(object):
         try:
             logger.debug("Unregistering %s", machine_id)
             self.session.delete(self.api_url + "/v1/systems/" + machine_id)
-            logger.info(
-                "Successfully unregistered from the Red Hat Access Insights Service")
+            message = "Successfully unregistered from the Red Hat Access Insights Service"
+            logger.info(message)
             write_unregistered_file()
+            return message
         except requests.ConnectionError as e:
             logger.debug(e)
-            logger.error("Could not unregister this system")
+            err_msg = "Could not unregister this system."
+            logger.error(err_msg)
+            raise InsightsConnectionError(err_msg)
 
     def register(self, options):
         """

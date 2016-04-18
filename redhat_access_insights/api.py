@@ -4,6 +4,7 @@ Public API module to Insights client functions
 
 from insights.connection import InsightsConnection, InsightsConnectionError
 from insights.constants import InsightsConstants as constants
+from insights.auto_config import try_auto_configuration
 from insights import parse_config_file, try_register, set_up_logging
 
 
@@ -30,7 +31,10 @@ class API(object):
         setattr(self.options, 'silent', True)
         setattr(self.options, 'quiet', False)
         self.config = parse_config_file(conf)
+        # initialization stuff
         set_up_logging(self.config, self.options)
+        if self.config.getboolean(constants.app_name, 'auto_config'):
+            try_auto_configuration(self.config)
 
     def register(self,
                  display_name=None,
@@ -59,7 +63,27 @@ class API(object):
         '''
         setattr(self.options, 'display_name', display_name)
         setattr(self.options, 'group', group)
-        return try_register(self.options, self.config)
+        return try_register(self.config, self.options)
+
+    def unregister(self):
+        '''
+        Unregister this host from the Insights service.
+
+        Parameters:
+            None
+
+        Returns:
+            Tuple of a locally generated message, and
+            return code of 0 on success.  Failure raises
+            InsightsConnectionError.
+
+        Example output:
+            ("Successfully unregistered from the Red Hat Access Insights Service", 0)
+
+        Raises:
+            InsightsConnectionError
+        '''
+        return (InsightsConnection(self.config).unregister(), 0)
 
     def test_connection(self):
         '''

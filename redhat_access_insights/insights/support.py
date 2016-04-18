@@ -8,7 +8,7 @@ import os
 import requests
 from subprocess import Popen, PIPE, STDOUT
 from constants import InsightsConstants as constants
-from connection import InsightsConnection
+from connection import InsightsConnection, InsightsConnectionError
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)

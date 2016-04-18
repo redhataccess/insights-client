@@ -66,7 +66,7 @@ def write_unregistered_file(date=None):
 
     unreg = file(constants.unregistered_file, 'w')
     unreg.write(str(date))
-    sys.exit(rc)
+    return rc
 
 
 def write_registered_file():

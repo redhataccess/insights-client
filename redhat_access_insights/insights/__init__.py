@@ -319,7 +319,7 @@ def try_register(config, options):
     else:
         reg_info = 'Successfully registered %s as %s in group %s' % (
             hostname, options.display_name, options.group)
-    logger_info(reg_info)
+    logger.info(reg_info)
     if message:
         logger.info(message)
     return (reg_info, message, 0)
@@ -560,9 +560,9 @@ def handle_startup(options, config):
     if options.unregister:
         try:
             pconn = InsightsConnection(config)
+            pconn.unregister()
         except InsightsConnectionError:
             sys.exit(1)
-        pconn.unregister()
         sys.exit()
 
     # Handle registration, grouping, and display name
