@@ -15,12 +15,16 @@ show this help message and exit
 .IP "--version"
 Display version
 .IP "--register"
-Register system to the Red Hat Access Insights Service
+Register system to the Red Hat Access Insights Service.
+Will also re-enable automatic scheduling if it has been
+disabled with --no-schedule
 .IP "--unregister"
 Unregister system from the Red Hat Access Insights Service
 .IP "--update-collection-rules"
 Refresh collection rules from Red Hat
 Set Red Hat Access Insights to collect data once per week
+.IP "--display-name=DISPLAYNAME"
+Display name for this system.  Must be used with --register
 .IP "--group=GROUP"
 Group to add this system to during registration
 .IP "--retry=RETRIES"
@@ -47,6 +51,8 @@ config JSON document; and "sig", with a value of the raw signature content.
 Make sure the uploader JSON is not actually parsed into the resulting dict from
 stdin, i.e. it should be a raw string with JSON special characters escaped
 within.
+.IP "--from-file"
+Similar to --from-stdin, but will read a specialized JSON config from file.
 
 .SH "DEBUG OPTIONS"
 .IP "--test-connection"
