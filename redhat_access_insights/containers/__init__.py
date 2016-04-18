@@ -12,8 +12,7 @@ import logging
 from redhat_access_insights.constants import InsightsConstants as constants
 
 APP_NAME = constants.app_name
-logger = logging.getLogger(constants.app_name)
-INSIGHTS_CLIENT_IMAGE_NAME = "redhat-insights/insights-client"
+logger = logging.getLogger(APP_NAME)
 
 HaveDocker = False
 try:
@@ -22,6 +21,7 @@ try:
     HaveDocker = True
 
 except:
+    logger.debug("Unable to import docker module, skipping docker related features")
     pass
 
 if HaveDocker:
@@ -33,6 +33,18 @@ if HaveDocker:
 
     import util
     from mount import DockerMount, Mount, MountError
+
+    from redhat_access_insights import InsightsClient
+
+    def get_image_name():
+        if InsightsClient.options.docker_image_name:
+            return InsightsClient.options.docker_image_name
+
+        elif InsightsClient.config.get(APP_NAME, 'docker_image_name'):
+            return InsightsClient.config.get(APP_NAME, 'docker_image_name')
+
+        else:
+            return constants.docker_image_name
 
     class ImageConnection:
         def __init__(self, client, image_id, mount_point, cid):
@@ -163,10 +175,24 @@ if HaveDocker:
         returncode = proc.wait()
         return returncode
 
+    def pull_image(image):
+        return runcommand(shlex.split("docker pull") + [ image ])
+
     def insights_client_container_is_available():
-        client = docker.Client(base_url='unix://var/run/docker.sock')
-        images = client.images(INSIGHTS_CLIENT_IMAGE_NAME)
-        return len(images) > 0
+        image_name = get_image_name()
+        if image_name:
+            client = docker.Client(base_url='unix://var/run/docker.sock')
+
+            pull_image(image_name)
+
+            images = client.images(image_name)
+            if len(images) == 0:
+                logger.debug("insights-client docker image not available: %s" % image_name)
+                return False
+            else:
+                return True
+        else:
+            return False
 
     def run_in_container(options):
         # This script runs the insights-client in a docker container.
@@ -193,9 +219,9 @@ if HaveDocker:
             logger.error('--from-file is incompatible with transfering to a container.')
             return 1
 
-        docker_args = shlex.split("docker run --privileged=true -i -a stdin -a stdout -a stderr --rm -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights -v /etc/pki/:/etc/pki/ " + INSIGHTS_CLIENT_IMAGE_NAME + " redhat-access-insights")
+        docker_args = shlex.split("docker run --privileged=true -i -a stdin -a stdout -a stderr --rm -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights -v /etc/pki/:/etc/pki/ " + get_image_name() + " redhat-access-insights")
 
-        return runcommand(docker_args + [ "--run-here" ] + options.all_args)
+        return runcommand(docker_args + [ "--run-here" ] + InsightsClient.argv[1:])
 
     def get_targets():
         client = docker.Client(base_url='unix://var/run/docker.sock')

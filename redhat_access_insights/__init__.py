@@ -18,6 +18,20 @@ import time
 import traceback
 import atexit
 
+# InsightsClient: the global config and options
+#   This class was created so that the containers module could get
+#     access to config and options without passing them into it, because
+#     containers has no obvious single entry function.
+#     It would also be useful for other modules too.
+#   The class InsightsClient must be defined before any of the other
+#     client modules are imported so that they can import it into themselves.
+#   Since the InsightsClient values are initialized in main, no one can use
+#     these values till after main initializes them.
+#   It may also be worth moving functions like containers.get_image_name,
+#     and others that only use data gathered from here, into this class.
+class InsightsClient:
+    pass
+
 import containers
 
 from auto_config import try_auto_configuration
@@ -70,7 +84,8 @@ def parse_config_file(conf_file):
          'systemid': None,
          'proxy': None,
          'insecure_connection': 'False',
-         'no_schedule': 'False'})
+         'no_schedule': 'False',
+         'docker_image_name': None})
     try:
         parsedconfig.read(conf_file)
     except ConfigParser.Error:
@@ -547,6 +562,11 @@ def set_up_options(parser):
                      action="store_true",
                      dest="original_style_specs",
                      default=False)
+    group.add_option('--docker-image-name',
+                     help="image name of insights-client",
+                     action="store",
+                     dest="docker_image_name",
+                     default=None)
     parser.add_option_group(group)
 
 
@@ -700,13 +720,15 @@ def _main():
         parser.error("Unknown arguments: %s" % args)
         sys.exit(1)
 
-    options.all_args = sys.argv[1:]
-
     # from_stdin mode implies to_stdout
     options.to_stdout = options.to_stdout or options.from_stdin or options.from_file
 
     config = parse_config_file(options.conf)
     logger, handler = set_up_logging(config, options)
+
+    InsightsClient.options = options
+    InsightsClient.config = config
+    InsightsClient.argv = sys.argv
 
     if config.getboolean(APP_NAME, 'trace'):
         sys.settrace(trace_calls)

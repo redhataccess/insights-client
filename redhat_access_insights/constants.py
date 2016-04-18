@@ -25,3 +25,4 @@ class InsightsConstants(object):
     lastupload_file = default_conf_dir + '.lastupload'
     pub_gpg_path = default_conf_dir + 'redhattools.pub.gpg'
     machine_id_file = default_conf_dir + 'machine-id'
+    docker_image_name = None
