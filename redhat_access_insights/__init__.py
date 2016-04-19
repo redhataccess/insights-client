@@ -239,7 +239,7 @@ def collect_data_and_upload(config, options, rc=0):
                     container_fs = container_connection.get_fs()
                 else:
                     logger.error('Could not open image for analysis: %s' % t['name'])
-                    return 1
+                    continue
 
             elif t['type'] == "docker_container":
                 container_connection = containers.open_container(t['name'])
@@ -247,7 +247,7 @@ def collect_data_and_upload(config, options, rc=0):
                     container_fs = container_connection.get_fs()
                 else:
                     logger.error('Could not open container for analysis: %s' % t['name'])
-                    return 1
+                    continue
 
             elif t['type'] == "host":
                 container_connection = None
@@ -255,7 +255,7 @@ def collect_data_and_upload(config, options, rc=0):
 
             else:
                 logger.error("Unexpected analysis target: %s" % t['type'])
-                return 1
+                continue
 
             collection_start = time.clock()
 

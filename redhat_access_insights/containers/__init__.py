@@ -162,7 +162,7 @@ if HaveDocker:
                 return AtomicTemporaryMountPoint(image_id, mount_point)
             else:
                 logger.error('Could not mount Image Id %s On %s' % (image_id, mount_point))
-                shutil.rmtree(self.mount_point, ignore_errors=True)
+                shutil.rmtree(mount_point, ignore_errors=True)
                 return None
 
         def open_container(container_id):
@@ -172,7 +172,7 @@ if HaveDocker:
                 return AtomicTemporaryMountPoint(container_id, mount_point)
             else:
                 logger.error('Could not mount Container Id %s On %s' % (container_id, mount_point))
-                shutil.rmtree(self.mount_point, ignore_errors=True)
+                shutil.rmtree(mount_point, ignore_errors=True)
                 return None
 
     else:
@@ -212,7 +212,7 @@ if HaveDocker:
                     return DockerTemporaryMountPoint(client, image_id, mount_point, cid)
                 else:
                     logger.error('Could not mount Image Id %s On %s' % (image_id, mount_point))
-                    shutil.rmtree(self.mount_point, ignore_errors=True)
+                    shutil.rmtree(mount_point, ignore_errors=True)
                     return None
 
             else:
@@ -240,7 +240,7 @@ if HaveDocker:
                         return DockerTemporaryMountPoint(client, container_id, mount_point, cid)
                     else:
                         logger.error('Could not mount Container Id %s On %s' % (container_id, mount_point))
-                        shutil.rmtree(self.mount_point, ignore_errors=True)
+                        shutil.rmtree(mount_point, ignore_errors=True)
                         return None
 
                 else:
