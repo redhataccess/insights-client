@@ -34,16 +34,17 @@ from connection import InsightsConnection
 from archive import InsightsArchive
 from support import InsightsSupport, registration_check
 from constants import InsightsConstants as constants
-from containers import open_image, get_images, run_in_container
+from containers import open_image, get_targets, run_in_container
+from client_config import InsightsClient
 
 __author__ = 'Jeremy Crafts <jcrafts@redhat.com>'
 
 LOG_FORMAT = ("%(asctime)s %(levelname)s %(message)s")
 APP_NAME = constants.app_name
-logger = None
+logger = logging.getLogger(APP_NAME)
 
 
-def set_up_logging(config, options):
+def set_up_logging():
     # TODO: come back to this
     """
     Initialize Logging
@@ -57,19 +58,19 @@ def set_up_logging(config, options):
                                                    backupCount=3)
 
     # from_stdin mode implies to_stdout
-    options.to_stdout = (options.to_stdout or
-                         options.from_stdin or
-                         options.from_file)
-    if options.to_stdout and not options.verbose:
-        options.quiet = True
+    InsightsClient.options.to_stdout = (InsightsClient.options.to_stdout or
+                                        InsightsClient.options.from_stdin or
+                                        InsightsClient.options.from_file)
+    if InsightsClient.options.to_stdout and not InsightsClient.options.verbose:
+        InsightsClient.options.quiet = True
 
     # Send anything INFO+ to stdout and log
     stdout_handler = logging.StreamHandler(sys.stdout)
-    if not options.verbose:
+    if not InsightsClient.options.verbose:
         stdout_handler.setLevel(logging.INFO)
-    if options.quiet:
+    if InsightsClient.options.quiet:
         stdout_handler.setLevel(logging.ERROR)
-    if not options.silent:
+    if not InsightsClient.options.silent:
         logging.root.addHandler(stdout_handler)
 
     logging.root.addHandler(handler)
@@ -77,11 +78,10 @@ def set_up_logging(config, options):
     formatter = logging.Formatter(LOG_FORMAT)
     handler.setFormatter(formatter)
     logging.root.setLevel(logging.WARNING)
-    my_logger = logging.getLogger(APP_NAME)
-    if options.verbose:
+    if InsightsClient.options.verbose:
         config_level = 'DEBUG'
     else:
-        config_level = config.get(APP_NAME, 'loglevel')
+        config_level = InsightsClient.config.get(APP_NAME, 'loglevel')
 
     if config_level in valid_levels:
         init_log_level = logging.getLevelName(config_level)
@@ -89,10 +89,10 @@ def set_up_logging(config, options):
         print "Invalid log level %s, defaulting to DEBUG" % config_level
         init_log_level = logging.getLevelName("DEBUG")
 
-    my_logger.setLevel(init_log_level)
+    logger.setLevel(init_log_level)
     logging.root.setLevel(init_log_level)
-    my_logger.debug("Logging initialized")
-    return my_logger, handler
+    logger.debug("Logging initialized")
+    return handler
 
 
 def set_up_options(parser):
@@ -176,13 +176,15 @@ def set_up_options(parser):
                       dest='offline', action='store_true',
                       default=False)
     parser.add_option('--container',
-                      help='Run Insights in container mode.',
+                      help='Run Insights in container mode. '
+                           'Analyze docker images and containers '
+                           'rather than the host.',
                       action='store_true',
                       dest='container_mode')
-    parser.add_option('--run-as-container',
+    parser.add_option('--run-in-container',
                       help="Run analysis from a container",
                       action="store_true",
-                      dest="run_as_container",
+                      dest="run_in_container",
                       default=False)
     group = optparse.OptionGroup(parser, "Debug options")
     parser.add_option('--version',
@@ -236,6 +238,16 @@ def set_up_options(parser):
                      action="store_true",
                      dest="keep_archive",
                      default=False)
+    group.add_option('--original-style-specs',
+                     help="Use the original style of specs even if new style are avaliable",
+                     action="store_true",
+                     dest="original_style_specs",
+                     default=False)
+    group.add_option('--docker-image-name',
+                     help="image name of insights-client",
+                     action="store",
+                     dest="docker_image_name",
+                     default=None)
     parser.add_option_group(group)
     '''
     [main options]
@@ -299,8 +311,7 @@ def parse_config_file(conf_file):
          'password': '',
          'systemid': None,
          'proxy': None,
-         'insecure_connection': 'False',
-         'no_schedule': 'False'})
+         'insecure_connection': 'False'})
     try:
         parsedconfig.read(conf_file)
     except ConfigParser.Error:
@@ -323,9 +334,8 @@ def handle_startup(config, options):
         print constants.version
         sys.exit()
 
-    if options.run_as_container:
-        options.run_as_container = False
-        sys.exit(run_in_container(sys.argv[1:]))
+    if options.run_in_container and containers.insights_client_container_is_available():
+        sys.exit(run_in_container(options))
 
     if options.validate:
         validate_remove_file()
@@ -461,20 +471,6 @@ def trace_calls(frame, event, arg):
     return
 
 
-def _delete_archive(archive, keep_archive):
-    # delete the archive on exit so we don't keep crap around
-    if not keep_archive:
-        archive.delete_tmp_dir()
-
-
-def _unmount_image(image):
-    try:
-        mounted_image.close()
-    except:
-        # it was already unmounted
-        pass
-
-
 def try_register(config, options):
     if os.path.isfile(constants.registered_file):
         logger.info('This host has already been registered.')
@@ -538,15 +534,7 @@ def collect_data_and_upload(config, options, rc=0):
     """
     # initialize collection targets
     if options.container_mode:
-        targets = get_images()
-        if targets:
-            # TODO: use 'host-limited' as the type for container host data
-            # or something else Gavin may have concocted
-            targets.append({'type': 'host', 'name': None})
-        else:
-            # container mode, but no images, abort
-            # error msg will come from get_images()
-            sys.exit(1)
+        targets = containers.get_targets()
     else:
         targets = constants.default_target
 
@@ -586,93 +574,100 @@ def collect_data_and_upload(config, options, rc=0):
     logger.debug("Rules configuration loaded. Elapsed time: %s", collection_elapsed)
 
     for t in targets:
-        # default mountpoint
+        # defaults
+        archive = None
+        container_connection = None
         mp = None
-        # mount if the target is an image
-        if t['type'] == 'docker_image':
-            mounted_image = open_image(t['name'])
-            mp = mounted_image.mount_point
-            # unmount on unexpected exit
-            atexit.register(_unmount_image, mounted_image)
 
-        collection_start = time.clock()
-        archive = InsightsArchive(compressor=options.compressor, target_name=t['name'])
-        dc = DataCollector(archive, mountpoint=mp, target_name=t['name'], target_type=t['type'])
-        logging_name = determine_hostname() if t['name'] is None else t['name']
+        try:
+            if t['type'] == 'docker_image':
+                container_connection = open_image(t['name'])
+                logging_name = 'Docker image ' + t['name']
+                if container_connection:
+                    mp = container_connection.get_fs()
+                else:
+                    logger.error('Could not open %s for analysis' % logging_name)
+                    return 1
 
-        # delete the archive on unexpected exit
-        atexit.register(_delete_archive, archive, options.keep_archive or options.no_upload)
+            elif t['type'] == 'docker_container':
+                container_connection = open_container(t['name'])
+                logging_name = 'Docker container ' + t['name']
+                if container_connection:
+                    mp = container_connection.get_fs()
+                else:
+                    logger.error('Could not open %s for analysis' % logging_name)
+                    return 1
 
-        logger.info('Starting to collect Insights data for %s' % logging_name)
+            elif t['type'] == 'host':
+                logging_name = determine_hostname()
+            else:
+                logger.error('Unexpected analysis target: %s' % t['type'])
+                return 1
 
-        # spec version
-        if 'specs' in collection_rules:
+            collection_start = time.clock()
+            archive = InsightsArchive(compressor=options.compressor, target_name=t['name'])
+            dc = DataCollector(archive, mountpoint=mp, target_name=t['name'], target_type=t['type'])
+
+            logger.info('Starting to collect Insights data for %s' % logging_name)
             dc.run_collection(collection_rules, rm_conf, branch_info)
             elapsed = (time.clock() - start)
             logger.debug("Data collection complete. Elapsed time: %s", elapsed)
 
-        # original version
-        # else:
-        #     dc.run_commands(collection_rules, rm_conf)
-        #     elapsed = (time.clock() - start)
-        #     logger.debug("Command execution complete. Elapsed time: %s", elapsed)
+            obfuscate = config.getboolean(APP_NAME, "obfuscate")
 
-        #     start = time.clock()
-        #     dc.copy_files(collection_rules, rm_conf, stdin_config)
-        #     elapsed = (time.clock() - start)
-        #     logger.debug("File collection complete. Elapsed time: %s", elapsed)
+            # include rule refresh time in the duration
+            collection_duration = (time.clock() - collection_start) + collection_elapsed
 
-        #     dc.write_branch_info(branch_info)
-        obfuscate = config.getboolean(APP_NAME, "obfuscate")
+            # unmount image when we are finished
+            if t['type'] == 'docker_image':
+                mounted_image.close()
 
-        # include rule refresh time in the duration
-        collection_duration = (time.clock() - collection_start) + collection_elapsed
+            if options.no_tar_file:
+                logger.info('See Insights data in %s', dc.archive.archive_dir)
+                return rc
 
-        # unmount image when we are finished
-        if t['type'] == 'docker_image':
-            mounted_image.close()
+            tar_file = dc.done(config, collection_rules, rm_conf)
 
-        if options.no_tar_file:
-            logger.info('See Insights data in %s', dc.archive.archive_dir)
-            return rc
+            if options.offline:
+                handle_file_output(options, tar_file, archive)
+                return rc
 
-        tar_file = dc.done(config, collection_rules, rm_conf)
-
-        if options.offline:
-            handle_file_output(options, tar_file, archive)
-            return rc
-
-        # do the upload
-        logger.info('Uploading Insights data,'
-                    ' this may take a few minutes')
-        for tries in range(options.retries):
-            upload = pconn.upload_archive(tar_file, collection_duration)
-            if upload.status_code == 201:
-                write_lastupload_file()
-                logger.info("Upload completed successfully!")
-                break
-            elif upload.status_code == 412:
-                pconn.handle_fail_rcs(upload)
-            else:
-                logger.error("Upload attempt %d of %d failed! Status Code: %s",
-                             tries + 1, options.retries, upload.status_code)
-                if tries + 1 != options.retries:
-                    logger.info("Waiting %d seconds then retrying",
-                                constants.sleep_time)
-                    time.sleep(constants.sleep_time)
+            # do the upload
+            logger.info('Uploading Insights data for %s, this may take a few minutes' % logging_name)
+            for tries in range(options.retries):
+                upload = pconn.upload_archive(tar_file, collection_duration)
+                if upload.status_code == 201:
+                    write_lastupload_file()
+                    logger.info("Upload completed successfully!")
+                    break
+                elif upload.status_code == 412:
+                    pconn.handle_fail_rcs(upload)
                 else:
-                    logger.error("All attempts to upload have failed!")
-                    logger.error("Please see %s for additional information",
-                                 constants.default_log_file)
-                    rc = 1
+                    logger.error("Upload attempt %d of %d failed! Status Code: %s",
+                                 tries + 1, options.retries, upload.status_code)
+                    if tries + 1 != options.retries:
+                        logger.info("Waiting %d seconds then retrying",
+                                    constants.sleep_time)
+                        time.sleep(constants.sleep_time)
+                    else:
+                        logger.error("All attempts to upload have failed!")
+                        logger.error("Please see %s for additional information",
+                                     constants.default_log_file)
+                        rc = 1
 
-        if obfuscate:
-            logger.info('Obfuscated Insights data retained in %s',
-                        os.path.dirname(tar_file))
-        elif options.keep_archive:
-            logger.info('Insights data retained in %s', tar_file)
-        else:
-            dc.archive.delete_tmp_dir()
+            if obfuscate:
+                logger.info('Obfuscated Insights data retained in %s',
+                            os.path.dirname(tar_file))
+            elif options.keep_archive:
+                logger.info('Insights data retained in %s', tar_file)
+
+        finally:
+            # called on loop iter end or unexpected exit
+            if container_connection:
+                container_connection.close()
+            if archive and not (options.keep_archive or options.offline):
+                archive.delete_tmp_dir()
+    return rc
 
 
 def handle_file_output(options, tar_file, archive):
@@ -693,7 +688,6 @@ def _main():
     if os.geteuid() is not 0:
         sys.exit("Red Hat Access Insights must be run as root")
 
-    global logger
     sys.excepthook = handle_exception
 
     parser = optparse.OptionParser()
@@ -703,7 +697,13 @@ def _main():
         parser.error("Unknown arguments: %s" % args)
         sys.exit(1)
     config = parse_config_file(options.conf)
-    logger, handler = set_up_logging(config, options)
+
+    # copy to global config object
+    InsightsClient.config = config
+    InsightsClient.options = options
+    InsightsClient.argv = sys.argv
+
+    handler = set_up_logging()
 
     if config.getboolean(APP_NAME, 'trace'):
         sys.settrace(trace_calls)
@@ -719,7 +719,8 @@ def _main():
     rc = collect_data_and_upload(config, options)
 
     # Roll log over on successful upload
-    handler.doRollover()
+    if not rc:
+        handler.doRollover()
     sys.exit(rc)
 
 if __name__ == '__main__':

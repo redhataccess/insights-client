@@ -16,6 +16,7 @@ from soscleaner import SOSCleaner
 from utilities import determine_hostname, _expand_paths, generate_analysis_target_id
 from constants import InsightsConstants as constants
 from insights_spec import InsightsFile, InsightsCommand
+from client_config import InsightsClient
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
@@ -31,7 +32,7 @@ class DataCollector(object):
     '''
     Run commands and collect files
     '''
-    def __init__(self, archive_=None, mountpoint=None, target_name=None, target_type='host'):
+    def __init__(self, archive_=None, mountpoint=None, target_name='', target_type='host'):
         self.archive = archive_ if archive_ else archive.InsightsArchive()
         self.mountpoint = '/'
         if mountpoint:
@@ -42,6 +43,7 @@ class DataCollector(object):
     def _get_meta_path(self, specname, conf):
         # should really never need these
         #   since spec should always have an "archive_file_name"
+        #   unless we are running old style spec
         default_meta_spec = {'analysis_target': '/insights_data/analysis_target',
                              'branch_info': '/branch_info',
                              'machine-id': '/insights_data/machine-id',
@@ -117,7 +119,12 @@ class DataCollector(object):
         '''
         if 'pre_command' in spec:
             precmd_alias = spec['pre_command']
-            precmd = precmds[precmd_alias]
+            try:
+                precmd = precmds[precmd_alias]
+            except LookupError:
+                logger.debug('Pre-command %s not found. Skipping %s...' %
+                             (precmd_alias, spec['command']))
+                return []
             args = self._run_pre_command(precmds[precmd_alias])
             logger.debug('Pre-command results: %s' % args)
 
@@ -131,8 +138,36 @@ class DataCollector(object):
         else:
             return [spec]
 
-    def run_old_collection(self, conf, rm_conf, options):
-        pass
+    def _run_old_collection(self, conf, rm_conf, exclude, branch_info):
+        # wrap old collection into specs for backward compatibility
+        for f in conf['files']:
+            if rm_conf and f['file'] in rm_conf['files']:
+                logger.warn("WARNING: Skipping file %s", f['file'])
+                continue
+            else:
+                file_specs = self._parse_file_spec(f)
+                for s in file_specs:
+                    # spoof archive_file_name
+                    # use _, archive path will be re-mangled anyway
+                    s['archive_file_name'] = s['file']
+                    file_spec = InsightsFile(s, exclude, self.mountpoint, self.target_name)
+                    self.archive.add_to_archive(file_spec)
+        for c in conf['commands']:
+            if rm_conf and c['command'] in rm_conf['commands']:
+                logger.warn("WARNING: Skipping command %s", c['command'])
+                continue
+            else:
+                cmd_specs = self._parse_command_spec(c, conf['pre_commands'])
+                for s in cmd_specs:
+                    # spoof archive_file_name
+                    s['archive_file_name'] = os.path.join(self.archive.cmd_dir, '_')
+                    cmd_spec = InsightsCommand(s, exclude, self.mountpoint, self.target_name)
+                    self.archive.add_to_archive(cmd_spec)
+        logger.debug('Spec collection finished.')
+        # collect metadata
+        logger.debug('Collecting metadata...')
+        self._write_branch_info(conf, branch_info)
+        logger.debug('Metadata collection finished.')
 
     def run_collection(self, conf, rm_conf, branch_info):
         '''
@@ -146,10 +181,10 @@ class DataCollector(object):
             except LookupError:
                 logger.debug('Could not parse remove.conf. Ignoring...')
 
-        # if 'spec' not in conf:
-        #     # old style collection
-        #     run_old_collection()
-        #     return
+        if 'spec' not in conf or InsightsClient.options.original_style_specs:
+            # old style collection
+            self._run_old_collection(conf, rm_conf, exclude, branch_info)
+            return
 
         for specname in conf['specs']:
             try:
@@ -166,7 +201,7 @@ class DataCollector(object):
                         else:
                             file_specs = self._parse_file_spec(spec)
                             for s in file_specs:
-                                file_spec = InsightsFile(s, exclude, self.mountpoint)
+                                file_spec = InsightsFile(s, exclude, self.mountpoint, self.target_name)
                                 self.archive.add_to_archive(file_spec)
                     elif 'command' in spec:
                         if rm_conf and spec['command'] in rm_conf['commands']:
@@ -175,7 +210,7 @@ class DataCollector(object):
                         else:
                             cmd_specs = self._parse_command_spec(spec, conf['pre_commands'])
                             for s in cmd_specs:
-                                cmd_spec = InsightsCommand(s, exclude, self.mountpoint)
+                                cmd_spec = InsightsCommand(s, exclude, self.mountpoint, self.target_name)
                                 self.archive.add_to_archive(cmd_spec)
             except LookupError:
                 logger.debug('Target type %s not found in spec %s. Skipping...' % (self.target_type, specname))

@@ -32,18 +32,20 @@ class InsightsSpec(object):
         # absolute destination inside the archive for this spec
         self.archive_path = spec['archive_file_name']
 
-    def get_output(self):
-        pass
-
 
 class InsightsCommand(InsightsSpec):
     '''
     A command spec
     '''
-    def __init__(self, spec, exclude, mountpoint):
+    def __init__(self, spec, exclude, mountpoint, target_name):
         InsightsSpec.__init__(self, spec, exclude)
         # substitute mountpoint for collection
-        self.command = spec['command'].format(CONTAINER_MOUNT_POINT=mountpoint)
+        # have to use .replace instead of .format because there are other
+        #  braced keys in the collection spec not used here
+        self.command = spec['command'].replace(
+            '{CONTAINER_MOUNT_POINT}', mountpoint).replace(
+            '{DOCKER_IMAGE_NAME}', target_name).replace(
+            '{DOCKER_CONTAINER_NAME}', target_name)
         self.mangled_command = self._mangle_command(self.command)
         # have to re-mangle archive path in case there's a pre-command arg
         self.archive_path = os.path.join(
@@ -138,12 +140,18 @@ class InsightsFile(InsightsSpec):
     '''
     A file spec
     '''
-    def __init__(self, spec, exclude, mountpoint):
+    def __init__(self, spec, exclude, mountpoint, target_name):
         InsightsSpec.__init__(self, spec, exclude)
         # substitute mountpoint for collection
-        self.real_path = spec['file'].format(CONTAINER_MOUNT_POINT=mountpoint)
-        self.relative_path = spec['file'].format(CONTAINER_MOUNT_POINT='')
-        self.archive_path = self.archive_path.format(EXPANDED_FILE_NAME=self.real_path)
+        self.real_path = spec['file'].replace(
+            '{CONTAINER_MOUNT_POINT}', mountpoint).replace(
+            '{DOCKER_IMAGE_NAME}', target_name).replace(
+            '{DOCKER_CONTAINER_NAME}', target_name)
+        self.relative_path = spec['file'].replace(
+            '{CONTAINER_MOUNT_POINT}', mountpoint).replace(
+            '{DOCKER_IMAGE_NAME}', target_name).replace(
+            '{DOCKER_CONTAINER_NAME}', target_name)
+        self.archive_path = self.archive_path.replace('{EXPANDED_FILE_NAME}', self.real_path)
 
     def get_output(self):
         '''

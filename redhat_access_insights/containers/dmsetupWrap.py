@@ -18,8 +18,9 @@ def getMajorMinor(deviceName, dmsetupLs):
     startingIndex = string.rindex(dmsetupLs, deviceName) + len(deviceName)
     endingIndex = string.index(dmsetupLs[startingIndex:], "\n") + startingIndex
     # trim the preceding tab and ()'s
-    newStr = dmsetupLs[startingIndex+2: endingIndex-1]
+    newStr = dmsetupLs[startingIndex + 2: endingIndex - 1]
     return newStr
+
 
 def getDmsetupLs():
     cmd = ['dmsetup', 'ls']
