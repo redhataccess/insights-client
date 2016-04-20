@@ -152,7 +152,6 @@ class InsightsArchive(object):
                 archive_path = os.path.join(self.cmd_dir, spec.mangled_command.lstrip('/'))
             if isinstance(spec, InsightsFile):
                 archive_path = self.get_full_archive_path(spec.relative_path.lstrip('/'))
-
         output = spec.get_output()
         if output:
             write_data_to_file(output, archive_path)

@@ -24,11 +24,7 @@ class InsightsSpec(object):
         # exclusions patterns for this spec
         self.exclude = exclude
         # pattern for spec collection
-        try:
-            self.pattern = spec['pattern']
-        except LookupError:
-            # no pattern defined -- meta spec
-            pass
+        self.pattern = spec['pattern'] if spec['pattern'] else None
         # absolute destination inside the archive for this spec
         self.archive_path = spec['archive_file_name']
 
@@ -148,7 +144,7 @@ class InsightsFile(InsightsSpec):
             '{DOCKER_IMAGE_NAME}', target_name).replace(
             '{DOCKER_CONTAINER_NAME}', target_name)
         self.relative_path = spec['file'].replace(
-            '{CONTAINER_MOUNT_POINT}', mountpoint).replace(
+            '{CONTAINER_MOUNT_POINT}', '').replace(
             '{DOCKER_IMAGE_NAME}', target_name).replace(
             '{DOCKER_CONTAINER_NAME}', target_name)
         self.archive_path = self.archive_path.replace('{EXPANDED_FILE_NAME}', self.real_path)

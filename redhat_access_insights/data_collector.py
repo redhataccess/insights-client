@@ -72,6 +72,14 @@ class DataCollector(object):
         self.archive.add_metadata_to_archive(machine_id,
                                              self._get_meta_path('machine-id', conf))
 
+    def _write_role(self):
+        pass
+        # write role -- "image" or "container" or "host"
+
+    def _write_product_code(self):
+        pass
+        # write product code -- always "docker" or "RHEL"
+
     def _write_uploader_log(self, conf):
         logger.debug('Writing insights.log to archive...')
         with open(constants.default_log_file) as logfile:
@@ -159,8 +167,8 @@ class DataCollector(object):
             else:
                 cmd_specs = self._parse_command_spec(c, conf['pre_commands'])
                 for s in cmd_specs:
-                    # spoof archive_file_name
-                    s['archive_file_name'] = os.path.join(self.archive.cmd_dir, '_')
+                    # spoof archive_file_name, will be reassembled in InsightsCommand()
+                    s['archive_file_name'] = os.path.join('insights_commands', '_')
                     cmd_spec = InsightsCommand(s, exclude, self.mountpoint, self.target_name)
                     self.archive.add_to_archive(cmd_spec)
         logger.debug('Spec collection finished.')

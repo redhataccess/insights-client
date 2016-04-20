@@ -234,7 +234,6 @@ def write_data_to_file(data, filepath):
         try:
             os.makedirs(os.path.dirname(filepath), 0o700)
         except OSError:
-            # already exists
             pass
 
         with open(filepath, 'w') as _file:

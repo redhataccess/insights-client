@@ -26,3 +26,4 @@ class InsightsConstants(object):
     pub_gpg_path = default_conf_dir + 'redhattools.pub.gpg'
     machine_id_file = default_conf_dir + 'machine-id'
     default_target = [{'type': 'host', 'name': ''}]
+    docker_image_name = None

@@ -34,7 +34,10 @@ from connection import InsightsConnection
 from archive import InsightsArchive
 from support import InsightsSupport, registration_check
 from constants import InsightsConstants as constants
-from containers import open_image, get_targets, run_in_container
+from containers import (open_image,
+                        get_targets,
+                        run_in_container,
+                        insights_client_container_is_available)
 from client_config import InsightsClient
 
 __author__ = 'Jeremy Crafts <jcrafts@redhat.com>'
@@ -334,7 +337,7 @@ def handle_startup(config, options):
         print constants.version
         sys.exit()
 
-    if options.run_in_container and containers.insights_client_container_is_available():
+    if options.run_in_container and insights_client_container_is_available():
         sys.exit(run_in_container(options))
 
     if options.validate:
@@ -533,8 +536,9 @@ def collect_data_and_upload(config, options, rc=0):
     Run through "targets" - could be just one (host, default) or many (containers+host)
     """
     # initialize collection targets
+    # for now we do either containers OR host -- not both at same time
     if options.container_mode:
-        targets = containers.get_targets()
+        targets = get_targets()
     else:
         targets = constants.default_target
 
@@ -587,8 +591,7 @@ def collect_data_and_upload(config, options, rc=0):
                     mp = container_connection.get_fs()
                 else:
                     logger.error('Could not open %s for analysis' % logging_name)
-                    return 1
-
+                    continue
             elif t['type'] == 'docker_container':
                 container_connection = open_container(t['name'])
                 logging_name = 'Docker container ' + t['name']
@@ -596,17 +599,20 @@ def collect_data_and_upload(config, options, rc=0):
                     mp = container_connection.get_fs()
                 else:
                     logger.error('Could not open %s for analysis' % logging_name)
-                    return 1
-
+                    continue
             elif t['type'] == 'host':
                 logging_name = determine_hostname()
             else:
                 logger.error('Unexpected analysis target: %s' % t['type'])
-                return 1
+                continue
 
             collection_start = time.clock()
-            archive = InsightsArchive(compressor=options.compressor, target_name=t['name'])
-            dc = DataCollector(archive, mountpoint=mp, target_name=t['name'], target_type=t['type'])
+            archive = InsightsArchive(compressor=options.compressor,
+                                      target_name=t['name'])
+            dc = DataCollector(archive,
+                               mountpoint=mp,
+                               target_name=t['name'],
+                               target_type=t['type'])
 
             logger.info('Starting to collect Insights data for %s' % logging_name)
             dc.run_collection(collection_rules, rm_conf, branch_info)
@@ -617,10 +623,6 @@ def collect_data_and_upload(config, options, rc=0):
 
             # include rule refresh time in the duration
             collection_duration = (time.clock() - collection_start) + collection_elapsed
-
-            # unmount image when we are finished
-            if t['type'] == 'docker_image':
-                mounted_image.close()
 
             if options.no_tar_file:
                 logger.info('See Insights data in %s', dc.archive.archive_dir)
