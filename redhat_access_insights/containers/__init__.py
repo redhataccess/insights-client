@@ -82,7 +82,7 @@ if HaveDocker:
         else:
             return False
 
-    def run_in_container(options):
+    def run_in_container():
         # This script runs the insights-client in a docker container.
         #
         # This is using the docker client command, it should be changed to use the python docker
@@ -103,19 +103,12 @@ if HaveDocker:
         #    /dev/                ----   also so we can mount docker images and containers
         #    /etc/redhat-access-insights --- so we can use the host's configuration and machine-id
         #    /etc/pki --- so we can use the host's Sat6 certs (if any)
-        if options.from_file:
+        if InsightsClient.options.from_file:
             logger.error('--from-file is incompatible with transfering to a container.')
             return 1
 
         docker_args = shlex.split("docker run --privileged=true -i -a stdin -a stdout -a stderr --rm -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights -v /etc/pki/:/etc/pki/ " + get_image_name() + " redhat-access-insights")
-        # remove the run-in-container argument
-        while 1:
-            try:
-                InsightsClient.argv.remove('--run-in-container')
-            except:
-                break
-        InsightsClient.argv.remove('--run-in-container')
-        return runcommand(docker_args + InsightsClient.argv[1:])
+        return runcommand(docker_args + ["--run-here"] + InsightsClient.argv[1:])
 
     def get_targets():
         client = docker.Client(base_url='unix://var/run/docker.sock')

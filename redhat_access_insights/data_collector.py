@@ -72,14 +72,6 @@ class DataCollector(object):
         self.archive.add_metadata_to_archive(machine_id,
                                              self._get_meta_path('machine-id', conf))
 
-    def _write_role(self):
-        pass
-        # write role -- "image" or "container" or "host"
-
-    def _write_product_code(self):
-        pass
-        # write product code -- always "docker" or "RHEL"
-
     def _write_uploader_log(self, conf):
         logger.debug('Writing insights.log to archive...')
         with open(constants.default_log_file) as logfile:
@@ -232,14 +224,14 @@ class DataCollector(object):
         self._write_analysis_target_id(conf)
         logger.debug('Metadata collection finished.')
 
-    def done(self, config, conf, rm_conf):
+    def done(self, conf, rm_conf):
         """
         Do finalization stuff
         """
         self._write_uploader_log(conf)
-        if config.getboolean(APP_NAME, "obfuscate"):
+        if InsightsClient.config.getboolean(APP_NAME, "obfuscate"):
             cleaner = SOSCleaner(quiet=True)
-            clean_opts = CleanOptions(self.archive.tmp_dir, config, rm_conf)
+            clean_opts = CleanOptions(self.archive.tmp_dir, rm_conf)
             fresh = cleaner.clean_report(clean_opts, self.archive.archive_dir)
             if clean_opts.keyword_file is not None:
                 os.remove(clean_opts.keyword_file.name)
@@ -251,7 +243,7 @@ class CleanOptions(object):
     """
     Options for soscleaner
     """
-    def __init__(self, tmp_dir, config, rm_conf):
+    def __init__(self, tmp_dir, rm_conf):
         self.report_dir = tmp_dir
         self.domains = []
         self.files = []
@@ -271,7 +263,7 @@ class CleanOptions(object):
             except LookupError:
                 pass
 
-        if config.getboolean(APP_NAME, "obfuscate_hostname"):
+        if InsightsClient.config.getboolean(APP_NAME, "obfuscate_hostname"):
             self.hostname_path = "insights_commands/hostname"
         else:
             self.hostname_path = None

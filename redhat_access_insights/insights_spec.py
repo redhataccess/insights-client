@@ -48,6 +48,7 @@ class InsightsCommand(InsightsSpec):
             os.path.dirname(self.archive_path), self.mangled_command)
         if not six.PY3:
             self.command = self.command.encode('utf-8', 'ignore')
+        self.black_list = ['rm', 'kill', 'reboot', 'shutdown']
 
     def _mangle_command(self, command, name_max=255):
         """
@@ -69,8 +70,7 @@ class InsightsCommand(InsightsSpec):
         args = shlex.split(self.command)
 
         # never execute this stuff
-        black_list = ['rm', 'kill', 'reboot', 'shutdown']
-        if set.intersection(set(args), set(black_list)):
+        if set.intersection(set(args), set(self.black_list)):
             raise RuntimeError("Command Blacklist")
 
         try:

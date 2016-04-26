@@ -14,7 +14,7 @@ APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
 
 
-def registration_check(config):
+def registration_check():
     # check local registration record
     if os.path.isfile(constants.registered_file):
         local_record = 'System is registered.'
@@ -26,7 +26,7 @@ def registration_check(config):
         with open(constants.unregistered_file) as reg_file:
             local_record += ' Unregistered at ' + reg_file.readline()
 
-    pconn = InsightsConnection(config)
+    pconn = InsightsConnection()
     api_reg_status = pconn.api_registration_check()
     if type(api_reg_status) is bool:
         if api_reg_status:
@@ -47,8 +47,8 @@ class InsightsSupport(object):
     '''
     Build the support logfile
     '''
-    def __init__(self, config):
-        self.config = config
+    def __init__(self):
+        pass
 
     def collect_support_info(self):
         '''
@@ -58,7 +58,7 @@ class InsightsSupport(object):
         cfg_block = []
 
         logger.info('Insights version: %s' % (constants.version))
-        cfg_block += registration_check(self.config)
+        cfg_block += registration_check(InsightsClient.config)
 
         lastupload = 'never'
         if os.path.isfile(constants.lastupload_file):
@@ -66,11 +66,11 @@ class InsightsSupport(object):
                 lastupload = upl_file.readline().strip()
         cfg_block.append('Last successful upload was ' + lastupload)
 
-        cfg_block.append('auto_config: ' + str(self.config.getboolean(APP_NAME, 'auto_config')))
-        if self.config.get(APP_NAME, 'proxy'):
+        cfg_block.append('auto_config: ' + str(InsightsClient.config.getboolean(APP_NAME, 'auto_config')))
+        if InsightsClient.config.get(APP_NAME, 'proxy'):
             obfuscated_proxy = re.sub(r'(.*)(:)(.*)(@.*)',
                                       r'\1\2********\4',
-                                      self.config.get(APP_NAME, 'proxy'))
+                                      InsightsClient.config.get(APP_NAME, 'proxy'))
         else:
             obfuscated_proxy = 'None'
         cfg_block.append('proxy: ' + obfuscated_proxy)
