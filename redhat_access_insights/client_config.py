@@ -243,7 +243,8 @@ def parse_config_file(conf_file):
          'password': '',
          'systemid': None,
          'proxy': None,
-         'insecure_connection': 'False'})
+         'insecure_connection': 'False',
+         'no_schedule': 'False'})
     try:
         parsedconfig.read(conf_file)
     except ConfigParser.Error:

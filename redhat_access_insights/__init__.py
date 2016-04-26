@@ -230,14 +230,8 @@ def handle_startup():
 
 
 def handle_branch_info_error(msg):
-    if InsightsClient.options.offline:
-        logger.warning(msg)
-        logger.warning("Assuming remote branch and leaf value of -1")
-        return {'remote_branch': -1,
-                'remote_leaf': -1}
-    else:
-        logger.error("ERROR: %s", msg)
-        sys.exit()
+    logger.error("ERROR: %s", msg)
+    sys.exit(1)
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -341,17 +335,22 @@ def collect_data_and_upload(rc=0):
     else:
         targets = constants.default_target
 
-    pconn = InsightsConnection()
-    # TODO: change these err msgs to be more meaningful , i.e.
-    # "could not determine login information"
-    try:
-        branch_info = pconn.branch_info()
-    except requests.ConnectionError:
-        branch_info = handle_branch_info_error(
-            "Could not connect to determine branch information")
-    except LookupError:
-        branch_info = handle_branch_info_error(
-            "Could not determine branch information")
+    if InsightsClient.options.offline:
+        logger.warning("Assuming remote branch and leaf value of -1")
+        pconn = None
+        branch_info = constants.default_branch_info
+    else:
+        pconn = InsightsConnection()
+        # TODO: change these err msgs to be more meaningful , i.e.
+        # "could not determine login information"
+        try:
+            branch_info = pconn.branch_info()
+        except requests.ConnectionError:
+            branch_info = handle_branch_info_error(
+                "Could not connect to determine branch information")
+        except LookupError:
+            branch_info = handle_branch_info_error(
+                "Could not determine branch information")
     pc = InsightsConfig(pconn)
 
     # load config from stdin/file if specified
