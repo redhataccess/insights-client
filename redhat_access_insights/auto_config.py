@@ -21,7 +21,7 @@ def verify_connectivity():
     for item, value in InsightsClient.config.items(APP_NAME):
         if item != 'password' and item != 'proxy' and item != 'systemid':
             logger.debug("%s:%s", item, value)
-    ic = InsightsConnection(InsightsClient.config)
+    ic = InsightsConnection()
     try:
         branch_info = ic.branch_info()
     except requests.ConnectionError as e:

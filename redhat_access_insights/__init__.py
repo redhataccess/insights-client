@@ -117,6 +117,11 @@ def handle_startup():
         validate_remove_file()
         sys.exit()
 
+    # do auto_config here, for connection-related 'do X and exit' options
+    if InsightsClient.config.getboolean(APP_NAME, 'auto_config'):
+        # Try to discover if we are connected to a satellite or not
+        try_auto_configuration()
+
     if InsightsClient.options.test_connection:
         pconn = InsightsConnection()
         rc = pconn.test_connection()
@@ -144,10 +149,6 @@ def handle_startup():
         # TODO: config updates option, but in GPG option, the option updates
         # the config.  make this consistent
         InsightsClient.options.update = True
-
-    if InsightsClient.config.getboolean(APP_NAME, 'auto_config'):
-        # Try to discover if we are connected to a satellite or not
-        try_auto_configuration()
 
     # ----modifier options----
     if InsightsClient.options.no_gpg:
@@ -300,7 +301,7 @@ def register():
                 config_file.write(status['output'])
                 config_file.flush()
     pconn = InsightsConnection()
-    return pconn.register(InsightsClient.options)
+    return pconn.register()
 
 
 def collect_data_and_upload(rc=0):
@@ -355,6 +356,7 @@ def collect_data_and_upload(rc=0):
         archive = None
         container_connection = None
         mp = None
+        obfuscate = None
 
         try:
             if t['type'] == 'docker_image':
@@ -430,17 +432,22 @@ def collect_data_and_upload(rc=0):
                                      constants.default_log_file)
                         rc = 1
 
+            if InsightsClient.options.keep_archive:
+                logger.info('Insights data retained in %s', tar_file)
+                return rc
             if obfuscate:
                 logger.info('Obfuscated Insights data retained in %s',
                             os.path.dirname(tar_file))
-            elif InsightsClient.options.keep_archive:
-                logger.info('Insights data retained in %s', tar_file)
+            archive.delete_archive_dir()
 
         finally:
             # called on loop iter end or unexpected exit
             if container_connection:
                 container_connection.close()
-            if archive and not (InsightsClient.options.keep_archive or InsightsClient.options.offline):
+            if archive and not (InsightsClient.options.keep_archive or
+                                InsightsClient.options.offline or
+                                InsightsClient.options.no_tar_file or
+                                obfuscate):
                 archive.delete_tmp_dir()
     return rc
 
@@ -463,6 +470,7 @@ def _main():
     if os.geteuid() is not 0:
         sys.exit("Red Hat Access Insights must be run as root")
 
+    global logger
     sys.excepthook = handle_exception
 
     parser = optparse.OptionParser()
@@ -477,7 +485,6 @@ def _main():
     InsightsClient.config = config
     InsightsClient.options = options
     InsightsClient.argv = sys.argv
-
     handler = set_up_logging()
 
     if InsightsClient.config.getboolean(APP_NAME, 'trace'):

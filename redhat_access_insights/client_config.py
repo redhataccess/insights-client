@@ -2,6 +2,13 @@
 Declare global config here so that other modules can import it
 Gets initialized in __init__._main()
 '''
+import logging
+import optparse
+import ConfigParser
+from constants import InsightsConstants as constants
+
+APP_NAME = constants.app_name
+logger = logging.getLogger(APP_NAME)
 
 
 class InsightsClient:
