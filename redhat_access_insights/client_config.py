@@ -68,6 +68,16 @@ def set_up_options(parser):
                       action="store_true",
                       dest="silent",
                       default=False)
+    parser.add_option('--enable-schedule',
+                      help='Enable automatic scheduling for collection to run',
+                      action="store_true",
+                      dest='enable_schedule',
+                      default=False)
+    parser.add_option('--disable-schedule',
+                      help='Disable automatic scheduling',
+                      action="store_true",
+                      dest='disable_schedule',
+                      default=False)
     parser.add_option('-c', '--conf',
                       help="Pass a custom config file",
                       dest="conf",

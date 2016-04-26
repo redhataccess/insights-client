@@ -117,6 +117,24 @@ def handle_startup():
         validate_remove_file()
         sys.exit()
 
+    if InsightsClient.options.enable_schedule and InsightsClient.options.disable_schedule:
+        logger.error('Conflicting options: --enable-schedule and --disable-schedule')
+        sys.exit(1)
+
+    if InsightsClient.options.enable_schedule:
+        # enable automatic scheduling
+        InsightsSchedule()
+        InsightsClient.config.set(APP_NAME, 'no_schedule', False)
+        logger.info('Automatic scheduling for Insights has been enabled.')
+        sys.exit()
+
+    if InsightsClient.options.disable_schedule:
+        # disable automatic schedling
+        InsightsSchedule(set_cron=False).remove_scheduling()
+        InsightsClient.config.set(APP_NAME, 'no_schedule', True)
+        logger.info('Automatic scheduling for Insights has been disabled.')
+        sys.exit()
+
     # do auto_config here, for connection-related 'do X and exit' options
     if InsightsClient.config.getboolean(APP_NAME, 'auto_config'):
         # Try to discover if we are connected to a satellite or not
@@ -149,6 +167,13 @@ def handle_startup():
         # TODO: config updates option, but in GPG option, the option updates
         # the config.  make this consistent
         InsightsClient.options.update = True
+
+    # disable automatic scheduling if it was set in the config, and if the job exists
+    if InsightsClient.config.getboolean(APP_NAME, 'no_schedule'):
+        cron = InsightsSchedule(set_cron=False)
+        if cron.already_linked():
+            cron.remove_scheduling()
+            logger.debug('Automatic scheduling for Insights has been disabled.')
 
     # ----modifier options----
     if InsightsClient.options.no_gpg:
