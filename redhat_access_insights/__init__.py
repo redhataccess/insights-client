@@ -136,7 +136,7 @@ def handle_startup():
         sys.exit()
 
     # do auto_config here, for connection-related 'do X and exit' options
-    if InsightsClient.config.getboolean(APP_NAME, 'auto_config'):
+    if InsightsClient.config.getboolean(APP_NAME, 'auto_config') and not InsightsClient.options.offline:
         # Try to discover if we are connected to a satellite or not
         try_auto_configuration()
 
@@ -163,7 +163,7 @@ def handle_startup():
         if item != 'password' and item != 'proxy':
             logger.debug("%s:%s", item, value)
 
-    if InsightsClient.config.getboolean(APP_NAME, 'auto_update'):
+    if InsightsClient.config.getboolean(APP_NAME, 'auto_update') and not InsightsClient.options.offline:
         # TODO: config updates option, but in GPG option, the option updates
         # the config.  make this consistent
         InsightsClient.options.update = True

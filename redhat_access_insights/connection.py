@@ -81,9 +81,13 @@ class InsightsConnection(object):
             self.branch_info_url = self.base_url + "/v1/branch_info"
         self.authmethod = InsightsClient.config.get(APP_NAME, 'authmethod')
         self.systemid = InsightsClient.config.get(APP_NAME, 'systemid')
-        self.get_proxies()
-        self._validate_hostnames()
-        self.session = self._init_session()
+
+        # ignore actual connection stuff if in offline mode --
+        #   but we need the connection instance for other functionality
+        if not InsightsClient.options.offline:
+            self.get_proxies()
+            self._validate_hostnames()
+            self.session = self._init_session()
         # need this global -- [barfing intensifies]
         # tuple of self-signed cert flag & cert chain list
         self.cert_chain = (False, [])
