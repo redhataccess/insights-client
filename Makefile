@@ -3,13 +3,25 @@ PKGNAME=redhat-access-insights
 SRPM=$(RPMTOP)/SRPMS/$(PKGNAME)-*.src.rpm
 TARBALL=$(RPMTOP)/$(PKGNAME)-*.tar.gz
 RPM=$(RPMTOP)/RPMS/noarch/$(PKGNAME)*.rpm
+CONSTANTS=$(TOPDIR)/redhat_access_insights/constants.py
+PY_SDIST=python setup.py sdist
+CONF_ORIG=default_conf_dir = '\/etc\/' + app_name + '\/'
+CONF_PORT=default_conf_dir = package_path + '\/etc\/'
 
 all: rpm
 
 .PHONY: tarball
 tarball: $(TARBALL)
 $(TARBALL): Makefile
-	python setup.py sdist
+	$(PY_SDIST)
+
+.PHONY: tar_portable
+tar_portable: $(TAR_PORTABLE)
+$(TAR_PORTABLE): Makefile
+	sed -i "s/$(CONF_ORIG)/$(CONF_PORT)/" $(CONSTANTS)
+	$(PY_SDIST)
+	sed -i "s/$(CONF_PORT)/$(CONF_ORIG)/" $(CONSTANTS)
+	mv $(TARBALL) $(RPMTOP)/..
 
 .PHONY: srpm rpm 
 srpm: $(SRPM)

@@ -8,6 +8,8 @@ class InsightsConstants(object):
     version = '1.1.0'
     auth_method = 'BASIC'
     log_level = 'DEBUG'
+    package_path = os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))
     sleep_time = 300
     user_agent = app_name + '/' + version
     default_conf_dir = '/etc/' + app_name + '/'
