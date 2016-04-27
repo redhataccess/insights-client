@@ -1,12 +1,15 @@
-RPMTOP=$(shell bash -c "pwd -P")/dist
+TOPDIR=$(shell bash -c "pwd -P")
+RPMTOP=$(TOPDIR)/dist
 PKGNAME=redhat-access-insights
 SRPM=$(RPMTOP)/SRPMS/$(PKGNAME)-*.src.rpm
 TARBALL=$(RPMTOP)/$(PKGNAME)-*.tar.gz
+TAR_PORTABLE=$(TOPDIR)/$(PKGNAME)-*.tar.gz
 RPM=$(RPMTOP)/RPMS/noarch/$(PKGNAME)*.rpm
 CONSTANTS=$(TOPDIR)/redhat_access_insights/constants.py
 PY_SDIST=python setup.py sdist
 CONF_ORIG=default_conf_dir = '\/etc\/' + app_name + '\/'
 CONF_PORT=default_conf_dir = package_path + '\/etc\/'
+
 
 all: rpm
 
@@ -25,7 +28,7 @@ $(TAR_PORTABLE): Makefile
 
 .PHONY: srpm rpm 
 srpm: $(SRPM)
-$(SRPM): $(TARBALL) $(SPEC_FILE_IN)
+$(SRPM): $(TAR_PORTABLE) $(TARBALL) $(SPEC_FILE_IN)
 	mkdir -p $(RPMTOP)/{RPMS,SPECS,SRPMS,SOURCES,BUILD,BUILDROOT}
 	rpmbuild -ts --define="_topdir $(RPMTOP)" --define="_sourcedir dist" $(TARBALL)
 
@@ -35,20 +38,11 @@ $(RPM): $(SRPM)
 	rpmbuild --buildroot $(RPMTOP)/BUILDROOT --define="_topdir $(RPMTOP)" --rebuild $<
 
 install: $(RPM)
-	if ! sudo yum install -y $(RPM); then \
-	  sudo yum reinstall -y $(RPM);      \
-	fi
-
-
-
-install-docker-image:
-	sudo docker build -t redhat-insights/insights-client .
-
-uninstall-docker-image:
-	sudo docker rmi redhat-insights/insights-client
+	sudo yum install -y $(RPM)
 
 clean:
 	rm -rf dist
 	rm -f MANIFEST
 	rm -rf *.egg*
+	rm -f $(TAR_PORTABLE)
 	find . -type f -name '*.pyc' -delete
