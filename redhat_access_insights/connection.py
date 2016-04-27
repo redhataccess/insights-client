@@ -14,6 +14,7 @@ from utilities import (determine_hostname,
                        write_unregistered_file)
 from cert_auth import rhsmCertificate
 from constants import InsightsConstants as constants
+from client_config import InsightsClient
 
 import xml.etree.ElementTree as ET
 import warnings
@@ -47,40 +48,40 @@ class InsightsConnection(object):
     Helper class to manage details about the connection
     """
 
-    def __init__(self, config):
+    def __init__(self):
         self.user_agent = constants.user_agent
-        self.username = config.get(APP_NAME, "username")
-        self.password = config.get(APP_NAME, "password")
+        self.username = InsightsClient.config.get(APP_NAME, "username")
+        self.password = InsightsClient.config.get(APP_NAME, "password")
 
-        self.cert_verify = config.get(APP_NAME, "cert_verify")
+        self.cert_verify = InsightsClient.config.get(APP_NAME, "cert_verify")
         if self.cert_verify.lower() == 'false':
             self.cert_verify = False
         elif self.cert_verify.lower() == 'true':
             self.cert_verify = True
 
         protocol = "https://"
-        insecure_connection = config.getboolean(APP_NAME,
-                                                "insecure_connection")
+        insecure_connection = InsightsClient.config.getboolean(APP_NAME,
+                                                               "insecure_connection")
         if insecure_connection:
             # This really should not be used.
             protocol = "http://"
             self.cert_verify = False
 
-        self.auto_config = config.getboolean(APP_NAME,
-                                             'auto_config')
-        self.base_url = protocol + config.get(APP_NAME, "base_url")
-        self.upload_url = config.get(APP_NAME, "upload_url")
+        self.auto_config = InsightsClient.config.getboolean(APP_NAME,
+                                                            'auto_config')
+        self.base_url = protocol + InsightsClient.config.get(APP_NAME, "base_url")
+        self.upload_url = InsightsClient.config.get(APP_NAME, "upload_url")
         if self.upload_url is None:
             self.upload_url = self.base_url + "/uploads"
-        self.api_url = config.get(APP_NAME, "api_url")
+        self.api_url = InsightsClient.config.get(APP_NAME, "api_url")
         if self.api_url is None:
             self.api_url = self.base_url
-        self.branch_info_url = config.get(APP_NAME, "branch_info_url")
+        self.branch_info_url = InsightsClient.config.get(APP_NAME, "branch_info_url")
         if self.branch_info_url is None:
             self.branch_info_url = self.base_url + "/v1/branch_info"
-        self.authmethod = config.get(APP_NAME, 'authmethod')
-        self.systemid = config.get(APP_NAME, 'systemid')
-        self.get_proxies(config)
+        self.authmethod = InsightsClient.config.get(APP_NAME, 'authmethod')
+        self.systemid = InsightsClient.config.get(APP_NAME, 'systemid')
+        self.get_proxies()
         self._validate_hostnames()
         self.session = self._init_session()
         # need this global -- [barfing intensifies]
@@ -125,7 +126,7 @@ class InsightsConnection(object):
                 connection.proxy_headers = auth_map
         return session
 
-    def get_proxies(self, config):
+    def get_proxies(self):
         """
         Determine proxy configuration
         """
@@ -148,7 +149,7 @@ class InsightsConnection(object):
             logger.debug("ENV Proxy: %s", env_proxy)
             proxies = {"https": env_proxy}
 
-        conf_proxy = config.get(APP_NAME, 'proxy')
+        conf_proxy = InsightsClient.config.get(APP_NAME, 'proxy')
 
         if ((conf_proxy is not None and
              conf_proxy.lower() != 'None'.lower() and
@@ -445,7 +446,7 @@ class InsightsConnection(object):
 
         return branch_info
 
-    def create_system(self, options, new_machine_id=False):
+    def create_system(self, new_machine_id=False):
         """
         Create the machine via the API
         """
@@ -480,8 +481,8 @@ class InsightsConnection(object):
                 'remote_branch': remote_branch,
                 'remote_leaf': remote_leaf,
                 'hostname': client_hostname}
-        if options.display_name is not None:
-            data['display_name'] = options.display_name
+        if InsightsClient.options.display_name is not None:
+            data['display_name'] = InsightsClient.options.display_name
         data = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         post_system_url = self.api_url + '/v1/systems'
@@ -500,10 +501,11 @@ class InsightsConnection(object):
             self.test_connection(1)
         return system
 
-    def do_group(self, group_id):
+    def do_group(self):
         """
         Do grouping on register
         """
+        group_id = InsightsClient.options.group
         api_group_id = None
         headers = {'Content-Type': 'application/json'}
         group_path = self.api_url + '/v1/groups'
@@ -577,7 +579,7 @@ class InsightsConnection(object):
             logger.debug(e)
             logger.error("Could not unregister this system")
 
-    def register(self, options):
+    def register(self):
         """
         Register this machine
         """
@@ -587,11 +589,11 @@ class InsightsConnection(object):
         client_hostname = determine_hostname()
         # This will undo a blacklist
         logger.debug("API: Create system")
-        system = self.create_system(options, new_machine_id=False)
+        system = self.create_system(new_machine_id=False)
 
         # If we get a 409, we know we need to generate a new machine-id
         if system.status_code == 409:
-            system = self.create_system(options, new_machine_id=True)
+            system = self.create_system(new_machine_id=True)
         self.handle_fail_rcs(system)
 
         logger.debug("System: %s", system.json())
@@ -599,13 +601,13 @@ class InsightsConnection(object):
         message = system.headers.get("x-rh-message", "")
 
         # Do grouping
-        if options.group is not None:
-            self.do_group(options.group)
+        if InsightsClient.options.group is not None:
+            self.do_group()
 
-        if options.group is not None:
-            return (message, client_hostname, options.group, options.display_name)
-        elif options.display_name is not None:
-            return (message, client_hostname, "None", options.display_name)
+        if InsightsClient.options.group is not None:
+            return (message, client_hostname, InsightsClient.options.group, InsightsClient.options.display_name)
+        elif InsightsClient.options.display_name is not None:
+            return (message, client_hostname, "None", InsightsClient.options.display_name)
         else:
             return (message, client_hostname, "None", "")
 

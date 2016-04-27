@@ -9,7 +9,7 @@
 
 import logging
 
-from redhat_access_insights.constants import InsightsConstants as constants
+from constants import InsightsConstants as constants
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
@@ -33,7 +33,7 @@ if HaveDocker:
     import shlex
     import subprocess
 
-    from redhat_access_insights import InsightsClient
+    from client_config import InsightsClient
 
     def run_command_very_quietly(cmdline):
         # this takes a string (not an array)
@@ -64,7 +64,7 @@ if HaveDocker:
             return constants.docker_image_name
 
     def pull_image(image):
-        return runcommand(shlex.split("docker pull") + [ image ])
+        return runcommand(shlex.split("docker pull") + [image])
 
     def insights_client_container_is_available():
         image_name = get_image_name()
@@ -82,7 +82,7 @@ if HaveDocker:
         else:
             return False
 
-    def run_in_container(options):
+    def run_in_container():
         # This script runs the insights-client in a docker container.
         #
         # This is using the docker client command, it should be changed to use the python docker
@@ -103,13 +103,12 @@ if HaveDocker:
         #    /dev/                ----   also so we can mount docker images and containers
         #    /etc/redhat-access-insights --- so we can use the host's configuration and machine-id
         #    /etc/pki --- so we can use the host's Sat6 certs (if any)
-        if options.from_file:
+        if InsightsClient.options.from_file:
             logger.error('--from-file is incompatible with transfering to a container.')
             return 1
 
         docker_args = shlex.split("docker run --privileged=true -i -a stdin -a stdout -a stderr --rm -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/:/var/lib/docker/ -v /dev/:/dev/ -v /etc/redhat-access-insights/:/etc/redhat-access-insights -v /etc/pki/:/etc/pki/ " + get_image_name() + " redhat-access-insights")
-
-        return runcommand(docker_args + [ "--run-here" ] + InsightsClient.argv[1:])
+        return runcommand(docker_args + ["--run-here"] + InsightsClient.argv[1:])
 
     def get_targets():
         client = docker.Client(base_url='unix://var/run/docker.sock')
@@ -120,7 +119,6 @@ if HaveDocker:
             for d in client.containers(all=True, trunc=False):
                 targets.append({'type': 'docker_container', 'name': d['Id']})
         return targets
-
 
     # Check to see if we have access to Atomic through the 'atomic' command
     HaveAtomic = False
@@ -162,7 +160,7 @@ if HaveDocker:
                 return AtomicTemporaryMountPoint(image_id, mount_point)
             else:
                 logger.error('Could not mount Image Id %s On %s' % (image_id, mount_point))
-                shutil.rmtree(mount_point, ignore_errors=True)
+                shutil.rmtree(self.mount_point, ignore_errors=True)
                 return None
 
         def open_container(container_id):
@@ -172,7 +170,7 @@ if HaveDocker:
                 return AtomicTemporaryMountPoint(container_id, mount_point)
             else:
                 logger.error('Could not mount Container Id %s On %s' % (container_id, mount_point))
-                shutil.rmtree(mount_point, ignore_errors=True)
+                shutil.rmtree(self.mount_point, ignore_errors=True)
                 return None
 
     else:
@@ -201,7 +199,7 @@ if HaveDocker:
             global HaveAtomicException
             if HaveAtomicException:
                 logger.debug("using docker client to open images and containers")
-                logger.debug("atomic is either not installed or not accessable %s" % HaveAtomicException);
+                logger.debug("atomic is either not installed or not accessable %s" % HaveAtomicException)
                 HaveAtomicException = None
             client = docker.Client(base_url='unix://var/run/docker.sock')
             if client:
@@ -212,7 +210,7 @@ if HaveDocker:
                     return DockerTemporaryMountPoint(client, image_id, mount_point, cid)
                 else:
                     logger.error('Could not mount Image Id %s On %s' % (image_id, mount_point))
-                    shutil.rmtree(mount_point, ignore_errors=True)
+                    shutil.rmtree(self.mount_point, ignore_errors=True)
                     return None
 
             else:
@@ -223,14 +221,14 @@ if HaveDocker:
             global HaveAtomicException
             if HaveAtomicException:
                 logger.debug("using docker client to open images and containers")
-                logger.debug("atomic is either not installed or not accessable %s" % HaveAtomicException);
+                logger.debug("atomic is either not installed or not accessable %s" % HaveAtomicException)
                 HaveAtomicException = None
             client = docker.Client(base_url='unix://var/run/docker.sock')
             if client:
                 matching_containers = []
                 for each in client.containers(all=True, trunc=False):
                     if container_id == each['Id']:
-                        matching_containers = [ each ]
+                        matching_containers = [each]
                         break
                 if len(matching_containers) == 1:
                     mount_point = tempfile.mkdtemp()
@@ -240,7 +238,7 @@ if HaveDocker:
                         return DockerTemporaryMountPoint(client, container_id, mount_point, cid)
                     else:
                         logger.error('Could not mount Container Id %s On %s' % (container_id, mount_point))
-                        shutil.rmtree(mount_point, ignore_errors=True)
+                        shutil.rmtree(self.mount_point, ignore_errors=True)
                         return None
 
                 else:
@@ -282,31 +280,30 @@ else:
         # Don't print error here, this is the way to tell if running in a container is possible
         # but do print debug info
         logger.debug('not transfering to insights-client image')
-        logger.debug('Docker is either not installed or not accessable: %s' % \
+        logger.debug('Docker is either not installed or not accessable: %s' %
                      (HaveDockerException if HaveDockerException else ''))
         return False
 
     def run_in_container(options):
         logger.error('Could not connect to docker to examine image %s' % options.analyse_docker_image)
-        logger.error('Docker is either not installed or not accessable: %s' % \
+        logger.error('Docker is either not installed or not accessable: %s' %
                      (HaveDockerException if HaveDockerException else ''))
         return 1
 
     def get_targets():
         logger.debug('Could not connect to docker to collect from images and containers')
-        logger.debug('Docker is either not installed or not accessable: %s' % \
+        logger.debug('Docker is either not installed or not accessable: %s' %
                      (HaveDockerException if HaveDockerException else ''))
         return []
 
     def open_image(image_id):
         logger.error('Could not connect to docker to examine image %s' % image_id)
-        logger.error('Docker is either not installed or not accessable: %s' % \
+        logger.error('Docker is either not installed or not accessable: %s' %
                      (HaveDockerException if HaveDockerException else ''))
         return None
 
     def open_container(container_id):
         logger.error('Could not connect to docker to examine container %s' % container_id)
-        logger.error('Docker is either not installed or not accessable: %s' % \
+        logger.error('Docker is either not installed or not accessable: %s' %
                      (HaveDockerException if HaveDockerException else ''))
         return None
-

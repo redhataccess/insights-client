@@ -10,6 +10,7 @@ import os
 from subprocess import Popen, PIPE, STDOUT
 from tempfile import NamedTemporaryFile
 from constants import InsightsConstants as constants
+from client_config import InsightsClient
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
@@ -20,7 +21,7 @@ class InsightsConfig(object):
     Insights configuration
     """
 
-    def __init__(self, config, conn):
+    def __init__(self, conn):
         """
         Load config from parent
         """
@@ -28,15 +29,15 @@ class InsightsConfig(object):
         self.remove_file = constants.collection_remove_file
         self.collection_rules_file = constants.collection_rules_file
         protocol = "https://"
-        insecure_connection = config.getboolean(APP_NAME, "insecure_connection")
+        insecure_connection = InsightsClient.config.getboolean(APP_NAME, "insecure_connection")
         if insecure_connection:
             # This really should not be used.
             protocol = "http://"
-        self.base_url = protocol + config.get(APP_NAME, 'base_url')
-        self.collection_rules_url = config.get(APP_NAME, 'collection_rules_url')
+        self.base_url = protocol + InsightsClient.config.get(APP_NAME, 'base_url')
+        self.collection_rules_url = InsightsClient.config.get(APP_NAME, 'collection_rules_url')
         if self.collection_rules_url is None:
             self.collection_rules_url = self.base_url + '/v1/static/uploader.json'
-        self.gpg = config.getboolean(APP_NAME, 'gpg')
+        self.gpg = InsightsClient.config.getboolean(APP_NAME, 'gpg')
         self.conn = conn
 
     def validate_gpg_sig(self, path, sig=None):
@@ -90,7 +91,7 @@ class InsightsConfig(object):
         """
         Download the collection rules
         """
-        logger.debug("Attempting to download collection rules from %s",
+        logger.debug("Attemping to download collection rules from %s",
                      self.collection_rules_url)
 
         req = self.conn.session.get(
@@ -119,9 +120,9 @@ class InsightsConfig(object):
             return json.loads(req.text)
 
     def fetch_gpg(self):
-        logger.debug("Attempting to download collection "
-                    "rules GPG signature from %s",
-                    self.collection_rules_url + ".asc")
+        logger.debug("Attemping to download collection "
+                     "rules GPG signature from %s",
+                     self.collection_rules_url + ".asc")
 
         headers = ({'accept': 'text/plain'})
         config_sig = self.conn.session.get(self.collection_rules_url + '.asc',
@@ -170,10 +171,10 @@ class InsightsConfig(object):
                 rm_conf[item] = value.strip().split(',')
             logger.warn("WARNING: Excluding data from files")
         if stdin_config:
-            rules_fp = NamedTemporaryFile()
+            rules_fp = NamedTemporaryFile(delete=False)
             rules_fp.write(stdin_config["uploader.json"])
             rules_fp.flush()
-            sig_fp = NamedTemporaryFile()
+            sig_fp = NamedTemporaryFile(delete=False)
             sig_fp.write(stdin_config["sig"])
             sig_fp.flush()
             if not self.gpg or self.validate_gpg_sig(rules_fp.name, sig_fp.name):

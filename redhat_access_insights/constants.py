@@ -5,7 +5,7 @@ Constants
 
 class InsightsConstants(object):
     app_name = 'redhat-access-insights'
-    version = '1.0.8'
+    version = '1.1.0'
     auth_method = 'BASIC'
     log_level = 'DEBUG'
     sleep_time = 300
@@ -25,4 +25,6 @@ class InsightsConstants(object):
     lastupload_file = default_conf_dir + '.lastupload'
     pub_gpg_path = default_conf_dir + 'redhattools.pub.gpg'
     machine_id_file = default_conf_dir + 'machine-id'
+    default_target = [{'type': 'host', 'name': ''}]
+    default_branch_info = {'remote_branch': -1, 'remote_leaf': -1}
     docker_image_name = None

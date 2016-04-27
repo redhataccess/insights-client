@@ -7,36 +7,42 @@ import sys
 import logging
 import uuid
 import datetime
+import shlex
+from subprocess import Popen, PIPE
 from constants import InsightsConstants as constants
 
 logger = logging.getLogger(constants.app_name)
 
 
-def determine_hostname():
+def determine_hostname(container=None):
     """
     Find fqdn if we can
     """
-    socket_gethostname = socket.gethostname()
-    socket_fqdn = socket.getfqdn()
+    if container:
+        # use container name as "hostname" for container
+        return container
+    else:
+        socket_gethostname = socket.gethostname()
+        socket_fqdn = socket.getfqdn()
 
-    try:
-        socket_ex = socket.gethostbyname_ex(socket_gethostname)[0]
-    except LookupError:
-        socket_ex = ''
-    except socket.gaierror:
-        socket_ex = ''
+        try:
+            socket_ex = socket.gethostbyname_ex(socket_gethostname)[0]
+        except LookupError:
+            socket_ex = ''
+        except socket.gaierror:
+            socket_ex = ''
 
-    gethostname_len = len(socket_gethostname)
-    fqdn_len = len(socket_fqdn)
-    ex_len = len(socket_ex)
+        gethostname_len = len(socket_gethostname)
+        fqdn_len = len(socket_fqdn)
+        ex_len = len(socket_ex)
 
-    if fqdn_len > gethostname_len or ex_len > gethostname_len:
-        if "localhost" not in socket_ex and len(socket_ex):
-            return socket_ex
-        if "localhost" not in socket_fqdn:
-            return socket_fqdn
+        if fqdn_len > gethostname_len or ex_len > gethostname_len:
+            if "localhost" not in socket_ex and len(socket_ex):
+                return socket_ex
+            if "localhost" not in socket_fqdn:
+                return socket_fqdn
 
-    return socket_gethostname
+        return socket_gethostname
 
 
 def _write_machine_id(machine_id):
@@ -44,14 +50,6 @@ def _write_machine_id(machine_id):
     Write machine id out to disk
     """
     logger.debug("Creating %s", constants.machine_id_file)
-
-    # make sure the directory actually exists
-    try:
-        os.makedirs(constants.default_conf_dir)
-    except OSError:
-        # ignore EEXISTS errors
-        pass
-
     machine_id_file = open(constants.machine_id_file, "w")
     machine_id_file.write(machine_id)
     machine_id_file.flush()
@@ -127,6 +125,7 @@ def delete_machine_id():
     if os.path.isfile(constants.machine_id_file):
         os.remove(constants.machine_id_file)
 
+
 def generate_analysis_target_id(analysis_target, name):
     # this function generates 'machine-id's for analysis target's that
     # might not be hosts.
@@ -166,9 +165,10 @@ def generate_analysis_target_id(analysis_target, name):
     if analysis_target == "host":
         return generate_machine_id()
     elif analysis_target == "docker_image" or analysis_target == "docker_container":
-        return str(uuid.uuid5(uuid.UUID(generate_machine_id()), name.encode('utf8')))
+        return generate_container_id(name)
     else:
         raise ValueError("Unknown analysis target: %s" % analysis_target)
+
 
 def _expand_paths(path):
     """
@@ -189,22 +189,6 @@ def _expand_paths(path):
         return paths
     else:
         logger.debug("Could not expand %s", path)
-
-
-def write_file_with_text(path, text):
-    """
-    Write to file with text
-    """
-    try:
-        os.makedirs(os.path.dirname(path))
-    except OSError:
-        # This is really chatty
-        # logger.debug("Could not create dir for %s", os.path.dirname(path))
-        pass
-
-    file_from_text = open(path, 'w')
-    file_from_text.write(text.encode('utf8'))
-    file_from_text.close()
 
 
 def write_lastupload_file():
@@ -243,6 +227,19 @@ def validate_remove_file():
     logger.info("JSON parsed correctly")
 
 
+def write_data_to_file(data, filepath):
+        '''
+        Write data to file
+        '''
+        try:
+            os.makedirs(os.path.dirname(filepath), 0o700)
+        except OSError:
+            pass
+
+        with open(filepath, 'w') as _file:
+            _file.write(data.encode('utf8'))
+
+
 def magic_plan_b(filename):
     '''
     Use this in instances where
@@ -255,3 +252,8 @@ def magic_plan_b(filename):
     stdout, stderr = Popen(cmd, stdout=PIPE).communicate()
     mime_str = stdout.split(filename + ': ')[1].strip()
     return mime_str
+
+
+def generate_container_id(container_name):
+    # container id is a uuid in the namespace of the machine
+    return str(uuid.uuid5(uuid.UUID(generate_machine_id()), container_name.encode('utf8')))
