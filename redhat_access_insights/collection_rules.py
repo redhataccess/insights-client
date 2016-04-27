@@ -183,6 +183,11 @@ class InsightsConfig(object):
                 logger.error("Unable to validate GPG signature in from_stdin mode.")
                 raise Exception("from_stdin mode failed to validate GPG sig")
         elif update:
+            if not self.conn:
+                logger.error('ERROR: Cannot update rules in --offline mode. '
+                             'Either run without the --update-collection-rules '
+                             'option or disable auto_update in config file.')
+                sys.exit(1)
             dyn_conf = self.get_collection_rules()
             version = dyn_conf.get('version', None)
             if version is None:

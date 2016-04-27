@@ -180,10 +180,6 @@ def handle_startup():
         logger.warn("WARNING: GPG VERIFICATION DISABLED")
         InsightsClient.config.set(APP_NAME, 'gpg', 'False')
 
-    # --no-upload deprecated, use --offline
-    if InsightsClient.options.no_upload:
-        InsightsClient.options.offline = True
-
     # can't use bofa
     if InsightsClient.options.from_stdin and InsightsClient.options.from_file:
         logger.error('Can\'t use both --from-stdin and --from-file.')
@@ -230,8 +226,13 @@ def handle_startup():
 
 
 def handle_branch_info_error(msg):
-    logger.error("ERROR: %s", msg)
-    sys.exit(1)
+    if InsightsClient.options.offline or InsightsClient.options.no_upload:
+        logger.warning(msg)
+        logger.warning("Assuming remote branch and leaf value of -1")
+        return constants.default_branch_info
+    else:
+        logger.error("ERROR: %s", msg)
+        sys.exit(1)
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -341,8 +342,9 @@ def collect_data_and_upload(rc=0):
         branch_info = constants.default_branch_info
     else:
         pconn = InsightsConnection()
-        # TODO: change these err msgs to be more meaningful , i.e.
-        # "could not determine login information"
+    # TODO: change these err msgs to be more meaningful , i.e.
+    # "could not determine login information"
+    if pconn:
         try:
             branch_info = pconn.branch_info()
         except requests.ConnectionError:
@@ -429,7 +431,7 @@ def collect_data_and_upload(rc=0):
 
             tar_file = dc.done(collection_rules, rm_conf)
 
-            if InsightsClient.options.offline:
+            if InsightsClient.options.offline or InsightsClient.options.no_upload:
                 handle_file_output(tar_file, archive)
                 return rc
 
@@ -470,6 +472,7 @@ def collect_data_and_upload(rc=0):
                 container_connection.close()
             if archive and not (InsightsClient.options.keep_archive or
                                 InsightsClient.options.offline or
+                                InsightsClient.options.no_upload or
                                 InsightsClient.options.no_tar_file or
                                 obfuscate):
                 archive.delete_tmp_dir()
