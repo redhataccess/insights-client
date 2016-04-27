@@ -169,54 +169,19 @@ def set_up_options(parser):
                      dest="original_style_specs",
                      default=False)
     group.add_option('--docker-image-name',
-                     help="image name of insights-client",
+                     help="Image name of insights-client",
                      action="store",
                      dest="docker_image_name",
                      default=None)
     # this option is for when we run inside a container, so
     #  that another container is not spawned
+    #  undocumented option
     group.add_option('--run-here',
                      help=optparse.SUPPRESS_HELP,
                      action="store_true",
                      dest="run_here",
                      default=False)
     parser.add_option_group(group)
-    '''
-    [main options]
-    --version (move to debug section?)
-    --register
-    --unregister
-    --update-collection-rules
-    --display-name
-    --group
-    --retry
-    --validate
-    --quiet
-    --silent
-    --no-schedule <-- change this to something more usable
-    ?--enable-schedule
-    ?--disable-schedule
-    ?--schedule=True/False
-    --conf / -c
-    --to-stdout
-    --compressor
-    --from-stdin
-    --from-file
-    --offline
-    --no-upload (redundant w/ --offline)
-    --container (change to --docker?)
-    --run-as-container
-    [debug options]
-    --test-connection
-    --force-reregister
-    --verbose
-    --support
-    --status
-    --no-gpg
-    --no-upload
-    --no-tar-file
-    --keep-archive
-    '''
 
 
 def parse_config_file(conf_file):

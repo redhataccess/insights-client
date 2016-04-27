@@ -12,8 +12,6 @@ redhat\-access\-insights \- Red Hat Access Insights Client tool
 .SH "OPTIONS"
 .IP "-h, --help"
 show this help message and exit
-.IP "--version"
-Display version
 .IP "--register"
 Register system to the Red Hat Access Insights Service
 .IP "--unregister"
@@ -21,6 +19,8 @@ Unregister system from the Red Hat Access Insights Service
 .IP "--update-collection-rules"
 Refresh collection rules from Red Hat
 Set Red Hat Access Insights to collect data once per week
+.IP "--display-name=DISPLAYNAME"
+Group to add this system to during registration
 .IP "--group=GROUP"
 Group to add this system to during registration
 .IP "--retry=RETRIES"
@@ -31,7 +31,9 @@ Validate remove.conf
 Only display error messages to stdout
 .IP "--silent"
 Display no messages to stdout
-.IP "--no-schedule"
+.IP "--enable-schedule"
+Enable automatic scheduling
+.IP "--disable-schedule"
 Disable automatic scheduling
 .IP "-c CONF, --conf=CONF"
 Pass a custom config file
@@ -47,8 +49,16 @@ config JSON document; and "sig", with a value of the raw signature content.
 Make sure the uploader JSON is not actually parsed into the resulting dict from
 stdin, i.e. it should be a raw string with JSON special characters escaped
 within.
++.IP "--from-file"
+ +Similar to --from-stdin, but will read a specialized JSON config from file.
+.IP "--offline"
+Collect locally only, do not connect to Insights and do not upload.
+.IP "--container"
+Run collection for images & containers on this system
 
 .SH "DEBUG OPTIONS"
+.IP "--version"
+Display version
 .IP "--test-connection"
 Test connectivity to Red Hat
 .IP "--force-reregister"
@@ -58,14 +68,18 @@ DEBUG output to stdout
 .IP "--no-gpg"
 Do not verify GPG signature
 .IP "--no-upload"
-Do not upload the archive
+Do not upload the archive.  Implies --offline
 .IP "--no-tar-file"
 Build the directory, but do not tar
 .IP "--keep-archive"
 Do not delete archive after upload
+.IP "--original-style-specs"
+Use the original collection metadata spec, even if the new style is available
+.IP "--docker-image-name"
+Docker image name for the Insights client
 
 .SH "SEE ALSO"
 .BR redhat-access-insights.conf (5)
 
 .SH "AUTHOR"
-Jeremy Crafts <jcrafts@redhat.com>\&
+Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>\&

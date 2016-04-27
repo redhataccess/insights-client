@@ -40,7 +40,7 @@ from containers import (open_image,
                         insights_client_container_is_available)
 from client_config import InsightsClient, set_up_options, parse_config_file
 
-__author__ = 'Jeremy Crafts <jcrafts@redhat.com>'
+__author__ = 'Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>'
 
 LOG_FORMAT = ("%(asctime)s %(levelname)s %(message)s")
 APP_NAME = constants.app_name

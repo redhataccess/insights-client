@@ -28,7 +28,7 @@ if __name__ == "__main__":
     setup(
         name="redhat-access-insights",
         version=VERSION,
-        author="Jeremy Crafts",
+        author="Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>",
         author_email="jcrafts@redhat.com",
         license="GPL",
         packages=find_packages(),
