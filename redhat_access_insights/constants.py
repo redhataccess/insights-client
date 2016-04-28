@@ -1,6 +1,7 @@
 """
 Constants
 """
+import os
 
 
 class InsightsConstants(object):
