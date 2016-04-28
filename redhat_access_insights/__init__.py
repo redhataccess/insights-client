@@ -35,6 +35,7 @@ from archive import InsightsArchive
 from support import InsightsSupport, registration_check
 from constants import InsightsConstants as constants
 from containers import (open_image,
+                        open_container,
                         get_targets,
                         run_in_container,
                         insights_client_container_is_available)
