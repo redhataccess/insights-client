@@ -378,9 +378,7 @@ class InsightsConnection(object):
                 logger.debug("HTTP Response Text: %s", req.text)
             if req.status_code == 402:
                 # failed registration because of entitlement limit hit
-                from schedule import InsightsSchedule
-                InsightsSchedule(set_cron=False).remove_scheduling()
-                logger.debug('Registration failed by 402 error. Removed automatic scheduling.')
+                logger.debug('Registration failed by 402 error.')
                 try:
                     logger.error(req.json()["message"])
                 except LookupError:
