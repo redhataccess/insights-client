@@ -89,7 +89,7 @@ if HaveDocker:
         return HaveAtomic
 
     def use_atomic_mount():
-        return HaveAtomicMount
+        return HaveAtomicMount and not InsightsClient.options.run_here
 
     def pull_image(image):
         return runcommand(shlex.split("docker pull") + [image])
