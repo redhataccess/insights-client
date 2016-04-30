@@ -120,9 +120,9 @@ if HaveDocker:
                 targets.append({'type': 'docker_container', 'name': d['Id']})
         return targets
 
-    def run_in_container(options):
+    def run_in_container():
 
-        if options.from_file:
+        if InsightsClient.options.from_file:
             logger.error('--from-file is incompatible with transfering to a container.')
             return 1
 
@@ -224,7 +224,7 @@ if HaveDocker:
                 return AtomicTemporaryMountPoint(image_id, mount_point)
             else:
                 logger.error('Could not mount Image Id %s On %s' % (image_id, mount_point))
-                shutil.rmtree(self.mount_point, ignore_errors=True)
+                shutil.rmtree(mount_point, ignore_errors=True)
                 return None
 
         else:
@@ -242,7 +242,7 @@ if HaveDocker:
                     return DockerTemporaryMountPoint(client, image_id, mount_point, cid)
                 else:
                     logger.error('Could not mount Image Id %s On %s' % (image_id, mount_point))
-                    shutil.rmtree(self.mount_point, ignore_errors=True)
+                    shutil.rmtree(mount_point, ignore_errors=True)
                     return None
 
             else:
@@ -297,8 +297,8 @@ else:
                      (HaveDockerException if HaveDockerException else ''))
         return False
 
-    def run_in_container(options):
-        logger.error('Could not connect to docker to examine image %s' % options.analyse_docker_image)
+    def run_in_container():
+        logger.debug('Could not connect to docker to transfer into a container')
         logger.error('Docker is either not installed or not accessable: %s' %
                      (HaveDockerException if HaveDockerException else ''))
         return 1
