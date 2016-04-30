@@ -97,12 +97,9 @@ if HaveDocker:
     def insights_client_container_is_available():
         image_name = get_image_name()
         if image_name:
-            client = docker.Client(base_url='unix://var/run/docker.sock')
-
             pull_image(image_name)
 
-            images = client.images(image_name)
-            if len(images) == 0:
+            if not _docker_image_is_available(image_name):
                 logger.debug("insights-client docker image not available: %s" % image_name)
                 return False
             else:
@@ -111,13 +108,11 @@ if HaveDocker:
             return False
 
     def get_targets():
-        client = docker.Client(base_url='unix://var/run/docker.sock')
         targets = []
-        if client:
-            for d in client.images(quiet=True):
-                targets.append({'type': 'docker_image', 'name': d})
-            for d in client.containers(all=True, trunc=False):
-                targets.append({'type': 'docker_container', 'name': d['Id']})
+        for d in _docker_all_image_ids():
+            targets.append({'type': 'docker_image', 'name': d})
+        for d in _docker_all_container_ids():
+            targets.append({'type': 'docker_container', 'name': d})
         return targets
 
     def run_in_container():
@@ -152,7 +147,7 @@ if HaveDocker:
         return None
 
     def _get_label(imagename, label):
-        imagedata = _inspect_image(imagename)
+        imagedata = _docker_inspect_image(imagename)
         if imagedata:
             idx = ("Config", "Labels", label)
             if dictmultihas(imagedata, idx):
@@ -160,14 +155,11 @@ if HaveDocker:
 
         return None
 
-    def _inspect_image(image_name):
-        client = docker.Client(base_url='unix://var/run/docker.sock')
-        try:
-            return client.inspect_image(image_name)
-        except Exception as e:
-            logger.debug("Not able to inspect image %s: %s" % (image_name, e))
-
-        return None
+    def _docker_image_is_available(image_name):
+        if _docker_inspect_image(image_name):
+            return True
+        else:
+            return False
 
     class AtomicTemporaryMountPoint:
         # this is used for both images and containers
@@ -190,8 +182,8 @@ if HaveDocker:
 
     class DockerTemporaryMountPoint:
         # this is used for both images and containers
-        def __init__(self, client, image_id, mount_point, cid):
-            self.client = client
+        def __init__(self, driver, image_id, mount_point, cid):
+            self.driver = driver
             self.image_id = image_id
             self.mount_point = mount_point
             self.cid = cid
@@ -203,7 +195,7 @@ if HaveDocker:
             try:
                 logger.debug("Closing Id %s On %s" % (self.image_id, self.mount_point))
                 # If using device mapper, unmount the bind-mount over the directory
-                if self.client.info()['Driver'] == 'devicemapper':
+                if self.driver == 'devicemapper':
                     Mount.unmount_path(self.mount_point)
 
                 DockerMount(self.mount_point).unmount(self.cid)
@@ -228,25 +220,22 @@ if HaveDocker:
                 return None
 
         else:
-            client = docker.Client(base_url='unix://var/run/docker.sock')
-            if client:
-                mount_point = tempfile.mkdtemp()
-                logger.debug("Opening Image Id %s On %s using docker client" % (image_id, mount_point))
-                # docker mount creates a temp image
-                # we have to use this temp image id to remove the device
-                mount_point, cid = DockerMount(mount_point).mount(image_id)
-                if client.info()['Driver'] == 'devicemapper':
-                    DockerMount.mount_path(os.path.join(mount_point, "rootfs"), mount_point, bind=True)
+            driver = _docker_driver()
+            if driver == None:
+                return None
 
-                if cid:
-                    return DockerTemporaryMountPoint(client, image_id, mount_point, cid)
-                else:
-                    logger.error('Could not mount Image Id %s On %s' % (image_id, mount_point))
-                    shutil.rmtree(mount_point, ignore_errors=True)
-                    return None
-
+            mount_point = tempfile.mkdtemp()
+            logger.debug("Opening Image Id %s On %s using docker client" % (image_id, mount_point))
+            # docker mount creates a temp image
+            # we have to use this temp image id to remove the device
+            mount_point, cid = DockerMount(mount_point).mount(image_id)
+            if driver == 'devicemapper':
+                DockerMount.mount_path(os.path.join(mount_point, "rootfs"), mount_point, bind=True)
+            if cid:
+                return DockerTemporaryMountPoint(driver, image_id, mount_point, cid)
             else:
-                logger.error('Could not connect to docker to examine image %s' % image_id)
+                logger.error('Could not mount Image Id %s On %s' % (image_id, mount_point))
+                shutil.rmtree(self.mount_point, ignore_errors=True)
                 return None
 
     def open_container(container_id):
@@ -266,25 +255,62 @@ if HaveDocker:
                 return None
 
         else:
-            client = docker.Client(base_url='unix://var/run/docker.sock')
-            if client:
-                mount_point = tempfile.mkdtemp()
-                logger.debug("Opening Container Id %s On %s using docker client" % (container_id, mount_point))
-                # docker mount creates a temp image
-                # we have to use this temp image id to remove the device
-                mount_point, cid = DockerMount(mount_point).mount(container_id)
-                if client.info()['Driver'] == 'devicemapper':
-                    DockerMount.mount_path(os.path.join(mount_point, "rootfs"), mount_point, bind=True)
-                if cid:
-                    return DockerTemporaryMountPoint(client, container_id, mount_point, cid)
-                else:
-                    logger.error('Could not mount Container Id %s On %s' % (container_id, mount_point))
-                    shutil.rmtree(mount_point, ignore_errors=True)
-                    return None
-
-            else:
-                logger.error('Could not connect to docker to examine container %s' % container_id)
+            driver = _docker_driver()
+            if driver == None:
                 return None
+
+            mount_point = tempfile.mkdtemp()
+            logger.debug("Opening Container Id %s On %s using docker client" % (container_id, mount_point))
+            # docker mount creates a temp image
+            # we have to use this temp image id to remove the device
+            mount_point, cid = DockerMount(mount_point).mount(container_id)
+            if driver == 'devicemapper':
+                DockerMount.mount_path(os.path.join(mount_point, "rootfs"), mount_point, bind=True)
+            if cid:
+                return DockerTemporaryMountPoint(driver, container_id, mount_point, cid)
+            else:
+                logger.error('Could not mount Container Id %s On %s' % (container_id, mount_point))
+                shutil.rmtree(mount_point, ignore_errors=True)
+                return None
+
+    def _docker_inspect_image(image_name):
+        client = docker.Client(base_url='unix://var/run/docker.sock')
+        try:
+            return client.inspect_image(image_name)
+        except Exception as e:
+            logger.debug("Not able to inspect image %s: %s" % (image_name, e))
+
+        return None
+
+    def _docker_driver():
+        client = docker.Client(base_url='unix://var/run/docker.sock')
+        if client:
+            return client.info()['Driver']
+
+        else:
+            logger.error('Could not connect to docker to determine storage driver')
+            return None
+
+    def _docker_all_image_ids():
+        client = docker.Client(base_url='unix://var/run/docker.sock')
+        if client:
+            return client.images(quiet=True)
+
+        else:
+            logger.error('Could not connect to docker to list images')
+            return []
+
+    def _docker_all_container_ids():
+        client = docker.Client(base_url='unix://var/run/docker.sock')
+        if client:
+            list = []
+            for d in client.containers(all=True, trunc=False):
+                list.append(d['Id'])
+            return list
+
+        else:
+            logger.error('Could not connect to docker to list containers')
+            return []
 
 else:
     # If we can't import docker then we stub out all the main functions to report errors
