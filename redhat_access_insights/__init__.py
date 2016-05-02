@@ -34,7 +34,7 @@ from support import InsightsSupport, registration_check
 
 from constants import InsightsConstants as constants
 
-__author__ = 'Jeremy Crafts <jcrafts@redhat.com>'
+__author__ = 'Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>'
 
 LOG_FORMAT = ("%(asctime)s %(levelname)s %(message)s")
 APP_NAME = constants.app_name
@@ -174,15 +174,21 @@ def collect_data_and_upload(config, options, rc=0):
     """
     collection_start = time.clock()
 
-    pconn = InsightsConnection(config)
-    try:
-        branch_info = pconn.branch_info()
-    except requests.ConnectionError:
-        branch_info = handle_branch_info_error(
-            "Could not connect to determine branch information", options)
-    except LookupError:
-        branch_info = handle_branch_info_error(
-            "Could not determine branch information", options)
+    if options.offline:
+        logger.warning('Assuming remote branch and leaf value of -1')
+        pconn = None
+        branch_info = {'remote_branch': -1, 'remote_leaf': -1}
+    else:
+        pconn = InsightsConnection(config)
+    if pconn:
+        try:
+            branch_info = pconn.branch_info()
+        except requests.ConnectionError:
+            branch_info = handle_branch_info_error(
+                "Could not connect to determine branch information", options)
+        except LookupError:
+            branch_info = handle_branch_info_error(
+                "Could not determine branch information", options)
     pc = InsightsConfig(config, pconn)
     archive = InsightsArchive(compressor=options.compressor)
     dc = DataCollector(archive)
@@ -229,7 +235,7 @@ def collect_data_and_upload(config, options, rc=0):
 
     if not options.no_tar_file:
         tar_file = dc.done(config, rm_conf)
-        if not options.offline:
+        if not options.offline and not options.no_upload:
             logger.info('Uploading Insights data,'
                         ' this may take a few minutes')
             for tries in range(options.retries):
@@ -553,10 +559,6 @@ def handle_startup(options, config):
         logger.info('\n'.join(reg_check))
         # exit with !status, 0 for True, 1 for False
         sys.exit(not status)
-
-    # Set offline mode for OSP/RHEV use
-    if options.no_upload:
-        options.offline = True
 
     # Can't use both
     if options.from_stdin and options.from_file:
