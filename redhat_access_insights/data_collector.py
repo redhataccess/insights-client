@@ -181,7 +181,7 @@ class DataCollector(object):
             except LookupError:
                 logger.debug('Could not parse remove.conf. Ignoring...')
 
-        if 'spec' not in conf or InsightsClient.options.original_style_specs:
+        if 'specs' not in conf or InsightsClient.options.original_style_specs:
             # old style collection
             self._run_old_collection(conf, rm_conf, exclude, branch_info)
             return
