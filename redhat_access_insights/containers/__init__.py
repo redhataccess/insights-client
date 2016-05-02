@@ -26,13 +26,13 @@ def run_command_very_quietly(cmdline):
     return returncode
 
 
-# Check to see if we have access to docker through the "docker" python module
+# Check to see if we have access to docker
 HaveDocker = False
 HaveDockerException = None
 try:
-    import docker
-    docker.Client(base_url='unix://var/run/docker.sock').images()
-    HaveDocker = True
+    if run_command_very_quietly("docker info") == 0:
+        # a returncode of 0 means cmd ran correctly
+        HaveDocker = True
 
 except Exception as e:
     HaveDockerException = e
@@ -59,6 +59,7 @@ if HaveDocker:
     import os
     import tempfile
     import shutil
+    import json
 
     from redhat_access_insights.client_config import InsightsClient
 
@@ -68,6 +69,12 @@ if HaveDocker:
         proc = subprocess.Popen(cmd)
         returncode = proc.wait()
         return returncode
+
+    def run_command_capture_output(cmdline):
+        cmd = shlex.split(cmdline)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (out, err) = proc.communicate()
+        return out
 
     def get_container_name():
         return "insights-client"
@@ -206,7 +213,7 @@ if HaveDocker:
     def open_image(image_id):
         global HaveAtomicException
         if HaveAtomicException:
-            logger.debug("atomic is either not installed or not accessable %s" % HaveAtomicException);
+            logger.debug("atomic is either not installed or not accessable %s" % HaveAtomicException)
             HaveAtomicException = None
 
         if use_atomic_mount():
@@ -221,7 +228,7 @@ if HaveDocker:
 
         else:
             driver = _docker_driver()
-            if driver == None:
+            if driver is None:
                 return None
 
             mount_point = tempfile.mkdtemp()
@@ -241,7 +248,7 @@ if HaveDocker:
     def open_container(container_id):
         global HaveAtomicException
         if HaveAtomicException:
-            logger.debug("atomic is either not installed or not accessable %s" % HaveAtomicException);
+            logger.debug("atomic is either not installed or not accessable %s" % HaveAtomicException)
             HaveAtomicException = None
 
         if use_atomic_mount():
@@ -256,7 +263,7 @@ if HaveDocker:
 
         else:
             driver = _docker_driver()
-            if driver == None:
+            if driver is None:
                 return None
 
             mount_point = tempfile.mkdtemp()
@@ -274,43 +281,30 @@ if HaveDocker:
                 return None
 
     def _docker_inspect_image(image_name):
-        client = docker.Client(base_url='unix://var/run/docker.sock')
-        try:
-            return client.inspect_image(image_name)
-        except Exception as e:
-            logger.debug("Not able to inspect image %s: %s" % (image_name, e))
-
-        return None
+        a = json.loads(run_command_capture_output("docker inspect " + image_name))
+        if len(a) == 0:
+            return None
+        else:
+            return a[0]
 
     def _docker_driver():
-        client = docker.Client(base_url='unix://var/run/docker.sock')
-        if client:
-            return client.info()['Driver']
-
-        else:
-            logger.error('Could not connect to docker to determine storage driver')
-            return None
+        x = "Storage Driver:"
+        for each in run_command_capture_output("docker info").splitlines():
+            if each.startswith(x):
+                return each[len(x):].strip()
+        return ""
 
     def _docker_all_image_ids():
-        client = docker.Client(base_url='unix://var/run/docker.sock')
-        if client:
-            return client.images(quiet=True)
-
-        else:
-            logger.error('Could not connect to docker to list images')
-            return []
+        l = []
+        for each in run_command_capture_output("docker images --quiet --no-trunc").splitlines():
+            l.append(each)
+        return l
 
     def _docker_all_container_ids():
-        client = docker.Client(base_url='unix://var/run/docker.sock')
-        if client:
-            list = []
-            for d in client.containers(all=True, trunc=False):
-                list.append(d['Id'])
-            return list
-
-        else:
-            logger.error('Could not connect to docker to list containers')
-            return []
+        l = []
+        for each in run_command_capture_output("docker ps --all --quiet --no-trunc").splitlines():
+            l.append(each)
+        return l
 
 else:
     # If we can't import docker then we stub out all the main functions to report errors
