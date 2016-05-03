@@ -27,7 +27,7 @@ $(TAR_PORTABLE): Makefile
 
 .PHONY: srpm rpm 
 srpm: $(SRPM)
-$(SRPM): $(TARBALL) $(SPEC_FILE_IN)
+$(SRPM): $(TAR_PORTABLE) $(TARBALL) $(SPEC_FILE_IN)
 	mkdir -p $(RPMTOP)/{RPMS,SPECS,SRPMS,SOURCES,BUILD,BUILDROOT}
 	rpmbuild -ts --define="_topdir $(RPMTOP)" --define="_sourcedir dist" $(TARBALL)
 
