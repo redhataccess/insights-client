@@ -3,14 +3,10 @@ import re
 from subprocess import Popen, PIPE, STDOUT
 import errno
 import shlex
-import json
-import archive
 import logging
 import six
-import copy
 from tempfile import NamedTemporaryFile
-from soscleaner import SOSCleaner
-from utilities import determine_hostname, _expand_paths
+from utilities import determine_hostname
 from constants import InsightsConstants as constants
 
 logger = logging.getLogger(constants.app_name)
@@ -125,7 +121,7 @@ class InsightsCommand(InsightsSpec):
         # Required hack while we still pass shell=True to Popen; a Popen
         # call with shell=False for a non-existant binary will raise OSError.
         if proc0.returncode == 126 or proc0.returncode == 127:
-            stdout = "Could not find cmd: %s" % command
+            stdout = "Could not find cmd: %s", self.command
 
         logger.debug("Status: %s", proc0.returncode)
         logger.debug("stderr: %s", stderr)
@@ -154,11 +150,11 @@ class InsightsFile(InsightsSpec):
         Get file content, selecting only lines we are interested in
         '''
         if not os.path.isfile(self.real_path):
-            logger.debug('File %s does not exist' % self.real_path)
+            logger.debug('File %s does not exist', self.real_path)
             return
 
-        logger.debug('Copying %s to %s with filters %s' % (
-            self.real_path, self.archive_path, str(self.pattern)))
+        logger.debug('Copying %s to %s with filters %s',
+                     self.real_path, self.archive_path, str(self.pattern))
 
         cmd = []
         cmd.append("/bin/sed".encode('utf-8'))

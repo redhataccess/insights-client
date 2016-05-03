@@ -3,7 +3,6 @@
  Gather and upload Insights data for
  Red Hat Insights
 """
-import ConfigParser
 import getpass
 import json
 import logging
@@ -15,18 +14,15 @@ import shutil
 import sys
 import time
 import traceback
-import atexit
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
-                       generate_analysis_target_id,
                        write_lastupload_file,
                        write_registered_file,
                        delete_registered_file,
                        delete_unregistered_file,
                        delete_machine_id,
-                       determine_hostname,
-                       write_lastupload_file)
+                       determine_hostname)
 from collection_rules import InsightsConfig
 from data_collector import DataCollector
 from schedule import InsightsSchedule
@@ -201,7 +197,7 @@ def handle_startup():
         delete_registered_file()
         delete_unregistered_file()
         delete_machine_id()
-    logger.debug('Machine-id: %s' % generate_machine_id(new))
+    logger.debug('Machine-id: %s', generate_machine_id(new))
 
     if InsightsClient.options.register:
         try_register()
@@ -282,12 +278,12 @@ def try_register():
         return
     message, hostname, group, display_name = register()
     if InsightsClient.options.display_name is None and InsightsClient.options.group is None:
-        logger.info('Successfully registered %s' % hostname)
+        logger.info('Successfully registered %s', hostname)
     elif InsightsClient.options.display_name is None:
-        logger.info('Successfully registered %s in group %s' % (hostname, group))
+        logger.info('Successfully registered %s in group %s', hostname, group)
     else:
-        logger.info('Successfully registered %s as %s in group %s' % (
-            hostname, display_name, group))
+        logger.info('Successfully registered %s as %s in group %s',
+                    hostname, display_name, group)
     if message:
         logger.info(message)
 
@@ -310,7 +306,7 @@ def register():
         save = raw_input().strip()
         InsightsClient.config.set(APP_NAME, 'username', username)
         InsightsClient.config.set(APP_NAME, 'password', password)
-        logger.debug('savestr: %s' % save)
+        logger.debug('savestr: %s', save)
         if save.lower() == 'y' or save.lower() == 'yes':
             logger.debug('Writing user/pass to config')
             cmd = ('/bin/sed -e \'s/^username.*=.*$/username=' +
@@ -369,7 +365,7 @@ def collect_data_and_upload(rc=0):
              'sig' not in stdin_config)):
             raise ValueError
     except:
-        logger.error('ERROR: Invalid config for %s! Exiting...' %
+        logger.error('ERROR: Invalid config for %s! Exiting...',
                      ('--from-file' if InsightsClient.options.from_file else '--from-stdin'))
         sys.exit(1)
 
@@ -392,7 +388,7 @@ def collect_data_and_upload(rc=0):
                 if container_connection:
                     mp = container_connection.get_fs()
                 else:
-                    logger.error('Could not open %s for analysis' % logging_name)
+                    logger.error('Could not open %s for analysis', logging_name)
                     continue
             elif t['type'] == 'docker_container':
                 container_connection = open_container(t['name'])
@@ -400,12 +396,12 @@ def collect_data_and_upload(rc=0):
                 if container_connection:
                     mp = container_connection.get_fs()
                 else:
-                    logger.error('Could not open %s for analysis' % logging_name)
+                    logger.error('Could not open %s for analysis', logging_name)
                     continue
             elif t['type'] == 'host':
                 logging_name = determine_hostname()
             else:
-                logger.error('Unexpected analysis target: %s' % t['type'])
+                logger.error('Unexpected analysis target: %s', t['type'])
                 continue
 
             collection_start = time.clock()
@@ -416,7 +412,7 @@ def collect_data_and_upload(rc=0):
                                target_name=t['name'],
                                target_type=t['type'])
 
-            logger.info('Starting to collect Insights data for %s' % logging_name)
+            logger.info('Starting to collect Insights data for %s', logging_name)
             dc.run_collection(collection_rules, rm_conf, branch_info)
             elapsed = (time.clock() - start)
             logger.debug("Data collection complete. Elapsed time: %s", elapsed)
@@ -437,7 +433,7 @@ def collect_data_and_upload(rc=0):
                 return rc
 
             # do the upload
-            logger.info('Uploading Insights data for %s, this may take a few minutes' % logging_name)
+            logger.info('Uploading Insights data for %s, this may take a few minutes', logging_name)
             for tries in range(InsightsClient.options.retries):
                 upload = pconn.upload_archive(tar_file, collection_duration)
                 if upload.status_code == 201:
@@ -498,7 +494,6 @@ def _main():
     if os.geteuid() is not 0:
         sys.exit("Red Hat Access Insights must be run as root")
 
-    global logger
     sys.excepthook = handle_exception
 
     parser = optparse.OptionParser()

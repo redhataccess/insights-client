@@ -290,7 +290,7 @@ class InsightsConnection(object):
             try:
                 sock.connect((hostname[0], 443))
             except socket.gaierror:
-                logger.error('Error: Failed to connect to %s. Invalid hostname.' % base_url)
+                logger.error('Error: Failed to connect to %s. Invalid hostname.', base_url)
                 sys.exit(1)
         ctx = SSL.Context(SSL.TLSv1_METHOD)
         if type(self.cert_verify) is not bool:
@@ -390,8 +390,7 @@ class InsightsConnection(object):
                 rhsm_hostname = urlparse(self.base_url).hostname
                 if rhsm_hostname != 'subscription.rhn.redhat.com':
                     logger.error('Please enable Insights on Satellite server '
-                                 '%s to continue.' %
-                                 rhsm_hostname)
+                                 '%s to continue.', rhsm_hostname)
             if req.status_code == 412:
                 try:
                     unreg_date = req.json()["unregistered_at"]
@@ -543,7 +542,7 @@ class InsightsConnection(object):
         machine_id = generate_machine_id()
         try:
             res = self.session.get(self.api_url + '/v1/systems/' + machine_id)
-        except requests.ConnectionError as e:
+        except requests.ConnectionError:
             return False
         # check the 'unregistered_at' key of the response
         try:

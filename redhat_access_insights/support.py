@@ -9,6 +9,7 @@ import requests
 from subprocess import Popen, PIPE, STDOUT
 from constants import InsightsConstants as constants
 from connection import InsightsConnection
+from client_config import InsightsClient
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
@@ -58,7 +59,7 @@ class InsightsSupport(object):
         cfg_block = []
 
         logger.info('Insights version: %s' % (constants.version))
-        cfg_block += registration_check(InsightsClient.config)
+        cfg_block += registration_check()
 
         lastupload = 'never'
         if os.path.isfile(constants.lastupload_file):
@@ -76,7 +77,7 @@ class InsightsSupport(object):
         cfg_block.append('proxy: ' + obfuscated_proxy)
 
         logger.info('\n'.join(cfg_block))
-        logger.info('python-requests: %s' % (requests.__version__))
+        logger.info('python-requests: %s', requests.__version__)
 
         # run commands
         commands = ['redhat-access-insights --test-connection --quiet',
@@ -101,7 +102,7 @@ class InsightsSupport(object):
         tmp_dir = '/var/tmp'
         dest_dir_stat = os.statvfs(tmp_dir)
         dest_dir_size = (dest_dir_stat.f_bavail * dest_dir_stat.f_frsize)
-        logger.info('Available space in %s:\t%s bytes\t%.1f 1K-blocks\t%.1f MB' % (
+        logger.info('Available space in %s:\t%s bytes\t%.1f 1K-blocks\t%.1f MB',
                     tmp_dir, dest_dir_size,
                     dest_dir_size / 1024.0,
-                    (dest_dir_size / 1024.0) / 1024.0))
+                    (dest_dir_size / 1024.0) / 1024.0)

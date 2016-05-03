@@ -2,18 +2,15 @@
 Collect all the interesting data for analysis
 """
 import os
-import re
-from subprocess import Popen, PIPE, STDOUT
 import errno
-import shlex
 import json
 import archive
 import logging
-import six
 import copy
+from subprocess import Popen, PIPE, STDOUT
 from tempfile import NamedTemporaryFile
 from soscleaner import SOSCleaner
-from utilities import determine_hostname, _expand_paths, generate_analysis_target_id
+from utilities import _expand_paths, generate_analysis_target_id
 from constants import InsightsConstants as constants
 from insights_spec import InsightsFile, InsightsCommand
 from client_config import InsightsClient
@@ -51,7 +48,7 @@ class DataCollector(object):
         try:
             archive_path = conf['meta_specs'][specname]['archive_file_name']
         except LookupError:
-            logger.debug('%s spec not found. Using default.' % specname)
+            logger.debug('%s spec not found. Using default.', specname)
             archive_path = default_meta_spec[specname]
         return archive_path
 
@@ -82,12 +79,12 @@ class DataCollector(object):
         '''
         Run a pre command to get external args for a command
         '''
-        logger.debug('Executing pre-command: %s' % pre_cmd)
+        logger.debug('Executing pre-command: %s', pre_cmd)
         try:
             pre_proc = Popen(pre_cmd, stdout=PIPE, stderr=STDOUT, shell=True)
         except OSError as err:
             if err.errno == errno.ENOENT:
-                logger.debug('Command %s not found' % pre_cmd)
+                logger.debug('Command %s not found', pre_cmd)
             return
         stdout, stderr = pre_proc.communicate()
         return stdout.splitlines()
@@ -100,7 +97,7 @@ class DataCollector(object):
         if '*' in spec['file']:
             expanded_paths = _expand_paths(spec['file'])
             if not expanded_paths:
-                logger.debug('Could not expand %s' % spec['file'])
+                logger.debug('Could not expand %s', spec['file'])
                 return []
 
             expanded_specs = []
@@ -121,20 +118,19 @@ class DataCollector(object):
             precmd_alias = spec['pre_command']
             try:
                 precmd = precmds[precmd_alias]
+                args = self._run_pre_command(precmd)
+                logger.debug('Pre-command results: %s', args)
+
+                expanded_specs = []
+                for arg in args:
+                    _spec = copy.copy(spec)
+                    _spec['command'] = _spec['command'] + ' ' + arg
+                    expanded_specs.append(_spec)
+                return expanded_specs
             except LookupError:
-                logger.debug('Pre-command %s not found. Skipping %s...' %
-                             (precmd_alias, spec['command']))
+                logger.debug('Pre-command %s not found. Skipping %s...',
+                             precmd_alias, spec['command'])
                 return []
-            args = self._run_pre_command(precmds[precmd_alias])
-            logger.debug('Pre-command results: %s' % args)
-
-            expanded_specs = []
-            for arg in args:
-                _spec = copy.copy(spec)
-                _spec['command'] = _spec['command'] + ' ' + arg
-                expanded_specs.append(_spec)
-            return expanded_specs
-
         else:
             return [spec]
 
@@ -205,7 +201,7 @@ class DataCollector(object):
                                 self.archive.add_to_archive(file_spec)
                     elif 'command' in spec:
                         if rm_conf and spec['command'] in rm_conf['commands']:
-                            logger.warn("WARNING: Skipping command %s", each_spec['command'])
+                            logger.warn("WARNING: Skipping command %s", spec['command'])
                             continue
                         else:
                             cmd_specs = self._parse_command_spec(spec, conf['pre_commands'])
@@ -213,7 +209,7 @@ class DataCollector(object):
                                 cmd_spec = InsightsCommand(s, exclude, self.mountpoint, self.target_name)
                                 self.archive.add_to_archive(cmd_spec)
             except LookupError:
-                logger.debug('Target type %s not found in spec %s. Skipping...' % (self.target_type, specname))
+                logger.debug('Target type %s not found in spec %s. Skipping...', self.target_type, specname)
                 continue
         logger.debug('Spec collection finished.')
 

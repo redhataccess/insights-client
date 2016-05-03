@@ -7,8 +7,7 @@ import sys
 import logging
 import uuid
 import datetime
-import shlex
-from subprocess import Popen, PIPE
+from subprocess import Popen
 from constants import InsightsConstants as constants
 
 logger = logging.getLogger(constants.app_name)
@@ -228,16 +227,16 @@ def validate_remove_file():
 
 
 def write_data_to_file(data, filepath):
-        '''
-        Write data to file
-        '''
-        try:
-            os.makedirs(os.path.dirname(filepath), 0o700)
-        except OSError:
-            pass
+    '''
+    Write data to file
+    '''
+    try:
+        os.makedirs(os.path.dirname(filepath), 0o700)
+    except OSError:
+        pass
 
-        with open(filepath, 'w') as _file:
-            _file.write(data.encode('utf8'))
+    with open(filepath, 'w') as _file:
+        _file.write(data.encode('utf8'))
 
 
 def magic_plan_b(filename):
@@ -247,7 +246,7 @@ def magic_plan_b(filename):
     for whatever reason
     '''
     import shlex
-    from subprocess import Popen, PIPE
+    from subprocess import PIPE
     cmd = shlex.split('file --mime-type --mime-encoding ' + filename)
     stdout, stderr = Popen(cmd, stdout=PIPE).communicate()
     mime_str = stdout.split(filename + ': ')[1].strip()
