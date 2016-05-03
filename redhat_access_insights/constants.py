@@ -1,13 +1,16 @@
 """
 Constants
 """
+import os
 
 
 class InsightsConstants(object):
     app_name = 'redhat-access-insights'
-    version = '1.0.9'
+    version = '1.0.10'
     auth_method = 'BASIC'
     log_level = 'DEBUG'
+    package_path = os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))
     sleep_time = 300
     user_agent = app_name + '/' + version
     default_conf_dir = '/etc/' + app_name + '/'
