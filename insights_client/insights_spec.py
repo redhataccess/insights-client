@@ -62,7 +62,11 @@ class InsightsCommand(InsightsSpec):
         the requested command is executable. Returns (returncode, stdout, 0)
         '''
         # ensure consistent locale for collected command output
-        cmd_env = {'LC_ALL': 'C'}
+        # load oracle env variables too
+        cmd_env = {'LC_ALL': 'C',
+                   'ORACLE_HOME': os.getenv('ORACLE_HOME'),
+                   'ORACLE_BASE': os.getenv('ORACLE_BASE')}
+        oracle
         args = shlex.split(self.command)
 
         # never execute this stuff

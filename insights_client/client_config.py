@@ -1,6 +1,6 @@
 '''
 Declare global config here so that other modules can import it
-Gets initialized in __init__._main()
+Also includes functions for option/config initialization
 '''
 import logging
 import optparse
@@ -111,6 +111,10 @@ def set_up_options(parser):
                            'along with the host.',
                       action='store_true',
                       dest='container_mode')
+    parser.add_option('--maintenance-plan',
+                      help='Fetch maintenance plans for this machine.',
+                      action='store_true',
+                      dest='maintenance_plan')
     group = optparse.OptionGroup(parser, "Debug options")
     parser.add_option('--version',
                       help="Display version",
