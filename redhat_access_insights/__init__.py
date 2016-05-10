@@ -14,6 +14,7 @@ import shutil
 import sys
 import time
 import traceback
+import atexit
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
@@ -321,6 +322,16 @@ def register():
     return pconn.register()
 
 
+def _delete_archive(archive):
+    # delete archive on unexpected exit
+    if not (InsightsClient.options.keep_archive or
+            InsightsClient.options.offline or
+            InsightsClient.options.no_upload or
+            InsightsClient.options.no_tar_file or
+            InsightsClient.config.getboolean(APP_NAME, "obfuscate")):
+        archive.delete_tmp_dir()
+
+
 def collect_data_and_upload(rc=0):
     """
     All the heavy lifting done here
@@ -330,6 +341,7 @@ def collect_data_and_upload(rc=0):
     # for now we do either containers OR host -- not both at same time
     if InsightsClient.options.container_mode:
         targets = get_targets()
+        targets = targets + constants.default_target
     else:
         targets = constants.default_target
 
@@ -374,6 +386,8 @@ def collect_data_and_upload(rc=0):
     collection_elapsed = (time.clock() - start)
     logger.debug("Rules configuration loaded. Elapsed time: %s", collection_elapsed)
 
+    individual_archives = []
+
     for t in targets:
         # defaults
         archive = None
@@ -407,6 +421,7 @@ def collect_data_and_upload(rc=0):
             collection_start = time.clock()
             archive = InsightsArchive(compressor=InsightsClient.options.compressor,
                                       target_name=t['name'])
+            atexit.register(_delete_archive, archive)
             dc = DataCollector(archive,
                                mountpoint=mp,
                                target_name=t['name'],
@@ -428,51 +443,61 @@ def collect_data_and_upload(rc=0):
 
             tar_file = dc.done(collection_rules, rm_conf)
 
-            if InsightsClient.options.offline or InsightsClient.options.no_upload:
-                handle_file_output(tar_file, archive)
-                return rc
-
-            # do the upload
-            logger.info('Uploading Insights data for %s, this may take a few minutes', logging_name)
-            for tries in range(InsightsClient.options.retries):
-                upload = pconn.upload_archive(tar_file, collection_duration)
-                if upload.status_code == 201:
-                    write_lastupload_file()
-                    logger.info("Upload completed successfully!")
-                    break
-                elif upload.status_code == 412:
-                    pconn.handle_fail_rcs(upload)
-                else:
-                    logger.error("Upload attempt %d of %d failed! Status Code: %s",
-                                 tries + 1, InsightsClient.options.retries, upload.status_code)
-                    if tries + 1 != InsightsClient.options.retries:
-                        logger.info("Waiting %d seconds then retrying",
-                                    constants.sleep_time)
-                        time.sleep(constants.sleep_time)
-                    else:
-                        logger.error("All attempts to upload have failed!")
-                        logger.error("Please see %s for additional information",
-                                     constants.default_log_file)
-                        rc = 1
-
-            if InsightsClient.options.keep_archive:
-                logger.info('Insights data retained in %s', tar_file)
-                return rc
-            if obfuscate:
-                logger.info('Obfuscated Insights data retained in %s',
-                            os.path.dirname(tar_file))
-            archive.delete_archive_dir()
+            # add archives to list of individual uploads
+            individual_archives.append(tar_file)
 
         finally:
             # called on loop iter end or unexpected exit
             if container_connection:
                 container_connection.close()
-            if archive and not (InsightsClient.options.keep_archive or
-                                InsightsClient.options.offline or
-                                InsightsClient.options.no_upload or
-                                InsightsClient.options.no_tar_file or
-                                obfuscate):
-                archive.delete_tmp_dir()
+
+    # if multiple targets, add all archives to single archive
+    if len(individual_archives) > 1:
+        full_archive = InsightsArchive(compressor=InsightsClient.options.compressor)
+        for a in individual_archives:
+            shutil.copy(a, full_archive.archive_dir)
+        # don't want insights_commands in meta archive
+        shutil.rmtree(full_archive.cmd_dir)
+        full_tar_file = full_archive.create_tar_file()
+    # if only one target, just upload one
+    else:
+        full_archive = archive
+        full_tar_file = tar_file
+
+    if InsightsClient.options.offline or InsightsClient.options.no_upload:
+        handle_file_output(full_tar_file, full_archive)
+        return rc
+
+    # do the upload
+    logger.info('Uploading Insights data for %s, this may take a few minutes', logging_name)
+    for tries in range(InsightsClient.options.retries):
+        upload = pconn.upload_archive(full_tar_file, collection_duration)
+        if upload.status_code == 201:
+            write_lastupload_file()
+            logger.info("Upload completed successfully!")
+            break
+        elif upload.status_code == 412:
+            pconn.handle_fail_rcs(upload)
+        else:
+            logger.error("Upload attempt %d of %d failed! Status Code: %s",
+                         tries + 1, InsightsClient.options.retries, upload.status_code)
+            if tries + 1 != InsightsClient.options.retries:
+                logger.info("Waiting %d seconds then retrying",
+                            constants.sleep_time)
+                time.sleep(constants.sleep_time)
+            else:
+                logger.error("All attempts to upload have failed!")
+                logger.error("Please see %s for additional information",
+                             constants.default_log_file)
+                rc = 1
+
+    if InsightsClient.options.keep_archive:
+        logger.info('Insights data retained in %s', full_tar_file)
+        return rc
+    if obfuscate:
+        logger.info('Obfuscated Insights data retained in %s',
+                    os.path.dirname(full_tar_file))
+    full_archive.delete_archive_dir()
     return rc
 
 
