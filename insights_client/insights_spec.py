@@ -29,7 +29,7 @@ class InsightsCommand(InsightsSpec):
     '''
     A command spec
     '''
-    def __init__(self, spec, exclude, mountpoint, target_name):
+    def __init__(self, spec, exclude, mountpoint, target_name, env):
         InsightsSpec.__init__(self, spec, exclude)
         # substitute mountpoint for collection
         # have to use .replace instead of .format because there are other
@@ -45,6 +45,7 @@ class InsightsCommand(InsightsSpec):
         if not six.PY3:
             self.command = self.command.encode('utf-8', 'ignore')
         self.black_list = ['rm', 'kill', 'reboot', 'shutdown']
+        self.env = env
 
     def _mangle_command(self, command, name_max=255):
         """
@@ -62,7 +63,7 @@ class InsightsCommand(InsightsSpec):
         the requested command is executable. Returns (returncode, stdout, 0)
         '''
         # ensure consistent locale for collected command output
-        cmd_env = {'LC_ALL': 'C'}
+        cmd_env = {'LC_ALL': 'C'}.update(self.env)
         args = shlex.split(self.command)
 
         # never execute this stuff
