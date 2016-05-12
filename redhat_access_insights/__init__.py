@@ -18,6 +18,7 @@ import atexit
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
+                       generate_analysis_target_id,
                        write_lastupload_file,
                        write_registered_file,
                        delete_registered_file,
@@ -178,6 +179,10 @@ def handle_startup():
         logger.warn("WARNING: GPG VERIFICATION DISABLED")
         InsightsClient.config.set(APP_NAME, 'gpg', 'False')
 
+    if InsightsClient.options.container_mode and InsightsClient.options.no_tar_file:
+        logger.error('Invalid combination: --container and --no-tar-file')
+        sys.exit(1)
+
     # can't use bofa
     if InsightsClient.options.from_stdin and InsightsClient.options.from_file:
         logger.error('Can\'t use both --from-stdin and --from-file.')
@@ -332,6 +337,34 @@ def _delete_archive(archive):
         archive.delete_tmp_dir()
 
 
+def _create_metadata_json(archives):
+    metadata = {'display_name': archives[-1]['display_name'],
+                'product': 'Docker',
+                'system_id': generate_machine_id(docker_group=True),
+                'systems': []}
+
+    # host archive is appended to the end of the targets array,
+    #   so it will always be the last one (index -1)
+    docker_links = []
+    for a in archives:
+        system = {}
+        if a['type'] == 'host':
+            system['links'] = docker_links
+        else:
+            docker_links.append({
+                'system_id': a['system_id'],
+                'type': a['type']
+            })
+            system['links'] = [{'system_id': archives[-1]['system_id'],
+                                'type': 'host'}]
+        system['display_name'] = a['display_name']
+        system['product'] = a['product']
+        system['system_id'] = a['system_id']
+        system['type'] = a['type']
+        metadata['systems'].append(system)
+    return metadata
+
+
 def collect_data_and_upload(rc=0):
     """
     All the heavy lifting done here
@@ -351,6 +384,7 @@ def collect_data_and_upload(rc=0):
         branch_info = constants.default_branch_info
     else:
         pconn = InsightsConnection()
+
     # TODO: change these err msgs to be more meaningful , i.e.
     # "could not determine login information"
     if pconn:
@@ -394,11 +428,14 @@ def collect_data_and_upload(rc=0):
         container_connection = None
         mp = None
         obfuscate = None
+        # archive metadata
+        archive_meta = {}
 
         try:
             if t['type'] == 'docker_image':
                 container_connection = open_image(t['name'])
                 logging_name = 'Docker image ' + t['name']
+                archive_meta['display_name'] = t['name']
                 if container_connection:
                     mp = container_connection.get_fs()
                 else:
@@ -407,6 +444,7 @@ def collect_data_and_upload(rc=0):
             elif t['type'] == 'docker_container':
                 container_connection = open_container(t['name'])
                 logging_name = 'Docker container ' + t['name']
+                archive_meta['display_name'] = t['name']
                 if container_connection:
                     mp = container_connection.get_fs()
                 else:
@@ -414,9 +452,14 @@ def collect_data_and_upload(rc=0):
                     continue
             elif t['type'] == 'host':
                 logging_name = determine_hostname()
+                archive_meta['display_name'] = determine_hostname(InsightsClient.options.display_name)
             else:
                 logger.error('Unexpected analysis target: %s', t['type'])
                 continue
+
+            archive_meta['type'] = t['type'].lstrip('docker_')
+            archive_meta['product'] = 'Docker'
+            archive_meta['system_id'] = generate_analysis_target_id(t['type'], t['name'])
 
             collection_start = time.clock()
             archive = InsightsArchive(compressor=InsightsClient.options.compressor,
@@ -444,7 +487,8 @@ def collect_data_and_upload(rc=0):
             tar_file = dc.done(collection_rules, rm_conf)
 
             # add archives to list of individual uploads
-            individual_archives.append(tar_file)
+            archive_meta['tar_file'] = tar_file
+            individual_archives.append(archive_meta)
 
         finally:
             # called on loop iter end or unexpected exit
@@ -455,9 +499,11 @@ def collect_data_and_upload(rc=0):
     if len(individual_archives) > 1:
         full_archive = InsightsArchive(compressor=InsightsClient.options.compressor)
         for a in individual_archives:
-            shutil.copy(a, full_archive.archive_dir)
+            shutil.copy(a['tar_file'], full_archive.archive_dir)
         # don't want insights_commands in meta archive
         shutil.rmtree(full_archive.cmd_dir)
+        metadata = _create_metadata_json(individual_archives)
+        full_archive.add_metadata_to_archive(json.dumps(metadata), 'metadata.json')
         full_tar_file = full_archive.create_tar_file()
     # if only one target, just upload one
     else:
