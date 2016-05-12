@@ -11,7 +11,7 @@ import logging
 import shlex
 import subprocess
 
-from redhat_access_insights.constants import InsightsConstants as constants
+from redhat_access.insights.constants import InsightsConstants as constants
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
@@ -20,10 +20,11 @@ logger = logging.getLogger(APP_NAME)
 def run_command_very_quietly(cmdline):
     # this takes a string (not an array)
     # need to redirect stdout and stderr to /dev/null
-    cmd = shlex.split(cmdline)
-    proc = subprocess.Popen(cmd)
-    returncode = proc.wait()
-    return returncode
+    with open(os.devnull, 'w') as devnull:
+        cmd = shlex.split(cmdline)
+        proc = subprocess.Popen(cmd, stdout=devnull, stderr=subprocess.STDOUT)
+        returncode = proc.wait()
+        return returncode
 
 
 # Check to see if we have access to docker
@@ -61,7 +62,7 @@ if HaveDocker:
     import shutil
     import json
 
-    from redhat_access_insights.client_config import InsightsClient
+    from redhat_access.insights.client_config import InsightsClient
 
     def runcommand(cmd):
         # this takes an array (not a string)
