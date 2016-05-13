@@ -20,10 +20,11 @@ logger = logging.getLogger(APP_NAME)
 def run_command_very_quietly(cmdline):
     # this takes a string (not an array)
     # need to redirect stdout and stderr to /dev/null
-    cmd = shlex.split(cmdline)
-    proc = subprocess.Popen(cmd)
-    returncode = proc.wait()
-    return returncode
+    with open(os.devnull, 'w') as devnull:
+        cmd = shlex.split(cmdline)
+        proc = subprocess.Popen(cmd, stdout=devnull, stderr=subprocess.STDOUT)
+        returncode = proc.wait()
+        return returncode
 
 
 # Check to see if we have access to docker
