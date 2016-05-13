@@ -19,6 +19,7 @@ from utilities import (validate_remove_file,
                        generate_machine_id,
                        write_lastupload_file,
                        write_registered_file,
+                       write_unregistered_file,
                        delete_registered_file,
                        delete_unregistered_file,
                        delete_machine_id,
@@ -143,10 +144,10 @@ def handle_startup():
         sys.exit(rc)
 
     if InsightsClient.options.status:
-        reg_check, status = registration_check()
-        logger.info('\n'.join(reg_check))
+        reg_check = registration_check()
+        logger.info('\n'.join(reg_check['messages']))
         # exit with !status, 0 for True, 1 for False
-        sys.exit(not status)
+        sys.exit(not reg_check['status'])
 
     if InsightsClient.options.support:
         support = InsightsSupport()
@@ -203,23 +204,38 @@ def handle_startup():
         try_register()
 
     # check registration before doing any uploads
-    # First startup, no .registered or .unregistered
     # Ignore if in offline mode
-    if (not os.path.isfile(constants.registered_file) and
-       not os.path.isfile(constants.unregistered_file) and
-       not InsightsClient.options.register and not InsightsClient.options.offline):
-        logger.error('This machine has not yet been registered.')
-        logger.error('Use --register to register this machine.')
-        logger.error("Exiting")
-        sys.exit(1)
+    if not (InsightsClient.options.register and not InsightsClient.options.offline):
+        msg, is_registered = _is_client_registered()
+        if not is_registered:
+            logger.error(msg)
+            sys.exit(1)
 
-    # Check for .unregistered file
-    if (os.path.isfile(constants.unregistered_file) and
-       not InsightsClient.options.register and not InsightsClient.options.offline):
-        logger.error("This machine has been unregistered.")
-        logger.error("Use --register if you would like to re-register this machine.")
-        logger.error("Exiting")
-        sys.exit(1)
+
+def _is_client_registered():
+    msg_notyet = 'This machine has not yet been registered.'
+    msg_unreg = 'This machine has been unregistered.'
+    msg_doreg = 'Use --register to register this machine.'
+    msg_rereg = 'Use --register if you would like to re-register this machine.'
+    msg_webrg = 'This machine has been unregistered from the Insights web UI.'
+    msg_exit = 'Exiting...'
+    if not os.path.isfile(constants.registered_file):
+        if os.path.isfile(constants.unregistered_file):
+            # client has been unregistered
+            msg = '\n'.join([msg_unreg, msg_rereg, msg_exit])
+        else:
+            # first startup, no .registered or .unregistered
+            msg = '\n'.join([msg_notyet, msg_doreg, msg_exit])
+        return msg, False
+    else:
+        # double check with the API
+        reg_check = registration_check()
+        if not reg_check['status']:
+            msg = '\n'.join([msg_webrg, msg_rereg, msg_exit])
+            write_unregistered_file(reg_check['unreg_date'])
+            return msg, False
+        # all clear
+        return '', True
 
 
 def handle_branch_info_error(msg):
@@ -270,8 +286,8 @@ def try_register():
         logger.info('This host has already been registered.')
         return
     # check reg status with API
-    reg_check, status = registration_check()
-    if status:
+    reg_check = registration_check()
+    if reg_check['status']:
         logger.info('This host has already been registered.')
         # regenerate the .registered file
         write_registered_file()

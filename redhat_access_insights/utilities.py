@@ -64,14 +64,11 @@ def write_unregistered_file(date=None):
     if date is None:
         date = datetime.datetime.isoformat(datetime.datetime.now())
     else:
-        logger.error("This machine has been unregistered")
-        logger.error("Use --register if you would like to re-register this machine")
-        logger.error("Exiting")
         rc = 1
 
     unreg = file(constants.unregistered_file, 'w')
     unreg.write(str(date))
-    sys.exit(rc)
+    return rc
 
 
 def write_registered_file():

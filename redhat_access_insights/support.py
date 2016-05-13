@@ -17,6 +17,7 @@ logger = logging.getLogger(APP_NAME)
 
 def registration_check():
     # check local registration record
+    unreg_date = None
     if os.path.isfile(constants.registered_file):
         local_record = 'System is registered.'
         with open(constants.registered_file) as reg_file:
@@ -39,9 +40,12 @@ def registration_check():
         api_reg_status = False
     else:
         api_record = 'Insights API says this machine was unregistered at ' + api_reg_status
+        unreg_date = api_reg_status
         api_reg_status = False
 
-    return [local_record, api_record], api_reg_status
+    return {'messages': [local_record, api_record],
+            'status': api_reg_status,
+            'unreg_date': unreg_date}
 
 
 class InsightsSupport(object):
