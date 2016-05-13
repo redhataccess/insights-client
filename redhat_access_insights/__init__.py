@@ -462,7 +462,7 @@ def collect_data_and_upload(rc=0):
             archive_meta['system_id'] = generate_analysis_target_id(t['type'], t['name'])
 
             collection_start = time.clock()
-            archive = InsightsArchive(compressor=InsightsClient.options.compressor,
+            archive = InsightsArchive(compressor=InsightsClient.options.compressor if not InsightsClient.options.container_mode else "none",
                                       target_name=t['name'])
             atexit.register(_delete_archive, archive)
             dc = DataCollector(archive,
@@ -495,8 +495,8 @@ def collect_data_and_upload(rc=0):
             if container_connection:
                 container_connection.close()
 
-    # if multiple targets, add all archives to single archive
-    if len(individual_archives) > 1:
+    # if multiple targets (container mode), add all archives to single archive
+    if InsightsClient.options.container_mode:
         full_archive = InsightsArchive(compressor=InsightsClient.options.compressor)
         for a in individual_archives:
             shutil.copy(a['tar_file'], full_archive.archive_dir)
@@ -504,8 +504,8 @@ def collect_data_and_upload(rc=0):
         shutil.rmtree(full_archive.cmd_dir)
         metadata = _create_metadata_json(individual_archives)
         full_archive.add_metadata_to_archive(json.dumps(metadata), 'metadata.json')
-        full_tar_file = full_archive.create_tar_file()
-    # if only one target, just upload one
+        full_tar_file = full_archive.create_tar_file(full_archive=True)
+    # if only one target (regular mode), just upload one
     else:
         full_archive = archive
         full_tar_file = tar_file
