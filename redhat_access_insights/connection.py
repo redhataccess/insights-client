@@ -459,7 +459,7 @@ class InsightsConnection(object):
 
         return branch_info
 
-    def create_system(self, options, new_machine_id=False):
+    def create_system(self, options, conf_display_name, new_machine_id=False):
         """
         Create the machine via the API
         """
@@ -494,6 +494,9 @@ class InsightsConnection(object):
                 'remote_branch': remote_branch,
                 'remote_leaf': remote_leaf,
                 'hostname': client_hostname}
+        # CLI option takes precedence over config
+        if conf_display_name is not None:
+            data['display_name'] = conf_display_name
         if options.display_name is not None:
             data['display_name'] = options.display_name
         data = json.dumps(data)
@@ -591,18 +594,18 @@ class InsightsConnection(object):
             logger.debug(e)
             logger.error("Could not unregister this system")
 
-    def register(self, options):
+    def register(self, options, conf_display_name):
         """
         Register this machine
         """
         client_hostname = determine_hostname()
         # This will undo a blacklist
         logger.debug("API: Create system")
-        system = self.create_system(options, new_machine_id=False)
+        system = self.create_system(options, conf_display_name, new_machine_id=False)
 
         # If we get a 409, we know we need to generate a new machine-id
         if system.status_code == 409:
-            system = self.create_system(options, new_machine_id=True)
+            system = self.create_system(options, conf_display_name, new_machine_id=True)
         self.handle_fail_rcs(system)
 
         logger.debug("System: %s", system.json())

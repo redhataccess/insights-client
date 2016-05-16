@@ -66,7 +66,8 @@ def parse_config_file(conf_file):
          'systemid': None,
          'proxy': None,
          'insecure_connection': 'False',
-         'no_schedule': 'False'})
+         'no_schedule': 'False',
+         'display_name': None})
     try:
         parsedconfig.read(conf_file)
     except ConfigParser.Error:
@@ -282,7 +283,7 @@ def handle_file_output(options, tar_file, archive):
         logger.info('See Insights data in %s', tar_file)
 
 
-def register(config, group_id=None):
+def register(config, options):
     """
     Do registration using basic auth
     """
@@ -291,8 +292,7 @@ def register(config, group_id=None):
     if ((
             username == "" and
             password == "" and
-            config.get(APP_NAME, 'authmethod') == 'BASIC')
-        and
+            config.get(APP_NAME, 'authmethod') == 'BASIC') and
             not config.get(APP_NAME, 'auto_config')):
         # Get input from user
         print "Please enter your Red Hat Customer Portal Credentials"
@@ -315,8 +315,9 @@ def register(config, group_id=None):
             config_file.write(status['output'])
             config_file.flush()
 
+    conf_display_name = config.get(APP_NAME, 'display_name')
     pconn = InsightsConnection(config)
-    return pconn.register(group_id)
+    return pconn.register(options, conf_display_name)
 
 
 def set_up_options(parser):
@@ -530,14 +531,15 @@ def handle_startup(options, config):
             reg_check, status = registration_check(config)
             if not status:
                 message, hostname, opt_group, display_name = register(config, options)
-                if options.display_name is None and options.group is None:
-                    logger.info('Successfully registered %s', hostname)
-                elif options.display_name is None:
-                    logger.info('Successfully registered %s in group %s', hostname, opt_group)
-                else:
-                    logger.info('Successfully registered %s as %s in group %s', hostname, display_name,
-                                opt_group)
-                logger.info(message)
+                display_name = options.display_name if options.display_name else config.get(APP_NAME, 'display_name')
+                reg_msg = 'Successfully registered %s' % hostname
+                if display_name is not None:
+                    reg_msg = reg_msg + ' as %s' % display_name
+                if options.group is not None:
+                    reg_msg = reg_msg + ' in group %s' % opt_group
+                logger.info(reg_msg)
+                if message:
+                    logger.info(message)
             else:
                 logger.info('This host has already been registered.')
                 # regenerate the .registered file
