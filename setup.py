@@ -25,6 +25,8 @@ if __name__ == "__main__":
     man5path = "/usr/share/man/man5/"
     man8path = "/usr/share/man/man8/"
 
+    rpmpath = "/var/lib/redhat_access_insights"
+
     setup(
         name="redhat-access-insights",
         version=VERSION,
@@ -53,7 +55,10 @@ if __name__ == "__main__":
             (man5path, ['docs/redhat-access-insights.conf.5']),
             (man8path, ['docs/redhat-access-insights.8']),
 
-            (logpath, [])
+            (logpath, []),
+
+            # included portable client .gz
+            (rpmpath, ['redhat-access-insights-' + VERSION + '.tar.gz'])
         ],
         description=SHORT_DESC,
         long_description=LONG_DESC

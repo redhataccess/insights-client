@@ -3,7 +3,7 @@
 
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
-Version:                1.0.9
+Version:                1.0.10
 Release:                1%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
@@ -77,6 +77,7 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %{python_sitelib}/redhat_access_insights*.egg-info
 %{python_sitelib}/redhat_access_insights/*.py*
+%{_sharedstatedir}/redhat_access_insights/redhat-access-insights-*.tar.gz
 
 %doc
 /usr/share/man/man8/*.8.gz
