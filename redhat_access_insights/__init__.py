@@ -178,6 +178,11 @@ def handle_startup():
         logger.warn("WARNING: GPG VERIFICATION DISABLED")
         InsightsClient.config.set(APP_NAME, 'gpg', 'False')
 
+    if InsightsClient.options.just_upload:
+        # override these for great justice
+        InsightsClient.options.no_tar_file = False
+        InsightsClient.options.keep_archive = True
+
     # can't use bofa
     if InsightsClient.options.from_stdin and InsightsClient.options.from_file:
         logger.error('Can\'t use both --from-stdin and --from-file.')
@@ -368,6 +373,14 @@ def collect_data_and_upload(rc=0):
                 "Could not determine branch information")
     pc = InsightsConfig(pconn)
 
+    if InsightsClient.options.just_upload:
+        if not os.path.exists(InsightsClient.options.just_upload):
+            logger.error('No file %s', InsightsClient.options.just_upload)
+            return 1
+        tar_file = InsightsClient.options.just_upload
+        rc = _do_upload(pconn, tar_file, 'dummy', 0)
+        return rc
+
     # load config from stdin/file if specified
     try:
         stdin_config = {}
@@ -448,29 +461,7 @@ def collect_data_and_upload(rc=0):
                 handle_file_output(tar_file, archive)
                 return rc
 
-            # do the upload
-            logger.info('Uploading Insights data for %s, this may take a few minutes', logging_name)
-            for tries in range(InsightsClient.options.retries):
-                upload = pconn.upload_archive(tar_file, collection_duration)
-                if upload.status_code == 201:
-                    write_lastupload_file()
-                    logger.info("Upload completed successfully!")
-                    break
-                elif upload.status_code == 412:
-                    pconn.handle_fail_rcs(upload)
-                else:
-                    logger.error("Upload attempt %d of %d failed! Status Code: %s",
-                                 tries + 1, InsightsClient.options.retries, upload.status_code)
-                    if tries + 1 != InsightsClient.options.retries:
-                        logger.info("Waiting %d seconds then retrying",
-                                    constants.sleep_time)
-                        time.sleep(constants.sleep_time)
-                    else:
-                        logger.error("All attempts to upload have failed!")
-                        logger.error("Please see %s for additional information",
-                                     constants.default_log_file)
-                        rc = 1
-
+            rc = _do_upload(pconn, tar_file, logging_name, collection_duration)
             if InsightsClient.options.keep_archive:
                 logger.info('Insights data retained in %s', tar_file)
                 return rc
@@ -489,6 +480,32 @@ def collect_data_and_upload(rc=0):
                                 InsightsClient.options.no_tar_file or
                                 obfuscate):
                 archive.delete_tmp_dir()
+    return rc
+
+
+def _do_upload(pconn, tar_file, logging_name, collection_duration, rc=0):
+    # do the upload
+    logger.info('Uploading Insights data for %s, this may take a few minutes', logging_name)
+    for tries in range(InsightsClient.options.retries):
+        upload = pconn.upload_archive(tar_file, collection_duration)
+        if upload.status_code == 201:
+            write_lastupload_file()
+            logger.info("Upload completed successfully!")
+            break
+        elif upload.status_code == 412:
+            pconn.handle_fail_rcs(upload)
+        else:
+            logger.error("Upload attempt %d of %d failed! Status Code: %s",
+                         tries + 1, InsightsClient.options.retries, upload.status_code)
+            if tries + 1 != InsightsClient.options.retries:
+                logger.info("Waiting %d seconds then retrying",
+                            constants.sleep_time)
+                time.sleep(constants.sleep_time)
+            else:
+                logger.error("All attempts to upload have failed!")
+                logger.error("Please see %s for additional information",
+                             constants.default_log_file)
+                rc = 1
     return rc
 
 

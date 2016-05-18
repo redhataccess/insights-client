@@ -180,7 +180,11 @@ def set_up_options(parser):
                      help=optparse.SUPPRESS_HELP,
                      action="store_true",
                      dest="run_here",
-                     default=False)
+                     default=False),
+    group.add_option('--just-upload',
+                     help=optparse.SUPPRESS_HELP,
+                     action='store',
+                     dest='just_upload')
     parser.add_option_group(group)
 
 
