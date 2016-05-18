@@ -191,6 +191,15 @@ def collect_data_and_upload(config, options, rc=0):
             branch_info = handle_branch_info_error(
                 "Could not determine branch information", options)
     pc = InsightsConfig(config, pconn)
+
+    if options.just_upload:
+        if not os.path.exists(options.just_upload):
+            logger.error('No file %s', options.just_upload)
+            return 1
+        tar_file = options.just_upload
+        rc = _do_upload(pconn, tar_file, 0, options)
+        return rc
+
     archive = InsightsArchive(compressor=options.compressor)
     dc = DataCollector(archive)
 
@@ -237,29 +246,7 @@ def collect_data_and_upload(config, options, rc=0):
     if not options.no_tar_file:
         tar_file = dc.done(config, rm_conf)
         if not options.offline and not options.no_upload:
-            logger.info('Uploading Insights data,'
-                        ' this may take a few minutes')
-            for tries in range(options.retries):
-                upload = pconn.upload_archive(tar_file, collection_duration)
-                if upload.status_code == 201:
-                    write_lastupload_file()
-                    logger.info("Upload completed successfully!")
-                    break
-                elif upload.status_code == 412:
-                    pconn.handle_fail_rcs(upload)
-                else:
-                    logger.error("Upload attempt %d of %d failed! Status Code: %s",
-                                 tries + 1, options.retries, upload.status_code)
-                    if tries + 1 != options.retries:
-                        logger.info("Waiting %d seconds then retrying",
-                                    constants.sleep_time)
-                        time.sleep(constants.sleep_time)
-                    else:
-                        logger.error("All attempts to upload have failed!")
-                        logger.error("Please see %s for additional information",
-                                     constants.default_log_file)
-                        rc = 1
-
+            rc = _do_upload(pconn, tar_file, collection_duration, options)
             if not obfuscate and not options.keep_archive:
                 dc.archive.delete_tmp_dir()
             else:
@@ -272,6 +259,32 @@ def collect_data_and_upload(config, options, rc=0):
             handle_file_output(options, tar_file, archive)
     else:
         logger.info('See Insights data in %s', dc.archive.archive_dir)
+    return rc
+
+
+def _do_upload(pconn, tar_file, collection_duration, options, rc=0):
+    logger.info('Uploading Insights data,'
+                ' this may take a few minutes')
+    for tries in range(options.retries):
+        upload = pconn.upload_archive(tar_file, collection_duration)
+        if upload.status_code == 201:
+            write_lastupload_file()
+            logger.info("Upload completed successfully!")
+            break
+        elif upload.status_code == 412:
+            pconn.handle_fail_rcs(upload)
+        else:
+            logger.error("Upload attempt %d of %d failed! Status Code: %s",
+                         tries + 1, options.retries, upload.status_code)
+            if tries + 1 != options.retries:
+                logger.info("Waiting %d seconds then retrying",
+                            constants.sleep_time)
+                time.sleep(constants.sleep_time)
+            else:
+                logger.error("All attempts to upload have failed!")
+                logger.error("Please see %s for additional information",
+                             constants.default_log_file)
+                rc = 1
     return rc
 
 
@@ -457,6 +470,10 @@ def set_up_options(parser):
                      action="store_true",
                      dest="keep_archive",
                      default=False)
+    group.add_option('--just-upload',
+                     help=optparse.SUPPRESS_HELP,
+                     action="store",
+                     dest="just_upload")
     parser.add_option_group(group)
 
 
@@ -475,6 +492,14 @@ def handle_startup(options, config):
 
     if options.to_stdout:
         options.no_upload = True
+
+    if options.just_upload:
+        if options.offline or options.no_upload:
+            logger.error('Cannot use --just-upload in combination with --offline or --no-upload.')
+            sys.exit(1)
+        # override these for great justice
+        options.no_tar_file = False
+        options.keep_archive = True
 
     # Generate /etc/machine-id if it does not exist
     new = False
