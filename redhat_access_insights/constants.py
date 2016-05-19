@@ -6,7 +6,7 @@ import os
 
 class InsightsConstants(object):
     app_name = 'redhat-access-insights'
-    version = '1.0.10'
+    version = '1.0.11'
     auth_method = 'BASIC'
     log_level = 'DEBUG'
     package_path = os.path.dirname(

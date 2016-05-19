@@ -217,6 +217,9 @@ def collect_data_and_upload(config, options, rc=0):
             ('uploader.json' not in stdin_config or
              'sig' not in stdin_config)):
             raise ValueError
+        if ((options.from_file or options.from_stdin) and
+           'branch_info' in stdin_config and stdin_config['branch_info'] is not None):
+            branch_info = stdin_config['branch_info']
     except:
         logger.error('ERROR: Invalid config for %s! Exiting...' %
                      ('--from-file' if options.from_file else '--from-stdin'))
