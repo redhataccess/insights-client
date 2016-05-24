@@ -118,9 +118,11 @@ if HaveDocker:
     def get_targets():
         targets = []
         for d in _docker_all_image_ids():
-            targets.append({'type': 'docker_image', 'name': d})
+            if InsightsClient.options.only is None or InsightsClient.options.only == d:
+                targets.append({'type': 'docker_image', 'name': d})
         for d in _docker_all_container_ids():
-            targets.append({'type': 'docker_container', 'name': d})
+            if InsightsClient.options.only is None or InsightsClient.options.only == d:
+                targets.append({'type': 'docker_container', 'name': d})
         return targets
 
     def run_in_container():

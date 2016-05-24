@@ -173,6 +173,11 @@ def set_up_options(parser):
                      action="store",
                      dest="docker_image_name",
                      default=None)
+    group.add_option('--only',
+                     help="only upload data for the image or container who's Id matches this option",
+                     action="store",
+                     dest="only",
+                     default=None)
     # this option is for when we run inside a container, so
     #  that another container is not spawned
     #  undocumented option
