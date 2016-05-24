@@ -7,11 +7,12 @@
 # and if the docker server on this machine is accessable, which isn't exactly the
 # same thing as 'there is no docker on this machine'.
 
+import os
 import logging
 import shlex
 import subprocess
 
-from redhat_access.insights.constants import InsightsConstants as constants
+from redhat_access_insights.constants import InsightsConstants as constants
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
@@ -57,12 +58,11 @@ HaveAtomicMount = HaveAtomic
 
 
 if HaveDocker:
-    import os
     import tempfile
     import shutil
     import json
 
-    from redhat_access.insights.client_config import InsightsClient
+    from redhat_access_insights.client_config import InsightsClient
 
     def runcommand(cmd):
         # this takes an array (not a string)
