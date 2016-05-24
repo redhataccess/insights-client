@@ -628,7 +628,7 @@ class InsightsConnection(object):
             'file': (file_name, open(data_collected, 'rb'), mime_type)}
 
         if cluster:
-            upload_url = self.upload_url + '/' + cluster + "?cluster=True"
+            upload_url = self.upload_url + '/' + cluster
         elif base_name:
             upload_url = self.upload_url + '/' + base_name
         else:
