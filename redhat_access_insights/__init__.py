@@ -17,6 +17,7 @@ import traceback
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
+                       generate_analysis_target_id,
                        write_lastupload_file,
                        write_registered_file,
                        write_unregistered_file,
@@ -414,6 +415,7 @@ def collect_data_and_upload(rc=0):
             if t['type'] == 'docker_image':
                 container_connection = open_image(t['name'])
                 logging_name = 'Docker image ' + t['name']
+                system_id = generate_analysis_target_id(t['type'], t['name'])
                 if container_connection:
                     mp = container_connection.get_fs()
                 else:
@@ -422,6 +424,7 @@ def collect_data_and_upload(rc=0):
             elif t['type'] == 'docker_container':
                 container_connection = open_container(t['name'])
                 logging_name = 'Docker container ' + t['name']
+                system_id = generate_analysis_target_id(t['type'], t['name'])
                 if container_connection:
                     mp = container_connection.get_fs()
                 else:
@@ -429,6 +432,7 @@ def collect_data_and_upload(rc=0):
                     continue
             elif t['type'] == 'host':
                 logging_name = determine_hostname()
+                system_id = generate_machine_id()
             else:
                 logger.error('Unexpected analysis target: %s', t['type'])
                 continue
@@ -461,7 +465,7 @@ def collect_data_and_upload(rc=0):
                 handle_file_output(tar_file, archive)
                 return rc
 
-            rc = _do_upload(pconn, tar_file, logging_name, collection_duration)
+            rc = _do_upload(pconn, tar_file, logging_name, collection_duration, base_name=system_id)
             if InsightsClient.options.keep_archive:
                 logger.info('Insights data retained in %s', tar_file)
                 return rc
@@ -483,11 +487,11 @@ def collect_data_and_upload(rc=0):
     return rc
 
 
-def _do_upload(pconn, tar_file, logging_name, collection_duration, rc=0):
+def _do_upload(pconn, tar_file, logging_name, collection_duration, rc=0, base_name=None):
     # do the upload
     logger.info('Uploading Insights data for %s, this may take a few minutes', logging_name)
     for tries in range(InsightsClient.options.retries):
-        upload = pconn.upload_archive(tar_file, collection_duration)
+        upload = pconn.upload_archive(tar_file, collection_duration, base_name=base_name)
         if upload.status_code == 201:
             write_lastupload_file()
             logger.info("Upload completed successfully!")
