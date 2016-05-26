@@ -570,7 +570,7 @@ class InsightsConnection(object):
             logger.debug("Unregistering %s", machine_id)
             self.session.delete(self.api_url + "/v1/systems/" + machine_id)
             logger.info(
-                "Successfully unregistered from the Red Hat Access Insights Service")
+                "Successfully unregistered from the Red Hat Insights Service")
             write_unregistered_file()
         except requests.ConnectionError as e:
             logger.debug(e)

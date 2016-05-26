@@ -1,5 +1,8 @@
-[redhat-access-insights]
-name=redhat-access-insights repo - noarch
-baseurl=http://people.redhat.com/~dvarga/projects/redhat-access-insights/$releasever/
+[insights-client]
+name=Copr repo for insights-client owned by insights
+baseurl=https://copr-be.cloud.fedoraproject.org/results/insights/insights-client/epel-$releasever-$basearch/
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/insights/insights-client/pubkey.gpg
 enabled=1
-gpgcheck=0
+enabled_metadata=1

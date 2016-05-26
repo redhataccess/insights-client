@@ -529,7 +529,7 @@ def _main():
     Call data collector
     """
     if os.geteuid() is not 0:
-        sys.exit("Red Hat Access Insights must be run as root")
+        sys.exit("Red Hat Insights must be run as root")
 
     sys.excepthook = handle_exception
 

@@ -1,5 +1,5 @@
 RPMTOP=$(shell bash -c "pwd -P")/dist
-PKGNAME=redhat-access-insights
+PKGNAME=insights-client
 SRPM=$(RPMTOP)/SRPMS/$(PKGNAME)-*.src.rpm
 TARBALL=$(RPMTOP)/$(PKGNAME)-*.tar.gz
 RPM=$(RPMTOP)/RPMS/noarch/$(PKGNAME)*.rpm

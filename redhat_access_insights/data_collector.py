@@ -21,7 +21,7 @@ logger = logging.getLogger(APP_NAME)
 SOSCLEANER_LOGGER = logging.getLogger('soscleaner')
 SOSCLEANER_LOGGER.setLevel(logging.ERROR)
 # python 2.6
-SOSCLEANER_LOGGER = logging.getLogger('redhat_access_insights.soscleaner')
+SOSCLEANER_LOGGER = logging.getLogger('insights-client.soscleaner')
 SOSCLEANER_LOGGER.setLevel(logging.ERROR)
 
 

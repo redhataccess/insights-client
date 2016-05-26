@@ -1,18 +1,21 @@
 %{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %define _binaries_in_noarch_packages_terminate_build 0
 
-Name:                   redhat-access-insights
+Name:                   insights-client
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                1.1.0
 Release:                0%{?dist}
-Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
+Source0:                https://github.com/redhataccess/insights-client/archive/insights-client-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
 URL:                    http://access.redhat.com/insights
 Group:                  Applications/System
 Vendor:                 Red Hat, Inc.
 
+Provides: redhat-access-insights
+
 Obsoletes: redhat-access-proactive
+Obsoletes: redhat-access-insights
 
 Requires: python
 Requires: python-setuptools
@@ -43,17 +46,24 @@ rm -rf ${RPM_BUILD_ROOT}
 %post
 #Migrate existing machine-id
 if  [ -f "/etc/redhat_access_proactive/machine-id" ]; then
-mkdir -p /etc/redhat-access-insights/
-mv /etc/redhat_access_proactive/machine-id /etc/redhat-access-insights/machine-id
+mkdir -p /etc/insights-client/
+mv /etc/redhat_access_proactive/machine-id /etc/insights-client/machine-id
 fi
+#Migrate OTHER existing machine-id
+if  [ -f "/etc/redhat-access-insights/machine-id" ]; then
+mkdir -p /etc/insights-client/
+mv /etc/redhat-access-insights/machine-id /etc/insights-client/machine-id
+fi
+#Migrate existing configs
+
 
 %postun
 if [ "$1" -eq 0 ]; then
-rm -f /etc/cron.daily/redhat-access-insights
-rm -f /etc/cron.weekly/redhat-access-insights
-rm -f /etc/redhat-access-insights/.cache*
-rm -f /etc/redhat-access-insights/.registered
-rm -f /etc/redhat-access-insights/.unregistered
+rm -f /etc/cron.daily/insights-client
+rm -f /etc/cron.weekly/insights-client
+rm -f /etc/insights-client/.cache*
+rm -f /etc/insights-client/.registered
+rm -f /etc/insights-client/.unregistered
 fi
 
 %clean
@@ -61,22 +71,22 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(755,root,root)
-%{_bindir}/redhat-access-insights
-/etc/redhat-access-insights/redhat-access-insights.cron
+%{_bindir}/insights-client
+/etc/insights-client/insights-client.cron
 
 %defattr(0600, root, root)
-%dir /etc/redhat-access-insights
-%config(noreplace) /etc/redhat-access-insights/*.conf
-/etc/redhat-access-insights/.fallback.json
-/etc/redhat-access-insights/.fallback.json.asc
-/etc/redhat-access-insights/redhattools.pub.gpg
-/etc/redhat-access-insights/.exp.sed
-/etc/redhat-access-insights/*.pem
+%dir /etc/insights-client
+%config(noreplace) /etc/insights-client/*.conf
+/etc/insights-client/.fallback.json
+/etc/insights-client/.fallback.json.asc
+/etc/insights-client/redhattools.pub.gpg
+/etc/insights-client/.exp.sed
+/etc/insights-client/*.pem
 
 %defattr(-,root,root)
-%{python_sitelib}/redhat_access_insights*.egg-info
-%{python_sitelib}/redhat_access_insights/*.py*
-%{python_sitelib}/redhat_access_insights/containers/*.py*
+%{python_sitelib}/insights_client*.egg-info
+%{python_sitelib}/insights_client/*.py*
+%{python_sitelib}/insights_client/containers/*.py*
 
 %doc
 /usr/share/man/man8/*.8.gz
