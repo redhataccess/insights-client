@@ -55,7 +55,11 @@ mkdir -p /etc/insights-client/
 mv /etc/redhat-access-insights/machine-id /etc/insights-client/machine-id
 fi
 #Migrate existing configs
-
+if [ -d "/etc/redhat-access-insights" ]; then
+\cp -a /etc/redhat-access-insights/. /etc/insights-client/
+mv /etc/insights-client/redhat-access-insights.conf /etc/insights-client/insights-client.conf
+mv /etc/insights-client/redhat-access-insights.cron /etc/insights-client/insights-client.cron
+fi
 
 %postun
 if [ "$1" -eq 0 ]; then
