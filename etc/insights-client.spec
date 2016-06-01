@@ -46,20 +46,18 @@ rm -rf ${RPM_BUILD_ROOT}
 %post
 #Migrate existing machine-id
 if  [ -f "/etc/redhat_access_proactive/machine-id" ]; then
-mkdir -p /etc/insights-client/
 mv /etc/redhat_access_proactive/machine-id /etc/insights-client/machine-id
 fi
 #Migrate OTHER existing machine-id
-if  [ -f "/etc/redhat-access-insights/machine-id" ]; then
-mkdir -p /etc/insights-client/
+if [ -f "/etc/redhat-access-insights/machine-id" ]; then
 mv /etc/redhat-access-insights/machine-id /etc/insights-client/machine-id
 fi
-#Migrate existing configs
-if [ -d "/etc/redhat-access-insights" ]; then
-\cp -a /etc/redhat-access-insights/. /etc/insights-client/
-mv /etc/insights-client/redhat-access-insights.conf /etc/insights-client/insights-client.conf
-mv /etc/insights-client/redhat-access-insights.cron /etc/insights-client/insights-client.cron
+#Migrate existing config
+if [ -d "/etc/redhat-access-insights/redhat-access-insights.conf" ]; then
+mv /etc/redhat-access-insights/redhat-access-insights.conf /etc/insights-client/insights-client.conf
 fi
+# Create symlink to old name
+ln -sf %{_bindir}/insights-client %{_bindir}/redhat-access-insights
 
 %postun
 if [ "$1" -eq 0 ]; then
@@ -68,6 +66,9 @@ rm -f /etc/cron.weekly/insights-client
 rm -f /etc/insights-client/.cache*
 rm -f /etc/insights-client/.registered
 rm -f /etc/insights-client/.unregistered
+rm -f /etc/insights-client/.lastupload
+# remove symlink to old name on uninstall
+rm -f %{_bindir}/redhat-access-insights
 fi
 
 %clean
