@@ -12,7 +12,7 @@ import logging
 import shlex
 import subprocess
 
-from redhat_access_insights.constants import InsightsConstants as constants
+from insights_client.constants import InsightsConstants as constants
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
@@ -62,7 +62,7 @@ if HaveDocker:
     import shutil
     import json
 
-    from redhat_access_insights.client_config import InsightsClient
+    from insights_client.client_config import InsightsClient
 
     def runcommand(cmd):
         # this takes an array (not a string)

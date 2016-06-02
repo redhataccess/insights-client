@@ -84,7 +84,7 @@ class InsightsSupport(object):
         logger.info('python-requests: %s', requests.__version__)
 
         # run commands
-        commands = ['redhat-access-insights --test-connection --quiet',
+        commands = ['insights-client --test-connection --quiet',
                     'uname -a',
                     'cat /etc/redhat-release',
                     'env',

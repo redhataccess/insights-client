@@ -1,18 +1,18 @@
-.\" redhat-access-insights.conf - Red Hat Access Insights
-.TH "redhat-access-insights.conf" "8" "" "Red Hat Access Insights Configuration" ""
+.\" insights-client.conf - Red Hat Insights
+.TH "insights-client.conf" "8" "" "Red Hat Insights Configuration" ""
 .SH "NAME"
-redhat\-access\-insights.conf \- Red Hat Access Insights client configuration
+insights\-client.conf \- Red Hat Insights client configuration
 
 .SH "DESCRIPTION"
-The \fBredhat\-access\-insights.conf\fP file contains configuration information for \fBredhat\-access\-insights\fP, the client for the Red Hat Access Insights service. This file is in an INI style format, option=value, default or example values are shown below.
+The \fBinsights\-client.conf\fP file contains configuration information for \fBinsights\-client\fP, the client for the Red Hat Insights service. This file is in an INI style format, option=value, default or example values are shown below.
 
-[redhat-access-insights]\&
+[insights-client]\&
 .IP "loglevel=DEBUG"
 Change log level, valid options DEBUG, INFO, WARNING, ERROR, CRITICAL.
 .IP "trace=False"
 Log each line executed
 .IP "auto_config=True"
-Automatically attempt to configure connectivity to Red Hat Access Insights
+Automatically attempt to configure connectivity to Red Hat Insights
 .IP "authmethod=BASIC"
 Change authentication method, valid options BASIC, CERT. Default BASIC\&
 .IP "username="
@@ -21,7 +21,7 @@ Username to use when authmethod is BASIC
 Password to use when authmethod is BASIC
 .IP "base_url=cert-api.access.redhat.com:443/r/insights"
 Base URL for API Interactions
-.IP "remove_file=/etc/redhat-access-insights/remove.conf"
+.IP "remove_file=/etc/insights-client/remove.conf"
 File that can be used to prevent files or commands from being collected or to exclude lines containing a specified word.
 .br
 Each word specified in patterns will exclude the entire line containing the word in all commands and files.
@@ -42,7 +42,7 @@ patterns=password,username
 .br
 keywords=super$ecret,ultra$ecret
 .br
-.IP "cert_verify=/etc/redhat-access-insights/cert-api.access.redhat.com.pem"
+.IP "cert_verify=/etc/insights-client/cert-api.access.redhat.com.pem"
 Location of the certificate chain for cert-api.access.redhat.com used for Certificate Pinning.  Valid options are True, False, or a path to the pinned certificate(s).
 .IP "gpg=True"
 Enable/Disable GPG verification of dynamic configuration
@@ -58,7 +58,7 @@ URL for the proxy
 Disable automatic scheduling
 
 .SH "SEE ALSO"
-.BR redhat-access-insights (8)
+.BR insights-client (8)
 
 .SH "AUTHOR"
 Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>\&

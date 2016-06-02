@@ -98,7 +98,7 @@ def delete_unregistered_file():
 
 def generate_machine_id(new=False):
     """
-    Generate a machine-id if /etc/redhat-access-insights/machine-id does not exist
+    Generate a machine-id if /etc/insights-client/machine-id does not exist
     """
     machine_id = None
     machine_id_file = None

@@ -5,28 +5,28 @@ from distutils.sysconfig import get_python_lib
 
 
 def get_version():
-    f = open('redhat_access_insights/constants.py')
+    f = open('insights_client/constants.py')
     for line in f:
         if 'version' in line:
             return eval(line.split('=')[-1])
 
 VERSION = get_version().split('-')[0]
-SHORT_DESC = "Red Hat Access Insights"
+SHORT_DESC = "Red Hat Insights"
 LONG_DESC = """
 Uploads insightful information to Red Hat
 """
 
 if __name__ == "__main__":
-    logpath = "/var/log/redhat-access-insights"
+    logpath = "/var/log/insights-client"
 
     # where stuff lands
-    confpath = "/etc/redhat-access-insights"
+    confpath = "/etc/insights-client"
 
     man5path = "/usr/share/man/man5/"
     man8path = "/usr/share/man/man8/"
 
     setup(
-        name="redhat-access-insights",
+        name="insights-client",
         version=VERSION,
         author="Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>",
         author_email="jcrafts@redhat.com",
@@ -35,23 +35,23 @@ if __name__ == "__main__":
         install_requires=['requests'],
         include_package_data=True,
         scripts=[
-            "scripts/redhat-access-insights"
+            "scripts/insights-client"
         ],
-        entry_points={'console_scripts': ['redhat-access-insights = redhat_access_insights:_main']},
+        entry_points={'console_scripts': ['insights-client = insights_client:_main']},
         data_files=[
             # config files
-            (confpath, ['etc/redhat-access-insights.conf',
+            (confpath, ['etc/insights-client.conf',
                         'etc/.fallback.json',
                         'etc/.fallback.json.asc',
                         'etc/redhattools.pub.gpg',
                         'etc/api.access.redhat.com.pem',
                         'etc/cert-api.access.redhat.com.pem',
                         'etc/.exp.sed',
-                        'etc/redhat-access-insights.cron']),
+                        'etc/insights-client.cron']),
 
             # man pages
-            (man5path, ['docs/redhat-access-insights.conf.5']),
-            (man8path, ['docs/redhat-access-insights.8']),
+            (man5path, ['docs/insights-client.conf.5']),
+            (man8path, ['docs/insights-client.8']),
 
             (logpath, [])
         ],

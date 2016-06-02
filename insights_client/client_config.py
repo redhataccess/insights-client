@@ -27,7 +27,7 @@ def set_up_options(parser):
                       default=False)
     parser.add_option('--unregister',
                       help=('Unregister system from the Red Hat '
-                            'Access Insights Service'),
+                            'Insights Service'),
                       action="store_true",
                       dest="unregister",
                       default=False)
@@ -225,8 +225,10 @@ def parse_config_file(conf_file):
     except ConfigParser.Error:
         logger.error("ERROR: Could not read configuration file, using defaults")
     try:
-        # Try to add the redhat_access_insights section
+        # Try to add the insights-client section
         parsedconfig.add_section(APP_NAME)
+        # Try to add the redhat_access_insights section for back compat
+        parsedconfig.add_section('redhat_access_insights')
     except ConfigParser.Error:
         pass
     return parsedconfig
