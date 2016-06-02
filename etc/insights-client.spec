@@ -53,8 +53,16 @@ if [ -f "/etc/redhat-access-insights/machine-id" ]; then
 mv /etc/redhat-access-insights/machine-id /etc/insights-client/machine-id
 fi
 #Migrate existing config
-if [ -d "/etc/redhat-access-insights/redhat-access-insights.conf" ]; then
+if [ -f "/etc/redhat-access-insights/redhat-access-insights.conf" ]; then
 mv /etc/redhat-access-insights/redhat-access-insights.conf /etc/insights-client/insights-client.conf
+fi
+#Migrate registration record
+if [ -f "/etc/redhat-access-insights/.registered" ]; then
+mv /etc/redhat-access-insights/.registered /etc/insights-client/.registered
+fi
+#Migrate last upload record
+if [ -f "/etc/redhat-access-insights/.lastupload" ]; then
+mv /etc/redhat-access-insights/.lastupload /etc/insights-client/.lastupload
 fi
 # Create symlink to old name
 ln -sf %{_bindir}/insights-client %{_bindir}/redhat-access-insights
