@@ -486,7 +486,7 @@ def collect_data_and_upload(rc=0):
                 logger.error('Unexpected analysis target: %s', t['type'])
                 continue
 
-            archive_meta['type'] = t['type'].lstrip('docker_')
+            archive_meta['type'] = t['type'].replace('docker_', '')
             archive_meta['product'] = 'Docker'
             archive_meta['system_id'] = generate_analysis_target_id(t['type'], t['name'])
 
@@ -556,11 +556,11 @@ def collect_data_and_upload(rc=0):
     return rc
 
 
-def _do_upload(pconn, tar_file, logging_name, collection_duration, rc=0, base_name=None):
+def _do_upload(pconn, tar_file, logging_name, collection_duration, rc=0):
     # do the upload
     logger.info('Uploading Insights data for %s, this may take a few minutes', logging_name)
     for tries in range(InsightsClient.options.retries):
-        upload = pconn.upload_archive(tar_file, collection_duration, base_name=base_name)
+        upload = pconn.upload_archive(tar_file, collection_duration, cluster=generate_machine_id(docker_group=True))
         if upload.status_code == 201:
             write_lastupload_file()
             logger.info("Upload completed successfully!")

@@ -608,7 +608,7 @@ class InsightsConnection(object):
         else:
             return (message, client_hostname, "None", "")
 
-    def upload_archive(self, data_collected, duration, cluster=None, base_name=None):
+    def upload_archive(self, data_collected, duration, cluster=None):
         """
         Do an HTTPS Upload of the archive
         """
@@ -629,8 +629,6 @@ class InsightsConnection(object):
 
         if cluster:
             upload_url = self.upload_url + '/' + cluster
-        elif base_name:
-            upload_url = self.upload_url + '/' + base_name
         else:
             upload_url = self.upload_url + '/' + generate_machine_id()
 
