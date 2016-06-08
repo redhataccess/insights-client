@@ -7,3 +7,4 @@ include etc/redhattools.pub.gpg
 include etc/.exp.sed
 include etc/*.pem
 include docs/*
+include insights-client-*.tar.gz
