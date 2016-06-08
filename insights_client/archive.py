@@ -109,7 +109,7 @@ class InsightsArchive(object):
             "none": ""
         }.get(compressor, "z")
 
-    def create_tar_file(self):
+    def create_tar_file(self, full_archive=False):
         """
         Create tar file to be compressed
         """
@@ -120,7 +120,11 @@ class InsightsArchive(object):
         subprocess.call(shlex.split("tar c%sfS %s -C %s ." % (
             self.get_compression_flag(self.compressor),
             tar_file_name,
-            self.tmp_dir)), stderr=subprocess.PIPE)
+            # for the docker "uber archive,"use archive_dir
+            #   rather than tmp_dir for all the files we tar,
+            #   because all the individual archives are in there
+            self.tmp_dir if not full_archive else self.archive_dir)),
+            stderr=subprocess.PIPE)
         self.delete_archive_dir()
         logger.debug("Tar File Size: %s", str(os.path.getsize(tar_file_name)))
         return tar_file_name

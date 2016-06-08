@@ -14,6 +14,7 @@ import shutil
 import sys
 import time
 import traceback
+import atexit
 from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
@@ -184,6 +185,10 @@ def handle_startup():
         InsightsClient.options.no_tar_file = False
         InsightsClient.options.keep_archive = True
 
+    if InsightsClient.options.container_mode and InsightsClient.options.no_tar_file:
+        logger.error('Invalid combination: --container and --no-tar-file')
+        sys.exit(1)
+
     # can't use bofa
     if InsightsClient.options.from_stdin and InsightsClient.options.from_file:
         logger.error('Can\'t use both --from-stdin and --from-file.')
@@ -211,7 +216,7 @@ def handle_startup():
 
     # check registration before doing any uploads
     # Ignore if in offline mode
-    if not (InsightsClient.options.register and not InsightsClient.options.offline):
+    if not InsightsClient.options.register and not InsightsClient.options.offline:
         msg, is_registered = _is_client_registered()
         if not is_registered:
             logger.error(msg)
@@ -343,6 +348,44 @@ def register():
     return pconn.register()
 
 
+def _delete_archive(archive):
+    # delete archive on unexpected exit
+    if not (InsightsClient.options.keep_archive or
+            InsightsClient.options.offline or
+            InsightsClient.options.no_upload or
+            InsightsClient.options.no_tar_file or
+            InsightsClient.config.getboolean(APP_NAME, "obfuscate")):
+        archive.delete_tmp_dir()
+
+
+def _create_metadata_json(archives):
+    metadata = {'display_name': archives[-1]['display_name'],
+                'product': 'Docker',
+                'system_id': generate_machine_id(docker_group=True),
+                'systems': []}
+
+    # host archive is appended to the end of the targets array,
+    #   so it will always be the last one (index -1)
+    docker_links = []
+    for a in archives:
+        system = {}
+        if a['type'] == 'host':
+            system['links'] = docker_links
+        else:
+            docker_links.append({
+                'system_id': a['system_id'],
+                'type': a['type']
+            })
+            system['links'] = [{'system_id': archives[-1]['system_id'],
+                                'type': 'host'}]
+        system['display_name'] = a['display_name']
+        system['product'] = a['product']
+        system['system_id'] = a['system_id']
+        system['type'] = a['type']
+        metadata['systems'].append(system)
+    return metadata
+
+
 def collect_data_and_upload(rc=0):
     """
     All the heavy lifting done here
@@ -352,6 +395,7 @@ def collect_data_and_upload(rc=0):
     # for now we do either containers OR host -- not both at same time
     if InsightsClient.options.container_mode:
         targets = get_targets()
+        targets = targets + constants.default_target
     else:
         targets = constants.default_target
 
@@ -361,6 +405,7 @@ def collect_data_and_upload(rc=0):
         branch_info = constants.default_branch_info
     else:
         pconn = InsightsConnection()
+
     # TODO: change these err msgs to be more meaningful , i.e.
     # "could not determine login information"
     if pconn:
@@ -404,18 +449,22 @@ def collect_data_and_upload(rc=0):
     collection_elapsed = (time.clock() - start)
     logger.debug("Rules configuration loaded. Elapsed time: %s", collection_elapsed)
 
+    individual_archives = []
+
     for t in targets:
         # defaults
         archive = None
         container_connection = None
         mp = None
         obfuscate = None
+        # archive metadata
+        archive_meta = {}
 
         try:
             if t['type'] == 'docker_image':
                 container_connection = open_image(t['name'])
                 logging_name = 'Docker image ' + t['name']
-                system_id = generate_analysis_target_id(t['type'], t['name'])
+                archive_meta['display_name'] = t['name']
                 if container_connection:
                     mp = container_connection.get_fs()
                 else:
@@ -424,7 +473,7 @@ def collect_data_and_upload(rc=0):
             elif t['type'] == 'docker_container':
                 container_connection = open_container(t['name'])
                 logging_name = 'Docker container ' + t['name']
-                system_id = generate_analysis_target_id(t['type'], t['name'])
+                archive_meta['display_name'] = t['name']
                 if container_connection:
                     mp = container_connection.get_fs()
                 else:
@@ -432,14 +481,19 @@ def collect_data_and_upload(rc=0):
                     continue
             elif t['type'] == 'host':
                 logging_name = determine_hostname()
-                system_id = generate_machine_id()
+                archive_meta['display_name'] = determine_hostname(InsightsClient.options.display_name)
             else:
                 logger.error('Unexpected analysis target: %s', t['type'])
                 continue
 
+            archive_meta['type'] = t['type'].lstrip('docker_')
+            archive_meta['product'] = 'Docker'
+            archive_meta['system_id'] = generate_analysis_target_id(t['type'], t['name'])
+
             collection_start = time.clock()
-            archive = InsightsArchive(compressor=InsightsClient.options.compressor,
+            archive = InsightsArchive(compressor=InsightsClient.options.compressor if not InsightsClient.options.container_mode else "none",
                                       target_name=t['name'])
+            atexit.register(_delete_archive, archive)
             dc = DataCollector(archive,
                                mountpoint=mp,
                                target_name=t['name'],
@@ -461,29 +515,44 @@ def collect_data_and_upload(rc=0):
 
             tar_file = dc.done(collection_rules, rm_conf)
 
-            if InsightsClient.options.offline or InsightsClient.options.no_upload:
-                handle_file_output(tar_file, archive)
-                return rc
-
-            rc = _do_upload(pconn, tar_file, logging_name, collection_duration, base_name=system_id)
-            if InsightsClient.options.keep_archive:
-                logger.info('Insights data retained in %s', tar_file)
-                return rc
-            if obfuscate:
-                logger.info('Obfuscated Insights data retained in %s',
-                            os.path.dirname(tar_file))
-            archive.delete_archive_dir()
+            # add archives to list of individual uploads
+            archive_meta['tar_file'] = tar_file
+            individual_archives.append(archive_meta)
 
         finally:
             # called on loop iter end or unexpected exit
             if container_connection:
                 container_connection.close()
-            if archive and not (InsightsClient.options.keep_archive or
-                                InsightsClient.options.offline or
-                                InsightsClient.options.no_upload or
-                                InsightsClient.options.no_tar_file or
-                                obfuscate):
-                archive.delete_tmp_dir()
+
+    # if multiple targets (container mode), add all archives to single archive
+    if InsightsClient.options.container_mode:
+        full_archive = InsightsArchive(compressor=InsightsClient.options.compressor)
+        for a in individual_archives:
+            shutil.copy(a['tar_file'], full_archive.archive_dir)
+        # don't want insights_commands in meta archive
+        shutil.rmtree(full_archive.cmd_dir)
+        metadata = _create_metadata_json(individual_archives)
+        full_archive.add_metadata_to_archive(json.dumps(metadata), 'metadata.json')
+        full_tar_file = full_archive.create_tar_file(full_archive=True)
+    # if only one target (regular mode), just upload one
+    else:
+        full_archive = archive
+        full_tar_file = tar_file
+
+    if InsightsClient.options.offline or InsightsClient.options.no_upload:
+        handle_file_output(full_tar_file, full_archive)
+        return rc
+
+    # do the upload
+    rc = _do_upload(pconn, full_tar_file, logging_name, collection_duration)
+
+    if InsightsClient.options.keep_archive:
+        logger.info('Insights data retained in %s', full_tar_file)
+        return rc
+    if obfuscate:
+        logger.info('Obfuscated Insights data retained in %s',
+                    os.path.dirname(full_tar_file))
+    full_archive.delete_archive_dir()
     return rc
 
 

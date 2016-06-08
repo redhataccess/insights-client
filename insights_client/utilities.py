@@ -13,13 +13,13 @@ from constants import InsightsConstants as constants
 logger = logging.getLogger(constants.app_name)
 
 
-def determine_hostname(container=None):
+def determine_hostname(display_name=None):
     """
     Find fqdn if we can
     """
-    if container:
-        # use container name as "hostname" for container
-        return container
+    if display_name:
+        # if display_name is given (like for a container), just barf back the given name
+        return display_name
     else:
         socket_gethostname = socket.gethostname()
         socket_fqdn = socket.getfqdn()
@@ -44,12 +44,12 @@ def determine_hostname(container=None):
         return socket_gethostname
 
 
-def _write_machine_id(machine_id):
+def _write_machine_id(machine_id, destination_file):
     """
-    Write machine id out to disk
+    Write machine-id (or docker-group-id) out to disk
     """
-    logger.debug("Creating %s", constants.machine_id_file)
-    machine_id_file = open(constants.machine_id_file, "w")
+    logger.debug("Creating %s", destination_file)
+    machine_id_file = open(destination_file, "w")
     machine_id_file.write(machine_id)
     machine_id_file.flush()
     machine_id_file.close()
@@ -96,21 +96,28 @@ def delete_unregistered_file():
     write_registered_file()
 
 
-def generate_machine_id(new=False):
+def generate_machine_id(new=False, docker_group=False):
     """
     Generate a machine-id if /etc/insights-client/machine-id does not exist
     """
     machine_id = None
     machine_id_file = None
-    if os.path.isfile(constants.machine_id_file) and not new:
-        logger.debug('Found %s', constants.machine_id_file)
-        machine_id_file = open(constants.machine_id_file, 'r')
+    destination_file = constants.machine_id_file
+    logging_name = 'machine-id'
+    if docker_group:
+        # generate a docker group ("docking station") id
+        #   for the API to parse this group of systems
+        destination_file = constants.docker_group_id_file
+        logging_name = 'docker-group-id'
+    if os.path.isfile(destination_file) and not new:
+        logger.debug('Found %s', destination_file)
+        machine_id_file = open(destination_file, 'r')
         machine_id = machine_id_file.read()
         machine_id_file.close()
     else:
-        logger.debug('Could not find machine-id file, creating')
+        logger.debug('Could not find %s file, creating', logging_name)
         machine_id = str(uuid.uuid4())
-        _write_machine_id(machine_id)
+        _write_machine_id(machine_id, destination_file)
     return str(machine_id).strip()
 
 
