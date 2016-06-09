@@ -25,7 +25,7 @@ if __name__ == "__main__":
     man5path = "/usr/share/man/man5/"
     man8path = "/usr/share/man/man8/"
 
-    rpmpath = "/var/lib/redhat_access_insights"
+    rpmpath = "/var/lib/insights_client"
 
     setup(
         name="insights-client",

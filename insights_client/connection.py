@@ -11,7 +11,8 @@ import logging
 from utilities import (determine_hostname,
                        generate_machine_id,
                        delete_unregistered_file,
-                       write_unregistered_file)
+                       write_unregistered_file,
+                       write_registered_file)
 from cert_auth import rhsmCertificate
 from constants import InsightsConstants as constants
 from client_config import InsightsClient
@@ -395,10 +396,10 @@ class InsightsConnection(object):
                 try:
                     unreg_date = req.json()["unregistered_at"]
                     logger.error(req.json()["message"])
+                    write_unregistered_file(unreg_date)
                 except LookupError:
                     unreg_date = "412, but no unreg_date or message"
                     logger.debug("HTTP Response Text: %s", req.text)
-                write_unregistered_file(unreg_date)
             sys.exit(1)
 
     def get_satellite5_info(self, branch_info):
@@ -596,6 +597,8 @@ class InsightsConnection(object):
         logger.debug("System: %s", system.json())
 
         message = system.headers.get("x-rh-message", "")
+
+        write_registered_file()
 
         # Do grouping
         if InsightsClient.options.group is not None:

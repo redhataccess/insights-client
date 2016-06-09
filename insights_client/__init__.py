@@ -246,6 +246,7 @@ def _is_client_registered():
             write_unregistered_file(reg_check['unreg_date'])
             return msg, False
         # all clear
+        delete_unregistered_file()
         return '', True
 
 
@@ -560,7 +561,9 @@ def _do_upload(pconn, tar_file, logging_name, collection_duration, rc=0):
     # do the upload
     logger.info('Uploading Insights data for %s, this may take a few minutes', logging_name)
     for tries in range(InsightsClient.options.retries):
-        upload = pconn.upload_archive(tar_file, collection_duration, cluster=generate_machine_id(docker_group=True))
+        upload = pconn.upload_archive(tar_file, collection_duration,
+                                      cluster=generate_machine_id(
+                                          docker_group=InsightsClient.options.container_mode))
         if upload.status_code == 201:
             write_lastupload_file()
             logger.info("Upload completed successfully!")

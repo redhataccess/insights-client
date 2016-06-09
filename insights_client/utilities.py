@@ -93,7 +93,6 @@ def delete_unregistered_file():
     """
     if os.path.isfile(constants.unregistered_file):
         os.remove(constants.unregistered_file)
-    write_registered_file()
 
 
 def generate_machine_id(new=False, docker_group=False):

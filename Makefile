@@ -5,7 +5,7 @@ SRPM=$(RPMTOP)/SRPMS/$(PKGNAME)-*.src.rpm
 TARBALL=$(RPMTOP)/$(PKGNAME)-*.tar.gz
 TAR_PORTABLE=$(TOPDIR)/$(PKGNAME)-*.tar.gz
 RPM=$(RPMTOP)/RPMS/noarch/$(PKGNAME)*.rpm
-CONSTANTS=$(TOPDIR)/$(PKGNAME)/constants.py
+CONSTANTS=$(TOPDIR)/insights_client/constants.py
 PY_SDIST=python setup.py sdist
 CONF_ORIG=default_conf_dir = '\/etc\/' + app_name + '\/'
 CONF_PORT=default_conf_dir = package_path + '\/etc\/'
