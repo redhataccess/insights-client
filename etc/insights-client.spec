@@ -64,8 +64,18 @@ fi
 if [ -f "/etc/redhat-access-insights/.lastupload" ]; then
 mv /etc/redhat-access-insights/.lastupload /etc/insights-client/.lastupload
 fi
-# Create symlink to old name
+# Create symlinks to old name
 ln -sf %{_bindir}/insights-client %{_bindir}/redhat-access-insights
+if ! [ -d "/etc/redhat-access-insights" ]; then
+mkdir /etc/redhat-access-insights
+fi
+ln -sf /etc/insights-client/insights-client.conf /etc/redhat-access-insights/redhat-access-insights.conf
+ln -sf /etc/insights-client/insights-client.cron /etc/redhat-access-insights/redhat-access-insights.cron
+ln -sf /etc/cron.daily/insights-client /etc/cron.daily/redhat-access-insights
+ln -sf /etc/cron.weekly/insights-client /etc/cron.weekly/redhat-access-insights
+ln -sf /etc/insights-client/.registered /etc/redhat-access-insights/.registered
+ln -sf /etc/insights-client/.unregistered /etc/redhat-access-insights/.unregistered
+ln -sf /etc/insights-client/machine-id /etc/redhat-access-insights/machine-id
 
 %postun
 if [ "$1" -eq 0 ]; then
@@ -77,6 +87,10 @@ rm -f /etc/insights-client/.unregistered
 rm -f /etc/insights-client/.lastupload
 # remove symlink to old name on uninstall
 rm -f %{_bindir}/redhat-access-insights
+# remove symlinks to old configs
+rm -rf /etc/redhat-access-insights/
+rm -f /etc/cron.daily/redhat-access-insights
+rm -f /etc/cron.weekly/redhat-access-insights
 fi
 
 %clean
