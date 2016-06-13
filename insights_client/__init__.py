@@ -228,24 +228,28 @@ def _is_client_registered():
     msg_unreg = 'This machine has been unregistered.'
     msg_doreg = 'Use --register to register this machine.'
     msg_rereg = 'Use --register if you would like to re-register this machine.'
-    msg_webrg = 'This machine has been unregistered from the Insights web UI.'
     msg_exit = 'Exiting...'
-    if not os.path.isfile(constants.registered_file):
-        if os.path.isfile(constants.unregistered_file):
-            # client has been unregistered
+    # check reg status w/ API
+    reg_check = registration_check()
+    if not reg_check['status']:
+        # not registered
+        if reg_check['unreg_date']:
+            # system has been unregistered from the UI
             msg = '\n'.join([msg_unreg, msg_rereg, msg_exit])
-        else:
-            # first startup, no .registered or .unregistered
-            msg = '\n'.join([msg_notyet, msg_doreg, msg_exit])
-        return msg, False
-    else:
-        # double check with the API
-        reg_check = registration_check()
-        if not reg_check['status']:
-            msg = '\n'.join([msg_webrg, msg_rereg, msg_exit])
             write_unregistered_file(reg_check['unreg_date'])
             return msg, False
-        # all clear
+        else:
+            # no record of system in remote
+            msg = '\n'.join([msg_notyet, msg_doreg, msg_exit])
+            # clear any local records
+            delete_registered_file()
+            delete_unregistered_file()
+            return msg, False
+    else:
+        # API confirms reg
+        if not os.path.isfile(constants.registered_file):
+            write_registered_file()
+        # delete any stray unregistered
         delete_unregistered_file()
         return '', True
 
