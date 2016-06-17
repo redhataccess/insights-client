@@ -125,6 +125,13 @@ if HaveDocker:
                 targets.append({'type': 'docker_container', 'name': d})
         return targets
 
+    def get_repotag(image_name):
+        try:
+            tag = _docker_inspect_image(image_name)['RepoTags'][0]
+        except LookupError:
+            tag = image_name
+        return tag
+
     def run_in_container():
 
         if InsightsClient.options.from_file:

@@ -37,7 +37,8 @@ from containers import (open_image,
                         open_container,
                         get_targets,
                         run_in_container,
-                        insights_client_container_is_available)
+                        insights_client_container_is_available,
+                        get_repotag)
 from client_config import InsightsClient, set_up_options, parse_config_file
 
 __author__ = 'Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>'
@@ -383,6 +384,7 @@ def _create_metadata_json(archives):
             })
             system['links'] = [{'system_id': archives[-1]['system_id'],
                                 'type': 'host'}]
+            system['docker_id'] = a['docker_id']
         system['display_name'] = a['display_name']
         system['product'] = a['product']
         system['system_id'] = a['system_id']
@@ -469,7 +471,8 @@ def collect_data_and_upload(rc=0):
             if t['type'] == 'docker_image':
                 container_connection = open_image(t['name'])
                 logging_name = 'Docker image ' + t['name']
-                archive_meta['display_name'] = t['name']
+                archive_meta['display_name'] = get_repotag(t['name'])
+                archive_meta['docker_id'] = t['name']
                 if container_connection:
                     mp = container_connection.get_fs()
                 else:
