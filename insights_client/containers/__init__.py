@@ -291,7 +291,7 @@ if HaveDocker:
                 return None
 
     def _docker_inspect_image(image_name):
-        a = json.loads(run_command_capture_output("docker inspect " + image_name))
+        a = json.loads(run_command_capture_output("docker inspect --type image " + image_name))
         if len(a) == 0:
             return None
         else:
