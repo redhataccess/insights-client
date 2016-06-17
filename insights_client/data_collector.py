@@ -95,9 +95,11 @@ class DataCollector(object):
         '''
         # separate wildcard specs into more specs
         if '*' in spec['file']:
-            expanded_paths = _expand_paths(spec['file'])
+            expanded_paths = _expand_paths(spec['file'].replace(
+                '{CONTAINER_MOUNT_POINT}', self.mountpoint).replace(
+                '{DOCKER_IMAGE_NAME}', self.target_name).replace(
+                '{DOCKER_CONTAINER_NAME}', self.target_name))
             if not expanded_paths:
-                logger.debug('Could not expand %s', spec['file'])
                 return []
 
             expanded_specs = []
