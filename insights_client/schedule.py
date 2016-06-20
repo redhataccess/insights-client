@@ -15,9 +15,9 @@ class InsightsSchedule(object):
     """
     Set the cron schedule
     """
-    def __init__(self, set_cron=True):
+    def __init__(self, set_cron=True, container_mode=False):
         if set_cron and not self.already_linked():
-            self.set_daily()
+            self.set_daily(container_mode=container_mode)
 
     def already_linked(self):
         """
@@ -32,10 +32,11 @@ class InsightsSchedule(object):
         else:
             return False
 
-    def set_daily(self):
+    def set_daily(self, container_mode=False):
         """
         Set cron task to daily
         """
+        container_arg = '' if not container_mode else ' --container'
         logger.debug('Setting schedule to daily')
         try:
             os.remove(CRON_WEEKLY + APP_NAME)
@@ -44,7 +45,7 @@ class InsightsSchedule(object):
 
         try:
             os.symlink(
-                '/etc/' + APP_NAME + '/' + APP_NAME + '.cron',
+                '/etc/' + APP_NAME + '/' + APP_NAME + '.cron' + container_arg,
                 CRON_DAILY + APP_NAME)
         except OSError:
             logger.debug('Could not link cron.daily')

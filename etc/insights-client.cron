@@ -16,6 +16,6 @@ else
         exec /bin/cgexec -g memory:redhataccessinsights ${name} --retry 3 --quiet
         /bin/cgdelete memory:redhataccessinsights
     else
-        exec ${name} --quiet
+        exec ${name} --quiet $1
     fi
 fi

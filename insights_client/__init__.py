@@ -124,7 +124,7 @@ def handle_startup():
 
     if InsightsClient.options.enable_schedule:
         # enable automatic scheduling
-        InsightsSchedule()
+        InsightsSchedule(container_mode=options.container_mode)
         InsightsClient.config.set(APP_NAME, 'no_schedule', False)
         logger.info('Automatic scheduling for Insights has been enabled.')
         sys.exit()
@@ -214,6 +214,8 @@ def handle_startup():
 
     if InsightsClient.options.register:
         try_register()
+        if not InsightsClient.config.getboolean('no_schedule'):
+            InsightsSchedule(container_mode=options.container_mode)
 
     # check registration before doing any uploads
     # Ignore if in offline mode
