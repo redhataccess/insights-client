@@ -214,7 +214,7 @@ def handle_startup():
 
     if InsightsClient.options.register:
         try_register()
-        if not InsightsClient.config.getboolean('no_schedule'):
+        if not InsightsClient.config.getboolean(APP_NAME, 'no_schedule'):
             InsightsSchedule(container_mode=options.container_mode)
 
     # check registration before doing any uploads

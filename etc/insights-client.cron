@@ -13,7 +13,7 @@ else
     then
         /bin/cgcreate -g memory:redhataccessinsights
         /bin/cgset -r memory.limit_in_bytes=536870912 redhataccessinsights
-        exec /bin/cgexec -g memory:redhataccessinsights ${name} --retry 3 --quiet
+        exec /bin/cgexec -g memory:redhataccessinsights ${name} --retry 3 --quiet $1
         /bin/cgdelete memory:redhataccessinsights
     else
         exec ${name} --quiet $1

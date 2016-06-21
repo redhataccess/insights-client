@@ -108,7 +108,7 @@ def set_up_options(parser):
     parser.add_option('--container',
                       help='Run Insights in container mode. '
                            'Analyze docker images and containers '
-                           'rather than the host.',
+                           'along with the host.',
                       action='store_true',
                       dest='container_mode')
     group = optparse.OptionGroup(parser, "Debug options")

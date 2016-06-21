@@ -351,6 +351,11 @@ else:
                      (HaveDockerException if HaveDockerException else ''))
         return None
 
+    def get_repotag(image_id):
+        logger.error('Could not connect to docker to examine image %s' % image_id)
+        logger.error('Docker is either not installed or not accessable: %s' %
+                     (HaveDockerException if HaveDockerException else ''))
+        return None
 #
 # JSON data has lots of nested dictionaries, that are often optional.
 #
