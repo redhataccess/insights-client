@@ -49,6 +49,7 @@ if __name__ == "__main__":
                         'etc/api.access.redhat.com.pem',
                         'etc/cert-api.access.redhat.com.pem',
                         'etc/.exp.sed',
+                        'etc/insights-client-container.cron',
                         'etc/insights-client.cron']),
 
             # man pages
