@@ -7,7 +7,8 @@ import sys
 import logging
 import uuid
 import datetime
-from subprocess import Popen
+import shlex
+from subprocess import Popen, PIPE, STDOUT
 from constants import InsightsConstants as constants
 
 logger = logging.getLogger(constants.app_name)
@@ -259,3 +260,14 @@ def magic_plan_b(filename):
 def generate_container_id(container_name):
     # container id is a uuid in the namespace of the machine
     return str(uuid.uuid5(uuid.UUID(generate_machine_id()), container_name.encode('utf8')))
+
+
+def run_command_get_output(cmd):
+    proc = Popen(shlex.split(cmd.encode("utf-8")),
+                 stdout=PIPE, stderr=STDOUT)
+    stdout, stderr = proc.communicate()
+
+    return {
+        'status': proc.returncode,
+        'output': stdout.decode('utf-8', 'ignore')
+    }

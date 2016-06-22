@@ -3,6 +3,7 @@ Module responsible for scheduling Insights data collection
 """
 import os
 import logging
+from client_config import InsightsClient
 from constants import InsightsConstants as constants
 
 CRON_DAILY = '/etc/cron.daily/'
@@ -15,9 +16,9 @@ class InsightsSchedule(object):
     """
     Set the cron schedule
     """
-    def __init__(self, set_cron=True, container_mode=False):
+    def __init__(self, set_cron=True):
         if set_cron and not self.already_linked():
-            self.set_daily(container_mode=container_mode)
+            self.set_daily()
 
     def already_linked(self):
         """
@@ -32,11 +33,10 @@ class InsightsSchedule(object):
         else:
             return False
 
-    def set_daily(self, container_mode=False):
+    def set_daily(self):
         """
         Set cron task to daily
         """
-        container_arg = '' if not container_mode else ' --container'
         logger.debug('Setting schedule to daily')
         try:
             os.remove(CRON_WEEKLY + APP_NAME)
@@ -45,7 +45,9 @@ class InsightsSchedule(object):
 
         try:
             os.symlink(
-                '/etc/' + APP_NAME + '/' + APP_NAME + '.cron' + container_arg,
+                '/etc/' + APP_NAME + '/' + APP_NAME + (
+                    '-container' if InsightsClient.options.container_mode else ''
+                ) + '.cron',
                 CRON_DAILY + APP_NAME)
         except OSError:
             logger.debug('Could not link cron.daily')

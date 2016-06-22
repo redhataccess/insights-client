@@ -3,7 +3,7 @@
 
 Name:                   insights-client
 Summary:                Uploads Insights information to Red Hat on a periodic basis
-Version:                2.0.0
+Version:                2.0.1
 Release:                0%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/insights-client-%{version}.tar.gz
 Epoch:                  0
@@ -100,6 +100,7 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %defattr(755,root,root)
 %{_bindir}/insights-client
 /etc/insights-client/insights-client.cron
+/etc/insights-client/insights-client-container.cron
 
 %defattr(0600, root, root)
 %dir /etc/insights-client

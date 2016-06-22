@@ -6,7 +6,7 @@ import os
 
 class InsightsConstants(object):
     app_name = 'insights-client'
-    version = '2.0.0'
+    version = '2.0.1'
     auth_method = 'BASIC'
     log_level = 'DEBUG'
     package_path = os.path.dirname(

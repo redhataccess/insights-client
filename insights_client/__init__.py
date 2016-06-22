@@ -25,7 +25,8 @@ from utilities import (validate_remove_file,
                        delete_registered_file,
                        delete_unregistered_file,
                        delete_machine_id,
-                       determine_hostname)
+                       determine_hostname,
+                       run_command_get_output)
 from collection_rules import InsightsConfig
 from data_collector import DataCollector
 from schedule import InsightsSchedule
@@ -124,9 +125,16 @@ def handle_startup():
 
     if InsightsClient.options.enable_schedule:
         # enable automatic scheduling
-        InsightsSchedule(container_mode=options.container_mode)
+        InsightsSchedule()
         InsightsClient.config.set(APP_NAME, 'no_schedule', False)
         logger.info('Automatic scheduling for Insights has been enabled.')
+        logger.debug('Updating config...')
+        cmd = ('/bin/sed -e \'s/^#*no_schedule.*=.*$/no_schedule=False/\' ' +
+               constants.default_conf_file)
+        status = run_command_get_output(cmd)
+        with open(constants.default_conf_file, 'w') as config_file:
+                config_file.write(status['output'])
+                config_file.flush()
         sys.exit()
 
     if InsightsClient.options.disable_schedule:
@@ -134,6 +142,13 @@ def handle_startup():
         InsightsSchedule(set_cron=False).remove_scheduling()
         InsightsClient.config.set(APP_NAME, 'no_schedule', True)
         logger.info('Automatic scheduling for Insights has been disabled.')
+        logger.debug('Updating config...')
+        cmd = ('/bin/sed -e \'s/^#*no_schedule.*=.*$/no_schedule=True/\' ' +
+               constants.default_conf_file)
+        status = run_command_get_output(cmd)
+        with open(constants.default_conf_file, 'w') as config_file:
+                config_file.write(status['output'])
+                config_file.flush()
         sys.exit()
 
     # do auto_config here, for connection-related 'do X and exit' options
@@ -215,7 +230,7 @@ def handle_startup():
     if InsightsClient.options.register:
         try_register()
         if not InsightsClient.config.getboolean(APP_NAME, 'no_schedule'):
-            InsightsSchedule(container_mode=options.container_mode)
+            InsightsSchedule()
 
     # check registration before doing any uploads
     # Ignore if in offline mode
@@ -344,11 +359,11 @@ def register():
         logger.debug('savestr: %s', save)
         if save.lower() == 'y' or save.lower() == 'yes':
             logger.debug('Writing user/pass to config')
-            cmd = ('/bin/sed -e \'s/^username.*=.*$/username=' +
+            cmd = ('/bin/sed -e \'s/^#*username.*=.*$/username=' +
                    username + '/\' ' +
-                   '-e \'s/^password.*=.*$/password=' + password + '/\' ' +
+                   '-e \'s/^#*password.*=.*$/password=' + password + '/\' ' +
                    constants.default_conf_file)
-            status = DataCollector().run_command_get_output(cmd, nolog=True)
+            status = run_command_get_output(cmd)
             with open(constants.default_conf_file, 'w') as config_file:
                 config_file.write(status['output'])
                 config_file.flush()
