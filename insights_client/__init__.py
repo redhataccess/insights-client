@@ -26,7 +26,7 @@ from utilities import (validate_remove_file,
                        delete_unregistered_file,
                        delete_machine_id,
                        determine_hostname,
-                       run_command_get_output)
+                       modify_config_file)
 from collection_rules import InsightsConfig
 from data_collector import DataCollector
 from schedule import InsightsSchedule
@@ -129,12 +129,7 @@ def handle_startup():
         InsightsClient.config.set(APP_NAME, 'no_schedule', False)
         logger.info('Automatic scheduling for Insights has been enabled.')
         logger.debug('Updating config...')
-        cmd = ('/bin/sed -e \'s/^#*no_schedule.*=.*$/no_schedule=False/\' ' +
-               constants.default_conf_file)
-        status = run_command_get_output(cmd)
-        with open(constants.default_conf_file, 'w') as config_file:
-                config_file.write(status['output'])
-                config_file.flush()
+        modify_config_file({'no_schedule': 'False'})
         sys.exit()
 
     if InsightsClient.options.disable_schedule:
@@ -143,12 +138,7 @@ def handle_startup():
         InsightsClient.config.set(APP_NAME, 'no_schedule', True)
         logger.info('Automatic scheduling for Insights has been disabled.')
         logger.debug('Updating config...')
-        cmd = ('/bin/sed -e \'s/^#*no_schedule.*=.*$/no_schedule=True/\' ' +
-               constants.default_conf_file)
-        status = run_command_get_output(cmd)
-        with open(constants.default_conf_file, 'w') as config_file:
-                config_file.write(status['output'])
-                config_file.flush()
+        modify_config_file({'no_schedule': 'True'})
         sys.exit()
 
     # do auto_config here, for connection-related 'do X and exit' options
@@ -359,14 +349,15 @@ def register():
         logger.debug('savestr: %s', save)
         if save.lower() == 'y' or save.lower() == 'yes':
             logger.debug('Writing user/pass to config')
-            cmd = ('/bin/sed -e \'s/^#*username.*=.*$/username=' +
-                   username + '/\' ' +
-                   '-e \'s/^#*password.*=.*$/password=' + password + '/\' ' +
-                   constants.default_conf_file)
-            status = run_command_get_output(cmd)
-            with open(constants.default_conf_file, 'w') as config_file:
-                config_file.write(status['output'])
-                config_file.flush()
+            modify_config_file({'username': username, 'password': password})
+            # cmd = ('/bin/sed -e \'s/^#*username.*=.*$/username=' +
+            #        username + '/\' ' +
+            #        '-e \'s/^#*password.*=.*$/password=' + password + '/\' ' +
+            #        constants.default_conf_file)
+            # status = run_command_get_output(cmd)
+            # with open(constants.default_conf_file, 'w') as config_file:
+            #     config_file.write(status['output'])
+            #     config_file.flush()
     pconn = InsightsConnection()
     return pconn.register()
 
@@ -490,6 +481,8 @@ def collect_data_and_upload(rc=0):
                 logging_name = 'Docker image ' + t['name']
                 archive_meta['display_name'] = get_repotag(t['name'])
                 archive_meta['docker_id'] = t['name']
+                logger.debug('Docker display_name: %s', archive_meta['display_name'])
+                logger.debug('Docker docker_id: %s', archive_meta['docker_id'])
                 if container_connection:
                     mp = container_connection.get_fs()
                 else:
@@ -499,6 +492,9 @@ def collect_data_and_upload(rc=0):
                 container_connection = open_container(t['name'])
                 logging_name = 'Docker container ' + t['name']
                 archive_meta['display_name'] = t['name']
+                archive_meta['docker_id'] = t['name']
+                logger.debug('Docker display_name: %s', archive_meta['display_name'])
+                logger.debug('Docker docker_id: %s', archive_meta['docker_id'])
                 if container_connection:
                     mp = container_connection.get_fs()
                 else:

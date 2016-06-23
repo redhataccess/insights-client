@@ -271,3 +271,17 @@ def run_command_get_output(cmd):
         'status': proc.returncode,
         'output': stdout.decode('utf-8', 'ignore')
     }
+
+
+def modify_config_file(updates):
+    '''
+    Update the config file with certain things
+    '''
+    cmd = '/bin/sed '
+    for key in updates:
+        cmd = cmd + '-e \'s/^#*{key}.*=.*$/{key}={value}/\' '.format(key=key, value=updates[key])
+    cmd = cmd + constants.default_conf_file
+    status = run_command_get_output(cmd)
+    with open(constants.default_conf_file, 'w') as config_file:
+        config_file.write(status['output'])
+        config_file.flush()
