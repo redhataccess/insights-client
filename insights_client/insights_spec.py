@@ -76,7 +76,7 @@ class InsightsCommand(InsightsSpec):
         except OSError as err:
             if err.errno == errno.ENOENT:
                 logger.debug('Command %s not found', self.command)
-                return 'Command not found'
+                return
             else:
                 raise err
 
