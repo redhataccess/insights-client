@@ -125,12 +125,21 @@ if HaveDocker:
                 targets.append({'type': 'docker_container', 'name': d})
         return targets
 
-    def get_repotag(image_name):
-        try:
-            tag = _docker_inspect_image(image_name)['RepoTags'][0]
-        except LookupError:
-            tag = image_name
-        return tag
+    def docker_display_name(docker_name, docker_type):
+        inspect = _docker_inspect_image(docker_name, docker_type)
+        if not inspect:
+            return docker_name,
+
+        if docker_type == 'image':
+            try:
+                display_name = inspect['RepoTags'][0]
+            except LookupError:
+                display_name = docker_name
+
+        if docker_type == 'container':
+            display_name = inspect['Name'].lstrip('/')
+
+        return display_name
 
     def run_in_container():
 
@@ -290,8 +299,8 @@ if HaveDocker:
                 shutil.rmtree(mount_point, ignore_errors=True)
                 return None
 
-    def _docker_inspect_image(image_name):
-        a = json.loads(run_command_capture_output("docker inspect --type image " + image_name))
+    def _docker_inspect_image(docker_name, docker_type):
+        a = json.loads(run_command_capture_output("docker inspect --type %s %s" % (docker_type, docker_name)))
         if len(a) == 0:
             return None
         else:

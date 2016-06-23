@@ -39,7 +39,7 @@ from containers import (open_image,
                         get_targets,
                         run_in_container,
                         insights_client_container_is_available,
-                        get_repotag)
+                        docker_display_name)
 from client_config import InsightsClient, set_up_options, parse_config_file
 
 __author__ = 'Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>'
@@ -479,8 +479,8 @@ def collect_data_and_upload(rc=0):
             if t['type'] == 'docker_image':
                 container_connection = open_image(t['name'])
                 logging_name = 'Docker image ' + t['name']
-                archive_meta['display_name'] = get_repotag(t['name'])
                 archive_meta['docker_id'] = t['name']
+                archive_meta['display_name'] = docker_display_name(t['name'], t['type'].replace('docker_', ''))
                 logger.debug('Docker display_name: %s', archive_meta['display_name'])
                 logger.debug('Docker docker_id: %s', archive_meta['docker_id'])
                 if container_connection:
@@ -491,8 +491,8 @@ def collect_data_and_upload(rc=0):
             elif t['type'] == 'docker_container':
                 container_connection = open_container(t['name'])
                 logging_name = 'Docker container ' + t['name']
-                archive_meta['display_name'] = t['name']
                 archive_meta['docker_id'] = t['name']
+                archive_meta['display_name'] = docker_display_name(t['name'], t['type'].replace('docker_', ''))
                 logger.debug('Docker display_name: %s', archive_meta['display_name'])
                 logger.debug('Docker docker_id: %s', archive_meta['docker_id'])
                 if container_connection:
