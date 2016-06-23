@@ -16,13 +16,15 @@ class InsightsConstants(object):
     default_conf_dir = '/etc/' + app_name + '/'
     log_dir = '/var/log/' + app_name
     default_log_file = log_dir + '/' + app_name + '.log'
-    default_conf_file = default_conf_dir + app_name + '.conf'
+    default_conf_file_name = app_name + '.conf'
+    default_conf_file = default_conf_dir + default_conf_file_name
     default_sed_file = default_conf_dir + '.exp.sed'
     default_ca_file = default_conf_dir + 'cert-api.access.redhat.com.pem'
     base_url = 'cert-api.access.redhat.com/r/insights'
     collection_rules_file = default_conf_dir + '.cache.json'
     collection_fallback_file = default_conf_dir + '.fallback.json'
-    collection_remove_file = default_conf_dir + 'remove.conf'
+    collection_remove_file_name = 'remove.conf'
+    collection_remove_file = default_conf_dir + collection_remove_file_name
     unregistered_file = default_conf_dir + '.unregistered'
     registered_file = default_conf_dir + '.registered'
     lastupload_file = default_conf_dir + '.lastupload'

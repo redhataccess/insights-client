@@ -27,7 +27,7 @@ make clean install
 
 ### Next configure it.
 
-1. Edit /etc/redhat-access-insights/redhat-access-insights.conf
+1. Edit /etc/insights-client/insights-client.conf
 
 Some things you might want to change:
 
@@ -57,10 +57,10 @@ Some things you might want to change:
 ### Next run some tests:
 
 ```bash
-redhat-access-insights --verbose --register
+insights-client --verbose --register
 
 ./tests/test-containers
-./tests/test-containers "python ./redhat_access_insights/__init__.py"
+./tests/test-containers "python ./insights_client/__init__.py"
 
 ./tests/test-new-specs
 ./tests/test-conditional-docker
