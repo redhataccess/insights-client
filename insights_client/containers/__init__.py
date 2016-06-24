@@ -316,13 +316,15 @@ if HaveDocker:
     def _docker_all_image_ids():
         l = []
         for each in run_command_capture_output("docker images --quiet --no-trunc").splitlines():
-            l.append(each)
+            if each not in l:
+                l.append(each)
         return l
 
     def _docker_all_container_ids():
         l = []
         for each in run_command_capture_output("docker ps --all --quiet --no-trunc").splitlines():
-            l.append(each)
+            if each not in l:
+                l.append(each)
         return l
 
 else:
