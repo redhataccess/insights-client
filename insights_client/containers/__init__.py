@@ -128,7 +128,7 @@ if HaveDocker:
     def docker_display_name(docker_name, docker_type):
         inspect = _docker_inspect_image(docker_name, docker_type)
         if not inspect:
-            return docker_name,
+            return docker_name
 
         if docker_type == 'image':
             try:
@@ -140,6 +140,24 @@ if HaveDocker:
             display_name = inspect['Name'].lstrip('/')
 
         return display_name
+
+    def container_image_links():
+        from insights_client.utilities import generate_analysis_target_id
+        link_dict = {}
+        ps_output = run_command_capture_output("docker ps --no-trunc --all")
+        ps_data = ps_output.splitlines()
+        ps_data.pop(0)  # remove heading
+        for l in ps_data:
+            elements = l.split()
+            c_id = elements[0]
+            i_id = elements[1]
+            link_dict[c_id] = [{'system_id': generate_analysis_target_id('docker_image', i_id),
+                               'type': 'image'}]
+            if i_id not in link_dict:
+                link_dict[i_id] = []
+            link_dict[i_id].append({'system_id': generate_analysis_target_id('docker_container', c_id),
+                                    'type': 'container'})
+        return link_dict
 
     def run_in_container():
 
@@ -362,8 +380,14 @@ else:
                      (HaveDockerException if HaveDockerException else ''))
         return None
 
-    def get_repotag(image_id):
+    def docker_display_name(image_id):
         logger.error('Could not connect to docker to examine image %s' % image_id)
+        logger.error('Docker is either not installed or not accessable: %s' %
+                     (HaveDockerException if HaveDockerException else ''))
+        return None
+
+    def image_id_of_container(container_id):
+        logger.error('Could not connect to docker to examine container %s' % container_id)
         logger.error('Docker is either not installed or not accessable: %s' %
                      (HaveDockerException if HaveDockerException else ''))
         return None

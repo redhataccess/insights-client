@@ -39,7 +39,8 @@ from containers import (open_image,
                         get_targets,
                         run_in_container,
                         insights_client_container_is_available,
-                        docker_display_name)
+                        docker_display_name,
+                        container_image_links)
 from client_config import InsightsClient, set_up_options, parse_config_file
 
 __author__ = 'Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>'
@@ -381,6 +382,7 @@ def _create_metadata_json(archives):
     # host archive is appended to the end of the targets array,
     #   so it will always be the last one (index -1)
     docker_links = []
+    c_i_links = container_image_links()
     for a in archives:
         system = {}
         if a['type'] == 'host':
@@ -392,6 +394,8 @@ def _create_metadata_json(archives):
             })
             system['links'] = [{'system_id': archives[-1]['system_id'],
                                 'type': 'host'}]
+            if a['docker_id'] in c_i_links:
+                system['links'].extend(c_i_links[a['docker_id']])
             system['docker_id'] = a['docker_id']
         system['display_name'] = a['display_name']
         system['product'] = a['product']
