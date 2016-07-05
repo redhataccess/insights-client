@@ -493,8 +493,8 @@ class InsightsConnection(object):
                 'remote_branch': remote_branch,
                 'remote_leaf': remote_leaf,
                 'hostname': client_hostname}
-        if InsightsClient.config.display_name is not None:
-            data['display_name'] = InsightsClient.config.display_name
+        if InsightsClient.config.get(APP_NAME, 'display_name') is not None:
+            data['display_name'] = InsightsClient.config.get(APP_NAME, 'display_name')
         if InsightsClient.options.display_name is not None:
             data['display_name'] = InsightsClient.options.display_name
         data = json.dumps(data)
