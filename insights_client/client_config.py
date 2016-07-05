@@ -84,7 +84,7 @@ def set_up_options(parser):
                       default=constants.default_conf_file)
     parser.add_option('--to-stdout',
                       help='print archive to stdout; '
-                           'sets --silent and --no-upload',
+                           'sets --quiet and --no-upload',
                       dest='to_stdout',
                       default=False,
                       action='store_true')
@@ -174,7 +174,7 @@ def set_up_options(parser):
                      dest="docker_image_name",
                      default=None)
     group.add_option('--only',
-                     help="only upload data for the image or container who's Id matches this option",
+                     help="only upload data for the image or container whose ID matches this option",
                      action="store",
                      dest="only",
                      default=None)
@@ -219,7 +219,8 @@ def parse_config_file(conf_file):
          'proxy': None,
          'insecure_connection': 'False',
          'no_schedule': 'False',
-         'docker_image_name': ''})
+         'docker_image_name': '',
+         'display_name': None})
     try:
         parsedconfig.read(conf_file)
     except ConfigParser.Error:

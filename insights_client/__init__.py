@@ -188,6 +188,9 @@ def handle_startup():
         InsightsClient.config.set(APP_NAME, 'gpg', 'False')
 
     if InsightsClient.options.just_upload:
+        if InsightsClient.options.offline or InsightsClient.options.no_upload:
+            logger.error('Cannot use --just-upload in combination with --offline or --no-upload.')
+            sys.exit(1)
         # override these for great justice
         InsightsClient.options.no_tar_file = False
         InsightsClient.options.keep_archive = True
@@ -200,6 +203,9 @@ def handle_startup():
     if InsightsClient.options.from_stdin and InsightsClient.options.from_file:
         logger.error('Can\'t use both --from-stdin and --from-file.')
         sys.exit(1)
+
+    if InsightsClient.options.to_stdout:
+        InsightsClient.options.no_upload = True
 
     # ----register options----
     # put this first to avoid conflicts with register
@@ -351,14 +357,6 @@ def register():
         if save.lower() == 'y' or save.lower() == 'yes':
             logger.debug('Writing user/pass to config')
             modify_config_file({'username': username, 'password': password})
-            # cmd = ('/bin/sed -e \'s/^#*username.*=.*$/username=' +
-            #        username + '/\' ' +
-            #        '-e \'s/^#*password.*=.*$/password=' + password + '/\' ' +
-            #        constants.default_conf_file)
-            # status = run_command_get_output(cmd)
-            # with open(constants.default_conf_file, 'w') as config_file:
-            #     config_file.write(status['output'])
-            #     config_file.flush()
     pconn = InsightsConnection()
     return pconn.register()
 
@@ -458,6 +456,9 @@ def collect_data_and_upload(rc=0):
             ('uploader.json' not in stdin_config or
              'sig' not in stdin_config)):
             raise ValueError
+        if ((options.from_file or options.from_stdin) and
+           'branch_info' in stdin_config and stdin_config['branch_info'] is not None):
+            branch_info = stdin_config['branch_info']
     except:
         logger.error('ERROR: Invalid config for %s! Exiting...',
                      ('--from-file' if InsightsClient.options.from_file else '--from-stdin'))

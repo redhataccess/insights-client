@@ -195,6 +195,7 @@ class InsightsConnection(object):
             logger.debug(e)
             logger.error(
                 "Could not resolve hostname: %s", endpoint_url.geturl())
+            sys.exit(1)
         if self.proxies is not None:
             proxy_url = urlparse(self.proxies['https'])
             try:
@@ -212,7 +213,7 @@ class InsightsConnection(object):
             except socket.gaierror as e:
                 logger.debug(e)
                 logger.error("Could not resolve proxy %s", proxy_url.geturl())
-                traceback.print_exc()
+                sys.exit(1)
 
     def _test_urls(self, url, method):
         """
@@ -279,23 +280,35 @@ class InsightsConnection(object):
         sock = socket.socket()
         sock.setblocking(1)
         if self.proxies:
-            connect_str = 'CONNECT {0} HTTP/1.0\r\n'.format(hostname)
+            connect_str = 'CONNECT {0} HTTP/1.0\r\n'.format(hostname[0])
             if self.proxy_auth:
                 connect_str += 'Proxy-Authorization: {0}\r\n'.format(self.proxy_auth)
             connect_str += '\r\n'
-            proxy = urlparse(self.proxies).netloc.split(':')
-            sock.connect((proxy[0], int(proxy[1])))
+            proxy = urlparse(self.proxies['https']).netloc.split(':')
+            try:
+                sock.connect((proxy[0], int(proxy[1])))
+            except Exception as e:
+                logger.debug(e)
+                logger.error('Failed to connect to proxy %s. Connection refused.', self.proxies['https'])
+                sys.exit(1)
             sock.send(connect_str)
-            sock.recv(4096)
+            res = sock.recv(4096)
+            if 'HTTP/1.0 200 Connection established' not in res:
+                logger.error('Failed to connect to %s. Invalid hostname.', self.base_url)
+                sys.exit(1)
         else:
             try:
                 sock.connect((hostname[0], 443))
             except socket.gaierror:
-                logger.error('Error: Failed to connect to %s. Invalid hostname.', base_url)
+                logger.error('Error: Failed to connect to %s. Invalid hostname.', self.base_url)
                 sys.exit(1)
         ctx = SSL.Context(SSL.TLSv1_METHOD)
         if type(self.cert_verify) is not bool:
-            ctx.load_verify_locations(self.cert_verify, None)
+            if os.path.isfile(self.cert_verify):
+                ctx.load_verify_locations(self.cert_verify, None)
+            else:
+                logger.error('Error: Invalid cert path: %s', self.cert_verify)
+                sys.exit(1)
         ctx.set_verify(SSL.VERIFY_PEER, self._verify_check)
         ssl_conn = SSL.Connection(ctx, sock)
         ssl_conn.set_connect_state()
@@ -319,7 +332,8 @@ class InsightsConnection(object):
             logger.info(self._generate_cert_str(server_cert.get_subject(), 'subject=/'))
             logger.info(self._generate_cert_str(server_cert.get_issuer(), 'issuer=/'))
             logger.info('---')
-        except SSL.Error:
+        except SSL.Error as e:
+            logger.debug('SSL error: %s', e)
             success = False
             logger.error('Certificate chain test failed!')
         ssl_conn.shutdown()
@@ -479,6 +493,8 @@ class InsightsConnection(object):
                 'remote_branch': remote_branch,
                 'remote_leaf': remote_leaf,
                 'hostname': client_hostname}
+        if InsightsClient.config.display_name is not None:
+            data['display_name'] = InsightsClient.config.display_name
         if InsightsClient.options.display_name is not None:
             data['display_name'] = InsightsClient.options.display_name
         data = json.dumps(data)
