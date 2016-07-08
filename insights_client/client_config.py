@@ -111,6 +111,10 @@ def set_up_options(parser):
                            'along with the host.',
                       action='store_true',
                       dest='container_mode')
+    parser.add_option('--blacklist',
+                      help='Blacklist specific containers when running in container mode.',
+                      dest='blacklist',
+                      default=False),
     group = optparse.OptionGroup(parser, "Debug options")
     parser.add_option('--version',
                       help="Display version",

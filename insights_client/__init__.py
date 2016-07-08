@@ -19,6 +19,7 @@ from auto_config import try_auto_configuration
 from utilities import (validate_remove_file,
                        generate_machine_id,
                        generate_analysis_target_id,
+                       analysis_target_is_blacklisted,
                        write_lastupload_file,
                        write_registered_file,
                        write_unregistered_file,
@@ -399,6 +400,7 @@ def _create_metadata_json(archives):
         system['product'] = a['product']
         system['system_id'] = a['system_id']
         system['type'] = a['type']
+        system['blacklisted'] = a['blacklisted']
         metadata['systems'].append(system)
     return metadata
 
@@ -515,6 +517,7 @@ def collect_data_and_upload(rc=0):
             archive_meta['type'] = t['type'].replace('docker_', '')
             archive_meta['product'] = 'Docker'
             archive_meta['system_id'] = generate_analysis_target_id(t['type'], t['name'])
+            archive_meta['blacklisted'] = analysis_target_is_blacklisted(t['name'])
 
             collection_start = time.clock()
             archive = InsightsArchive(compressor=InsightsClient.options.compressor if not InsightsClient.options.container_mode else "none",
