@@ -224,7 +224,8 @@ def parse_config_file(conf_file):
          'insecure_connection': 'False',
          'no_schedule': 'False',
          'docker_image_name': '',
-         'display_name': None})
+         'display_name': None,
+         'blacklist': False})
     try:
         parsedconfig.read(conf_file)
     except ConfigParser.Error:
