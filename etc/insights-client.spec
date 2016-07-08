@@ -122,9 +122,8 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
-* Fri Mar 18 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.8-7
-- Fix bugs related to --from-stdin and --to-stdout options
-- Resolves: bz1319015
+* Thu Apr 07 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.9-0
+- Bugfixes for connection test and stdout options 
 
 * Fri Mar 04 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.8-0
 - Fix scheduling-related issues
@@ -133,32 +132,9 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 - Improved debug messaging
 - Resolves: bz1257238, bz1267303, bz1268002, bz1276058, bz1295928, bz1295931, bz1295932, bz1295934, bz1295940, bz1310242, bz1310243
 
-* Wed Jan 06 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.7-3
-- New config options trace and no_schedule
-- New command line options --no_schedule, --conf, --to-stdout, --compressor, --from-stdin, --support, --offline, and --status
-- Add certificate chain verification to connection test
-- Revised debug output
-- Reduced set of environment vars used for command execution
-- OpenStack cluster support
-- Remember time of last successful upload
-- Resolves: bz1237112, bz1243028, bz1244113, bz1246919, bz1250384, bz1257242, bz1267299, bz1276055, bz1276130, bz1280353, bz1295929, bz1295935, bz1295939 
-
 * Tue Aug 11 2015 Dan Varga <dvarga@redhat.com> - 1.0.6-0
 - Fix unregister -> reregister flow
 - Resolves: bz1252435
-
-* Wed Jul 29 2015 Dan Varga <dvarga@redhat.com> - 1.0.5-0
-- Automatically retry failed uploads when invoked via cron
-- Update python-requests dependency to >= 2.6
-- Add --unregister option
-- --no-gpg fix
-- Remove --weekly option
-- Add --quiet and --silent options
-- Default cron to quiet
-- Fix satellite 5 proxy auto configuration
-- Remove .registered and .unregistered files on uninstallation
-- lowercase -> lower()
-- Resolves: bz1248011, bz1248012, bz1248014, bz1248023
 
 * Mon Jun 08 2015 Dan Varga <dvarga@redhat.com> - 1.0.4-0
 - Improved logging of exceptions
@@ -187,4 +163,3 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 * Thu Apr 23 2015 Dan Varga <dvarga@redhat.com> - 1.0.0-0
 - Initial build
 - Resolves: bz1176237
-
