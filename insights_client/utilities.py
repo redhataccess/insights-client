@@ -173,29 +173,15 @@ def generate_analysis_target_id(analysis_target, name):
     else:
         raise ValueError("Unknown analysis target: %s" % analysis_target)
 
-def analysis_target_is_blacklisted(target_name):
+def analysis_target_is_blacklisted(blacklist,target_name):
     """
     Check if an analysis target (image container name) has been blacklisted
     Blacklisting can be enabled via the configuration file OR
     via the --blacklist CLI flag
     The --blacklist flag will take precedence over the configuration file
     """
-
-    # Setup the parsed blacklist if it is not present
-    blacklist = False
-    if not hasattr(InsightsClient,'parsed_blacklist'):
-        options_value = InsightsClient.options.blacklist
-        config_value = InsightsClient.config.getconfig(constants.app_name,'blacklist')
-        # Parse the blacklist (if present)
-        if options_value:
-            blacklist = options_value
-        elif config_value:
-            blacklist = config_value
-        else:
-            blacklist = False
-        if blacklist != None and blacklist != False and blacklist != '' and len(blacklist)>0:
-            blacklist = blacklist.split(',')
-            blacklist = blacklist if len(blacklist) > 0 else []
+    if blacklist != None and blacklist != False and blacklist != '' and len(blacklist)>0:
+        blacklist = blacklist if len(blacklist) > 0 else []
 
         # Clean the blacklist keywords
         # Replace asterisks with (.*)
@@ -205,13 +191,11 @@ def analysis_target_is_blacklisted(target_name):
             for keyword in blacklist:
                 cleaned_blacklist.append(('^%s$')%(keyword.replace('*','(.*)')))
             blacklist = cleaned_blacklist
-        InsightsClient.parsed_blacklist = blacklist
+        # Check if the name is in the blacklist
+        is_blacklisted = True if ( blacklist != False and len(blacklist) > 0 and len([keyword for keyword in blacklist if re.match(keyword,target_name)]) > 0 ) else False
+        return is_blacklisted
     else:
-        blacklist = InsightsClient.parsed_blacklist
-
-    # Check if the name is in the blacklist
-    is_blacklisted = True if ( blacklist != False and len(blacklist) > 0 and len([keyword for keyword in blacklist if re.match(keyword,target_name)]) > 0 ) else False
-    return is_blacklisted
+        return False
 
 def _expand_paths(path):
     """

@@ -111,10 +111,6 @@ def set_up_options(parser):
                            'along with the host.',
                       action='store_true',
                       dest='container_mode')
-    parser.add_option('--blacklist',
-                      help='Blacklist specific containers when running in container mode.',
-                      dest='blacklist',
-                      default=False),
     group = optparse.OptionGroup(parser, "Debug options")
     parser.add_option('--version',
                       help="Display version",
@@ -224,8 +220,7 @@ def parse_config_file(conf_file):
          'insecure_connection': 'False',
          'no_schedule': 'False',
          'docker_image_name': '',
-         'display_name': None,
-         'blacklist': False})
+         'display_name': None})
     try:
         parsedconfig.read(conf_file)
     except ConfigParser.Error:

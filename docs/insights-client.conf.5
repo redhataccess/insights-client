@@ -30,10 +30,7 @@ Keywords will be obfuscated to keyword# in all commands and files and require th
 .br
 This file MUST be in the following format, and MUST match exactly what is in the dynamic_config for file or command name.
 .br
-.IP "blacklist="
-Blacklist specific containers when running in container mode
 
-.br
 [remove]
 .br
 files=/etc/cluster/cluster.conf,/etc/hosts
@@ -43,6 +40,8 @@ commands=/bin/dmseg,/bin/hostname
 patterns=password,username
 .br
 keywords=super$ecret,ultra$ecret
+.br
+blacklist=Blacklist specific containers when running in container mode. Wildcards are accepted.
 .br
 .IP "cert_verify=/etc/insights-client/cert-api.access.redhat.com.pem"
 Location of the certificate chain for cert-api.access.redhat.com used for Certificate Pinning.  Valid options are True, False, or a path to the pinned certificate(s).

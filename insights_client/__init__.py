@@ -468,6 +468,7 @@ def collect_data_and_upload(rc=0):
 
     start = time.clock()
     collection_rules, rm_conf = pc.get_conf(InsightsClient.options.update, stdin_config)
+    blacklist = rm_conf['blacklist'] if 'blacklist' in rm_conf else False
     collection_elapsed = (time.clock() - start)
     logger.debug("Rules configuration loaded. Elapsed time: %s", collection_elapsed)
 
@@ -517,7 +518,11 @@ def collect_data_and_upload(rc=0):
             archive_meta['type'] = t['type'].replace('docker_', '')
             archive_meta['product'] = 'Docker'
             archive_meta['system_id'] = generate_analysis_target_id(t['type'], t['name'])
-            archive_meta['blacklisted'] = analysis_target_is_blacklisted(t['name'])
+            archive_meta['blacklisted'] = analysis_target_is_blacklisted(blacklist,t['name']) if blacklist else False
+
+            # IF the container image is blacklisted then continue
+            if blacklist and archive_meta['blacklisted']:
+                continue
 
             collection_start = time.clock()
             archive = InsightsArchive(compressor=InsightsClient.options.compressor if not InsightsClient.options.container_mode else "none",
