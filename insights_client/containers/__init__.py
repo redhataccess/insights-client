@@ -386,8 +386,8 @@ else:
                      (HaveDockerException if HaveDockerException else ''))
         return None
 
-    def image_id_of_container(container_id):
-        logger.error('Could not connect to docker to examine container %s' % container_id)
+    def container_image_links():
+        logger.error('Could not connect to docker.')
         logger.error('Docker is either not installed or not accessable: %s' %
                      (HaveDockerException if HaveDockerException else ''))
         return None
