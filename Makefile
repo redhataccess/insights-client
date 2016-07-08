@@ -15,7 +15,7 @@ all: rpm
 
 .PHONY: tarball
 tarball: $(TARBALL)
-$(TARBALL): Makefile
+$(TARBALL): Makefile $(TAR_PORTABLE)
 	$(PY_SDIST)
 
 .PHONY: tar_portable
@@ -28,7 +28,7 @@ $(TAR_PORTABLE): Makefile
 
 .PHONY: srpm rpm 
 srpm: $(SRPM)
-$(SRPM): $(TAR_PORTABLE) $(TARBALL) $(SPEC_FILE_IN)
+$(SRPM): $(TARBALL) $(SPEC_FILE_IN)
 	mkdir -p $(RPMTOP)/{RPMS,SPECS,SRPMS,SOURCES,BUILD,BUILDROOT}
 	rpmbuild -ts --define="_topdir $(RPMTOP)" --define="_sourcedir dist" $(TARBALL)
 
