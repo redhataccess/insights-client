@@ -468,7 +468,7 @@ def collect_data_and_upload(rc=0):
 
     start = time.clock()
     collection_rules, rm_conf = pc.get_conf(InsightsClient.options.update, stdin_config)
-    if 'blacklist' in rm_conf:
+    if rm_conf and 'blacklist' in rm_conf:
         blacklist = rm_conf['blacklist']
     else:
         blacklist = False
