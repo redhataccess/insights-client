@@ -29,7 +29,7 @@ class InsightsCommand(InsightsSpec):
     '''
     A command spec
     '''
-    def __init__(self, spec, exclude, mountpoint, target_name, env):
+    def __init__(self, spec, exclude, mountpoint, target_name):
         InsightsSpec.__init__(self, spec, exclude)
         # substitute mountpoint for collection
         # have to use .replace instead of .format because there are other
@@ -45,7 +45,6 @@ class InsightsCommand(InsightsSpec):
         if not six.PY3:
             self.command = self.command.encode('utf-8', 'ignore')
         self.black_list = ['rm', 'kill', 'reboot', 'shutdown']
-        self.env = env
 
     def _mangle_command(self, command, name_max=255):
         """
@@ -63,7 +62,7 @@ class InsightsCommand(InsightsSpec):
         the requested command is executable. Returns (returncode, stdout, 0)
         '''
         # ensure consistent locale for collected command output
-        cmd_env = {'LC_ALL': 'C'}.update(self.env)
+        cmd_env = {'LC_ALL': 'C'}
         args = shlex.split(self.command)
 
         # never execute this stuff
@@ -133,7 +132,7 @@ class InsightsFile(InsightsSpec):
     '''
     A file spec
     '''
-    def __init__(self, spec, exclude, mountpoint, target_name):
+    def __init__(self, spec, exclude, mountpoint, target_name, env):
         InsightsSpec.__init__(self, spec, exclude)
         # substitute mountpoint for collection
         self.real_path = spec['file'].replace(
@@ -144,6 +143,12 @@ class InsightsFile(InsightsSpec):
             '{CONTAINER_MOUNT_POINT}', '').replace(
             '{DOCKER_IMAGE_NAME}', target_name).replace(
             '{DOCKER_CONTAINER_NAME}', target_name)
+
+        # WARNING: incoming grease
+        if 'ORACLE_HOME' in env:
+            self.real_path = self.real_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
+            self.relative_path = self.relative_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
+
         self.archive_path = self.archive_path.replace('{EXPANDED_FILE_NAME}', self.real_path)
 
     def get_output(self):

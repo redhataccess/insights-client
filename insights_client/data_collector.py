@@ -250,7 +250,7 @@ class DataCollector(object):
                         else:
                             file_specs = self._parse_file_spec(spec)
                             for s in file_specs:
-                                file_spec = InsightsFile(s, exclude, self.mountpoint, self.target_name)
+                                file_spec = InsightsFile(s, exclude, self.mountpoint, self.target_name, env)
                                 self.archive.add_to_archive(file_spec)
                     elif 'command' in spec:
                         if rm_conf and spec['command'] in rm_conf['commands']:
@@ -259,7 +259,7 @@ class DataCollector(object):
                         else:
                             cmd_specs = self._parse_command_spec(spec, conf['pre_commands'])
                             for s in cmd_specs:
-                                cmd_spec = InsightsCommand(s, exclude, self.mountpoint, self.target_name, env)
+                                cmd_spec = InsightsCommand(s, exclude, self.mountpoint, self.target_name)
                                 self.archive.add_to_archive(cmd_spec)
             except LookupError:
                 logger.debug('Target type %s not found in spec %s. Skipping...', self.target_type, specname)
