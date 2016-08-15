@@ -101,7 +101,10 @@ class InsightsConnection(object):
         elif self.authmethod == "CERT":
             cert = rhsmCertificate.certpath()
             key = rhsmCertificate.keypath()
-            session.cert = (cert, key)
+            if rhsmCertificate.exists():
+                session.cert = (cert, key)
+            else:
+                logger.error('ERROR: Certificates not found.')
         session.verify = self.cert_verify
         session.proxies = self.proxies
         session.trust_env = False
