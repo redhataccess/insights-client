@@ -107,7 +107,7 @@ class InsightsConnection(object):
                 logger.error('ERROR: Certificates not found.')
         session.verify = self.cert_verify
         session.proxies = self.proxies
-        session.trust_env = False
+        session.trust_env = True
         if self.proxy_auth:
             # HACKY
             try:
@@ -135,24 +135,8 @@ class InsightsConnection(object):
         # Get proxy from ENV or Config
         proxies = None
         proxy_auth = None
-        env_proxy = os.environ.get('HTTPS_PROXY')
-        if env_proxy:
-            if '@' in env_proxy:
-                scheme = env_proxy.split(':')[0] + '://'
-                logger.debug("Proxy Scheme: %s", scheme)
-                location = env_proxy.split('@')[1]
-                logger.debug("Proxy Location: %s", location)
-                username = env_proxy.split('@')[0].split(
-                    ':')[1].replace('/', '')
-                logger.debug("Proxy User: %s", username)
-                password = env_proxy.split('@')[0].split(':')[2]
-                proxy_auth = requests.auth._basic_auth_str(username, password)
-                env_proxy = scheme + location
-            logger.debug("ENV Proxy: %s", env_proxy)
-            proxies = {"https": env_proxy}
 
         conf_proxy = config.get(APP_NAME, 'proxy')
-
         if ((conf_proxy is not None and
              conf_proxy.lower() != 'None'.lower() and
              conf_proxy != "")):
@@ -169,6 +153,12 @@ class InsightsConnection(object):
                 conf_proxy = scheme + location
             logger.debug("CONF Proxy: %s", conf_proxy)
             proxies = {"https": conf_proxy}
+
+        if os.environ.get('NO_PROXY') and conf_proxy:
+            logger.debug("You have environment variable NO_PROXY set "
+                         "as well as 'proxy' set in your configuration file. "
+                         "NO_PROXY environment variable will be ignored.")
+
         self.proxies = proxies
         self.proxy_auth = proxy_auth
 
