@@ -67,7 +67,7 @@ class Mount:
         Provisions an LVM device-mapper thin device reflecting,
         DM device id 'dm_id' in the docker pool.
         """
-        table = '0 %d thin /dev/mapper/%s %s' %  (int(size)//512, pool, dm_id)
+        table = '0 %d thin /dev/mapper/%s %s' % (int(size) // 512, pool, dm_id)
         cmd = ['dmsetup', 'create', name, '--table', table]
         r = util.subp(cmd)
         if r.return_code != 0:
@@ -75,7 +75,7 @@ class Mount:
                              r.stderr.decode(sys.getdefaultencoding()))
 
     @staticmethod
-    def remove_thin_device(name,force=False):
+    def remove_thin_device(name, force=False):
         """
         Destroys a thin device via subprocess call.
         """
@@ -138,7 +138,7 @@ class Mount:
         return stdout.replace('SOURCE\n', '').strip().split('\n')[-1]
 
     @staticmethod
-    def unmount_path(path,force=False):
+    def unmount_path(path, force=False):
         """
         Unmounts the directory specified by path.
         """
@@ -146,6 +146,7 @@ class Mount:
         if not force:
             if r.return_code != 0:
                 raise ValueError(r.stderr)
+
 
 class DockerMount(Mount):
 

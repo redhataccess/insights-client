@@ -135,26 +135,14 @@ class InsightsConnection(object):
         Determine proxy configuration
         """
         # Get proxy from ENV or Config
+        from urlparse import urlparse
         proxies = None
         proxy_auth = None
-        env_proxy = os.environ.get('HTTPS_PROXY')
-        if env_proxy:
-            if '@' in env_proxy:
-                scheme = env_proxy.split(':')[0] + '://'
-                logger.debug("Proxy Scheme: %s", scheme)
-                location = env_proxy.split('@')[1]
-                logger.debug("Proxy Location: %s", location)
-                username = env_proxy.split('@')[0].split(
-                    ':')[1].replace('/', '')
-                logger.debug("Proxy User: %s", username)
-                password = env_proxy.split('@')[0].split(':')[2]
-                proxy_auth = requests.auth._basic_auth_str(username, password)
-                env_proxy = scheme + location
-            logger.debug("ENV Proxy: %s", env_proxy)
-            proxies = {"https": env_proxy}
+        no_proxy = os.environ.get('NO_PROXY')
+        logger.debug("NO PROXY: %s", no_proxy)
 
+        # CONF PROXY TAKES PRECEDENCE OVER ENV PROXY
         conf_proxy = InsightsClient.config.get(APP_NAME, 'proxy')
-
         if ((conf_proxy is not None and
              conf_proxy.lower() != 'None'.lower() and
              conf_proxy != "")):
@@ -171,6 +159,50 @@ class InsightsConnection(object):
                 conf_proxy = scheme + location
             logger.debug("CONF Proxy: %s", conf_proxy)
             proxies = {"https": conf_proxy}
+
+        # HANDLE NO PROXY CONF PROXY EXCEPTION VERBIAGE
+        if no_proxy and conf_proxy:
+            logger.debug("You have environment variable NO_PROXY set "
+                         "as well as 'proxy' set in your configuration file. "
+                         "NO_PROXY environment variable will be ignored.")
+
+        # IF NO CONF PROXY, GET ENV PROXY AND NO PROXY
+        if proxies is None:
+            env_proxy = os.environ.get('HTTPS_PROXY')
+            if env_proxy:
+                if '@' in env_proxy:
+                    scheme = env_proxy.split(':')[0] + '://'
+                    logger.debug("Proxy Scheme: %s", scheme)
+                    location = env_proxy.split('@')[1]
+                    logger.debug("Proxy Location: %s", location)
+                    username = env_proxy.split('@')[0].split(':')[1].replace('/', '')
+                    logger.debug("Proxy User: %s", username)
+                    password = env_proxy.split('@')[0].split(':')[2]
+                    proxy_auth = requests.auth._basic_auth_str(username, password)
+                    env_proxy = scheme + location
+                logger.debug("ENV Proxy: %s", env_proxy)
+                proxies = {"https": env_proxy}
+            if no_proxy:
+                the_env_proxy_hostname = urlparse(env_proxy).hostname
+                for no_proxy_host in no_proxy.split(','):
+                    if no_proxy_host == '*':
+                        proxies = None
+                        proxy_auth = None
+                        logger.debug('Found NO_PROXY asterisk(*) wildcard, disabling all proxies.')
+                        break
+                    elif no_proxy_host.startswith('.') or no_proxy_host.startswith('*'):
+                        if the_env_proxy_hostname.endswith(no_proxy_host.replace('*', '')):
+                            proxies = None
+                            proxy_auth = None
+                            logger.debug('Found NO_PROXY range %s matching %s', no_proxy_host, the_env_proxy_hostname)
+                            break
+                    else:
+                        if no_proxy_host == the_env_proxy_hostname:
+                            proxies = None
+                            proxy_auth = None
+                            logger.debug('Found NO_PROXY %s exactly matching %s', no_proxy_host, the_env_proxy_hostname)
+                            break
+
         self.proxies = proxies
         self.proxy_auth = proxy_auth
 
