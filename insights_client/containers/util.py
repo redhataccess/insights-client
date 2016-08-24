@@ -32,6 +32,7 @@ def _decompose(compound_name):
         repo, tag = repo.rsplit(':', 1)
     return reg, repo, tag
 
+
 def image_by_name(img_name, images=None):
     """
     Returns a list of image data for images which match img_name. Will
@@ -144,7 +145,7 @@ def print_scan_summary(json_data, names=None):
             else:
                 image_name = names[image][-max_width:]
                 if len(image_name) == max_col_width:
-                    image_name = '...' + image_name[-(len(image_name)-3):]
+                    image_name = '...' + image_name[-(len(image_name) - 3):]
 
             tmp_tuple = tuple([image_name] +
                               [str(image_res[sev]) for sev in sevs])
@@ -196,6 +197,7 @@ def print_detail_scan_summary(json_data, names=None):
                         writeOut("")
     return clean
 
+
 def get_mounts_by_path():
     '''
     Gets all mounted devices and paths
@@ -213,6 +215,7 @@ def get_mounts_by_path():
                           )
     return mount_info
 
+
 def is_dock_obj_mounted(docker_obj):
     '''
     Check if the provided docker object, which needs to be an ID,
@@ -229,20 +232,20 @@ def is_dock_obj_mounted(docker_obj):
 
 
 def urllib3_disable_warnings():
-    if not 'requests' in sys.modules:
+    if 'requests' not in sys.modules:
         import requests
     else:
         requests = sys.modules['requests']
 
     # On latest Fedora, this is a symlink
     if hasattr(requests, 'packages'):
-        requests.packages.urllib3.disable_warnings() #pylint: disable=maybe-no-member
+        requests.packages.urllib3.disable_warnings()  # pylint: disable=maybe-no-member
     else:
         # But with python-requests-2.4.3-1.el7.noarch, we need
         # to talk to urllib3 directly
         have_urllib3 = False
         try:
-            if not 'urllib3' in sys.modules:
+            if 'urllib3' not in sys.modules:
                 import urllib3
                 have_urllib3 = True
         except ImportError as e:
