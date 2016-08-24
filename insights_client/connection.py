@@ -594,19 +594,24 @@ class InsightsConnection(object):
         machine_id = generate_machine_id()
         try:
             res = self.session.get(self.api_url + '/v1/systems/' + machine_id)
-        except requests.ConnectionError:
+        except requests.ConnectionError as e:
             return False
-        # check the 'unregistered_at' key of the response
+        # had to do a quick bugfix changing this around,
+        #   which makes the None-False-True dichotomy seem fucking weird
+        #   TODO: reconsider what gets returned, probably this:
+        #       True for registered
+        #       False for unregistered
+        #       None for system 404
         try:
-            unreg_status = json.loads(res.content)['unregistered_at']
-        except KeyError:
-            # no record of this machine, machine was never registered
-            # empty json object
-            return None
+            # check the 'unregistered_at' key of the response
+            unreg_status = json.loads(res.content).get('unregistered_at', 'undefined')
         except ValueError:
             # bad response, no json object
             return False
-        if unreg_status is None:
+        if unreg_status == 'undefined':
+            # key not found, machine not yet registered
+            return None
+        elif unreg_status is None:
             # unregistered_at = null, means this machine IS registered
             return True
         else:
