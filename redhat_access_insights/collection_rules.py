@@ -120,8 +120,8 @@ class InsightsConfig(object):
 
     def fetch_gpg(self):
         logger.debug("Attempting to download collection "
-                    "rules GPG signature from %s",
-                    self.collection_rules_url + ".asc")
+                     "rules GPG signature from %s",
+                     self.collection_rules_url + ".asc")
 
         headers = ({'accept': 'text/plain'})
         config_sig = self.conn.session.get(self.collection_rules_url + '.asc',
