@@ -4,7 +4,7 @@
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                1.0.11
-Release:                3%{?dist}
+Release:                4%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -83,6 +83,9 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Fri Aug 26 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.11-4
+- Resolves: bz1320581, bz1323150, bz1323187, bz1325111
+
 * Tue Apr 05 2016 Jeremy CraftS <jcrafts@redhat.com> - 1.0.8-14
 - Resolves: bz1323150, bz1323187
 

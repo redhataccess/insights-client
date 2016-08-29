@@ -592,10 +592,14 @@ class InsightsConnection(object):
         '''
         Check registration status through API
         '''
+        logger.debug('Checking registration status...')
         machine_id = generate_machine_id()
         try:
-            res = self.session.get(self.api_url + '/v1/systems/' + machine_id)
+            res = self.session.get(self.api_url + '/v1/systems/' + machine_id, timeout=10)
         except requests.ConnectionError as e:
+            # can't connect, run connection test
+            logger.error('Connection timed out. Running connection test...')
+            self.test_connection()
             return False
         # had to do a quick bugfix changing this around,
         #   which makes the None-False-True dichotomy seem fucking weird
@@ -627,6 +631,8 @@ class InsightsConnection(object):
             logger.info(
                 "Successfully unregistered from the Red Hat Access Insights Service")
             write_unregistered_file()
+            from schedule import InsightsSchedule
+            InsightsSchedule().remove_scheduling()
         except requests.ConnectionError as e:
             logger.debug(e)
             logger.error("Could not unregister this system")
