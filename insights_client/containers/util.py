@@ -4,24 +4,16 @@
 
 import sys
 import json
-import subprocess
-import collections
 from fnmatch import fnmatch as matches
-from docker.utils import kwargs_from_env
-
-import docker
+from docker_wrap import docker, DockerError
 import selinux
 
 """Atomic Utility Module"""
-
-ReturnTuple = collections.namedtuple('ReturnTuple',
-                                     ['return_code', 'stdout', 'stderr'])
 
 if sys.version_info[0] < 3:
     input = raw_input
 else:
     input = input
-
 
 def _decompose(compound_name):
     """ '[reg/]repo[:tag]' -> (reg, repo, tag) """
@@ -49,7 +41,7 @@ def image_by_name(img_name, images=None):
 
     # If the images were not passed in, go get them.
     if images is None:
-        c = docker.Client(**kwargs_from_env())
+        c = docker()
         images = c.images(all=False)
 
     valid_images = []
@@ -67,17 +59,6 @@ def image_by_name(img_name, images=None):
                 valid_images.append(i)
                 break
     return valid_images
-
-
-def subp(cmd):
-    """
-    Run a command as a subprocess.
-    Return a triple of return code, standard out, standard err.
-    """
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    out, err = proc.communicate()
-    return ReturnTuple(proc.returncode, stdout=out, stderr=err)
 
 
 def default_container_context():
@@ -187,14 +168,14 @@ def print_detail_scan_summary(json_data, names=None):
                 writeOut(image_template.format(sev,
                                                str(scan_results[sev]['num'])))
                 for cve in scan_results[sev]['cves']:
-                        writeOut(cve_template.format("CVE", cve['cve_title']))
-                        writeOut(cve_template.format("CVE URL",
-                                                     cve['cve_ref_url']))
-                        writeOut(cve_template.format("RHSA ID",
-                                                     cve['rhsa_ref_id']))
-                        writeOut(cve_template.format("RHSA URL",
-                                                     cve['rhsa_ref_url']))
-                        writeOut("")
+                    writeOut(cve_template.format("CVE", cve['cve_title']))
+                    writeOut(cve_template.format("CVE URL",
+                                                 cve['cve_ref_url']))
+                    writeOut(cve_template.format("RHSA ID",
+                                                 cve['rhsa_ref_id']))
+                    writeOut(cve_template.format("RHSA URL",
+                                                 cve['rhsa_ref_url']))
+                    writeOut("")
     return clean
 
 
