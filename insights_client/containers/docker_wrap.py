@@ -1,15 +1,19 @@
 # !/usr/bin/python
+""" Module that wraps docker to remove the docker-py dependency """
 
 from subp import subp
 import json
 
+
 class DockerError(Exception):
-    """ Generic error for shelling to dockers. """
+    """ Generic error for shelling to docker. """
+
     def __init__(self, val):
         self.val = val
 
     def __str__(self):
         return str(self.val)
+
 
 class docker:
 
@@ -37,12 +41,12 @@ class docker:
         for line in r.stdout.strip().split('\n'):
             if line.startswith('Storage Driver'):
                 pre, _, post = line.partition(':')
-                return post.strip() 
+                return post.strip()
         raise Exception('Unable to get docker storage driver')
 
     def dm_pool(self):
         # ONLY FOR DEVICEMAPPER
-        # returns the docker-pool docker is using   
+        # returns the docker-pool docker is using
         cmd = ['docker', 'info']
         r = subp(cmd)
         if r.return_code != 0:
@@ -50,12 +54,12 @@ class docker:
         for line in r.stdout.strip().split('\n'):
             if line.strip().startswith('Pool Name'):
                 pre, _, post = line.partition(':')
-                return post.strip() 
+                return post.strip()
         raise Exception('Unable to get docker pool name')
 
     def images(self, all=False, quiet=False):
         # returns a list of dicts, each dict is an image's information
-        # except when quiet is used - which returns a list of image ids 
+        # except when quiet is used - which returns a list of image ids
         # dict keys:
             # Created
             # Labels
@@ -65,7 +69,8 @@ class docker:
             # RepoDigests
             # Id
             # Size
-        cmd = ['docker', 'images', '-q']
+        # Adding --no-trunc to ensure we get full ID's if any quiet is True
+        cmd = ['docker', 'images', '-q', '--no-trunc']
         if all:
             cmd.append("-a")
         r = subp(cmd)
@@ -80,7 +85,10 @@ class docker:
                 inspec = self.inspect(i)
                 dic = {}
                 dic['Created'] = inspec['Created']
-                dic['Labels'] = inspec['Config']['Labels']
+                if inspec['Config']:
+                    dic['Labels'] = inspec['Config']['Labels']
+                else:
+                    dic['Labels'] = {}
                 dic['VirtualSize'] = inspec['VirtualSize']
                 dic['ParentId'] = inspec['Parent']
                 dic['RepoTags'] = inspec['RepoTags']
@@ -92,7 +100,7 @@ class docker:
 
     def containers(self, all=False, quiet=False):
         # returns a list of dicts, each dict is an containers's information
-        # except when quiet is used - which returns a list of container ids 
+        # except when quiet is used - which returns a list of container ids
         # dict keys:
             # Status
             # Created
@@ -132,7 +140,7 @@ class docker:
                 dic['Ports'] = inspec['NetworkSettings']['Ports']
                 conts.append(dic)
             return conts
-    
+
     def remove_container(self, cid):
         # removes container cid
         cmd = ['docker', 'rm', cid]
@@ -150,11 +158,11 @@ class docker:
             raise DockerError('Unable to remove docker image %s' % iid)
 
     def create_container(self, image, command, environment, detach, network_disabled):
-        # Note: There is no 'docker run' in the docker-pyhton api, it uses a derivative of 
+        # Note: There is no 'docker run' in the docker-pyhton api, it uses a derivative of
         # 'docker create' and 'docker run' - we can use 'docker run' to create what we need
         cmd = ['docker', 'run']
 
-        if len(environment) > 0: 
+        if len(environment) > 0:
             for env in environment:
                 cmd.append('-e')
                 cmd.append(env)
@@ -168,7 +176,7 @@ class docker:
 
         cmd.append(image)
         cmd.append(command)
-        
+
         r = subp(cmd)
         if r.return_code != 0:
             raise DockerError('Unable to create docker image %s' % image)

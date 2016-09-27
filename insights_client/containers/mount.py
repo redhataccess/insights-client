@@ -300,7 +300,7 @@ class DockerMount(Mount):
         # grab list of devces
         dmsetupLs = dmsetupWrap.getDmsetupLs()
         if dmsetupLs == -1:
-                raise MountError('Error: dmsetup returned non zero error ')
+            raise MountError('Error: dmsetup returned non zero error ')
 
         # ENSURE device exists!
         if dm_dev_name not in dmsetupLs:

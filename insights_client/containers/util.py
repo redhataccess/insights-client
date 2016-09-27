@@ -15,6 +15,7 @@ if sys.version_info[0] < 3:
 else:
     input = input
 
+
 def _decompose(compound_name):
     """ '[reg/]repo[:tag]' -> (reg, repo, tag) """
     reg, repo, tag = '', compound_name, ''
@@ -32,13 +33,11 @@ def image_by_name(img_name, images=None):
     query to avoid multiple docker queries.
     """
     i_reg, i_rep, i_tag = _decompose(img_name)
-
     # Correct for bash-style matching expressions.
     if not i_reg:
         i_reg = '*'
     if not i_tag:
         i_tag = '*'
-
     # If the images were not passed in, go get them.
     if images is None:
         c = docker()
