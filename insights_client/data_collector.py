@@ -112,6 +112,21 @@ class DataCollector(object):
         else:
             return [spec]
 
+    def _parse_glob_spec(self, spec):
+        '''
+        Grab globs of things
+        '''
+        import glob
+        some_globs = glob.glob(spec['glob'])
+        if not some_globs:
+            return []
+        el_globs = []
+        for g in some_globs:
+            _spec = copy.copy(spec)
+            _spec['file'] = g
+            el_globs.append(_spec)
+        return el_globs
+
     def _parse_command_spec(self, spec, precmds):
         '''
         Run pre_commands
@@ -201,6 +216,15 @@ class DataCollector(object):
                             for s in file_specs:
                                 file_spec = InsightsFile(s, exclude, self.mountpoint, self.target_name)
                                 self.archive.add_to_archive(file_spec)
+                    elif 'glob' in spec:
+                        glob_specs = self._parse_glob_spec(spec)
+                        for g in glob_specs:
+                            if rm_conf and g['file'] in rm_conf['files']:
+                                logger.warn("WARNING: Skipping file %s", g)
+                                continue
+                            else:
+                                glob_spec = InsightsFile(g, exclude, self.mountpoint, self.target_name)
+                                self.archive.add_to_archive(glob_spec)
                     elif 'command' in spec:
                         if rm_conf and spec['command'] in rm_conf['commands']:
                             logger.warn("WARNING: Skipping command %s", spec['command'])
