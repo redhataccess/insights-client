@@ -10,6 +10,8 @@ import json
 import archive
 import logging
 import six
+import glob
+import copy
 from tempfile import NamedTemporaryFile
 from soscleaner import SOSCleaner
 from utilities import determine_hostname, _expand_paths, write_file_with_text
@@ -260,28 +262,21 @@ class DataCollector(object):
             exclude = None
 
         for _file in files:
-            if rm_conf:
-                try:
-                    if _file['file'] in rm_conf['files']:
-                        logger.warn("WARNING: Skipping file %s", _file['file'])
-                        continue
-                except LookupError:
-                    pass
-
-            pattern = None
-            if len(_file['pattern']) > 0:
-                pattern = _file['pattern']
-            if _file['file'] == '/etc/redhat-access-insights/machine-id' and stdin_config:
-                try:
-                    machine_id = stdin_config['machine-id']
-                    logger.debug('Using machine-id from stdin: %s' % machine_id)
-                    write_file_with_text(
-                        self.archive.get_full_archive_path(_file['file']),
-                        machine_id)
+            # Do some things with globs
+            if 'glob' in _file:
+                # Get all of the files using the glob
+                glob_files = glob.glob(_file['glob'])
+                if glob_files:
+                    for glob_file_name in glob_files:
+                        a_new_file = copy.copy(_file)  # copy the current file structure
+                        a_new_file['file'] = glob_file_name  # update the file name with the found glob file name
+                        self._check_file(a_new_file, rm_conf, exclude, stdin_config)  # shoosh it through
+                else:
                     continue
-                except KeyError:
-                    logger.debug('No machine-id from stdin.  Using regular file')
-            self.copy_file_with_pattern(_file['file'], pattern, exclude)
+            # Do some things with files
+            elif 'file' in _file:
+                self._check_file(_file, rm_conf, exclude, stdin_config)
+
         logger.debug("File copy complete")
 
     def write_branch_info(self, branch_info):
@@ -291,6 +286,34 @@ class DataCollector(object):
         logger.debug("Writing branch information to workdir")
         full_path = self.archive.get_full_archive_path('/branch_info')
         write_file_with_text(full_path, json.dumps(branch_info))
+
+    def _check_file(self, the_file, rm_conf, exclude, stdin_config):
+        '''
+        Check file used to check if a file is in the remove conf
+        Otherwise copy the file
+        '''
+        if rm_conf:
+            try:
+                if the_file['file'] in rm_conf['files']:
+                    logger.warn("WARNING: Skipping file %s", the_file['file'])
+                    return
+            except LookupError:
+                pass
+
+        pattern = None
+        if len(the_file['pattern']) > 0:
+            pattern = the_file['pattern']
+        if the_file['file'] == '/etc/redhat-access-insights/machine-id' and stdin_config:
+            try:
+                machine_id = stdin_config['machine-id']
+                logger.debug('Using machine-id from stdin: %s' % machine_id)
+                write_file_with_text(
+                    self.archive.get_full_archive_path(the_file['file']),
+                    machine_id)
+                return
+            except KeyError:
+                logger.debug('No machine-id from stdin.  Using regular file')
+        self.copy_file_with_pattern(the_file['file'], pattern, exclude)
 
     def _copy_file_with_pattern(self, path, patterns, exclude):
         """
