@@ -5,6 +5,7 @@ import collections
 ReturnTuple = collections.namedtuple('ReturnTuple',
                                      ['return_code', 'stdout', 'stderr'])
 
+
 def subp(cmd):
     """
     Run a command as a subprocess.
