@@ -178,7 +178,7 @@ class DataCollector(object):
         for command in commands:
             if rm_conf:
                 try:
-                    if command['command'] in rm_conf['commands']:
+                    if 'commands' in rm_conf and command['command'] in rm_conf['commands']:
                         logger.warn("WARNING: Skipping command %s", command['command'])
                         continue
                 except LookupError:
@@ -286,7 +286,7 @@ class DataCollector(object):
         '''
         if rm_conf:
             try:
-                if the_file['file'] in rm_conf['files']:
+                if 'files' in rm_conf and the_file['file'] in rm_conf['files']:
                     logger.warn("WARNING: Skipping file %s", the_file['file'])
                     return
             except LookupError:
