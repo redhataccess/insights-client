@@ -154,7 +154,7 @@ class DataCollector(object):
     def _run_old_collection(self, conf, rm_conf, exclude, branch_info):
         # wrap old collection into specs for backward compatibility
         for f in conf['files']:
-            if rm_conf and f['file'] in rm_conf['files']:
+            if rm_conf and 'files' in rm_conf and f['file'] in rm_conf['files']:
                 logger.warn("WARNING: Skipping file %s", f['file'])
                 continue
             else:
@@ -166,7 +166,7 @@ class DataCollector(object):
                     file_spec = InsightsFile(s, exclude, self.mountpoint, self.target_name)
                     self.archive.add_to_archive(file_spec)
         for c in conf['commands']:
-            if rm_conf and c['command'] in rm_conf['commands']:
+            if rm_conf and 'commands' in rm_conf and c['command'] in rm_conf['commands']:
                 logger.warn("WARNING: Skipping command %s", c['command'])
                 continue
             else:
@@ -208,7 +208,7 @@ class DataCollector(object):
                 spec_list = spec_group[self.target_type]
                 for spec in spec_list:
                     if 'file' in spec:
-                        if rm_conf and spec['file'] in rm_conf['files']:
+                        if rm_conf and 'files' in rm_conf and spec['file'] in rm_conf['files']:
                             logger.warn("WARNING: Skipping file %s", spec['file'])
                             continue
                         else:
@@ -219,14 +219,14 @@ class DataCollector(object):
                     elif 'glob' in spec:
                         glob_specs = self._parse_glob_spec(spec)
                         for g in glob_specs:
-                            if rm_conf and g['file'] in rm_conf['files']:
+                            if rm_conf and 'files' in rm_conf and g['file'] in rm_conf['files']:
                                 logger.warn("WARNING: Skipping file %s", g)
                                 continue
                             else:
                                 glob_spec = InsightsFile(g, exclude, self.mountpoint, self.target_name)
                                 self.archive.add_to_archive(glob_spec)
                     elif 'command' in spec:
-                        if rm_conf and spec['command'] in rm_conf['commands']:
+                        if rm_conf and 'commands' in rm_conf and spec['command'] in rm_conf['commands']:
                             logger.warn("WARNING: Skipping command %s", spec['command'])
                             continue
                         else:
