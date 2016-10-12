@@ -240,7 +240,7 @@ def write_data_to_file(data, filepath):
         pass
 
     with open(filepath, 'w') as _file:
-        _file.write(data.encode('utf8'))
+        _file.write(data)
 
 
 def magic_plan_b(filename):
