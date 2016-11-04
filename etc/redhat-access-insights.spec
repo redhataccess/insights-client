@@ -3,8 +3,8 @@
 
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
-Version:                1.0.11
-Release:                4%{?dist}
+Version:                1.0.12
+Release:                0%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -83,6 +83,16 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Fri Nov 4 2016 Richard Brantley <rbrantle@redhat.com> - 1.0.12-0
+- Respects NO_PROXY, HTTPS_PROXY environment variables
+- Fixes remove.conf configuration issues
+- Fixes timezone and file encoding related issues
+- Adds new support for wildcard directories and files
+- Fixes issue where invalid proxy would hang registration check
+- Fixes some test cases
+- Adds support for integration with Coordinators
+- Resolves: bz1368237, bz1358354, bz1357964, bz1356939
+
 * Fri Aug 26 2016 Jeremy Crafts <jcrafts@redhat.com> - 1.0.11-4
 - Resolves: bz1320581, bz1323150, bz1323187, bz1325111
 
