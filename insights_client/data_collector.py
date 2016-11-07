@@ -178,7 +178,7 @@ class DataCollector(object):
         #   so we might need to get creative
         if not oracle_home:
             logger.debug('Could not read $ORACLE_HOME, trying to read from %s', orainst_loc)
-            if os.path.exits(orainst_loc):
+            if os.path.exists(orainst_loc):
                 with open(orainst_loc) as orainst:
                     _vars = dict(line.split('=') for line in orainst.readlines())
                 try:
