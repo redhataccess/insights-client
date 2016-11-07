@@ -163,7 +163,7 @@ class DataCollector(object):
                     # spoof archive_file_name
                     # use _, archive path will be re-mangled anyway
                     s['archive_file_name'] = s['file']
-                    file_spec = InsightsFile(s, exclude, self.mountpoint, self.target_name)
+                    file_spec = InsightsFile(s, exclude, self.mountpoint, self.target_name, env)
                     self.archive.add_to_archive(file_spec)
         for c in conf['commands']:
             if rm_conf and 'commands' in rm_conf and c['command'] in rm_conf['commands']:
@@ -174,7 +174,7 @@ class DataCollector(object):
                 for s in cmd_specs:
                     # spoof archive_file_name, will be reassembled in InsightsCommand()
                     s['archive_file_name'] = os.path.join('insights_commands', '_')
-                    cmd_spec = InsightsCommand(s, exclude, self.mountpoint, self.target_name)
+                    cmd_spec = InsightsCommand(s, exclude, self.mountpoint, self.target_name, env)
                     self.archive.add_to_archive(cmd_spec)
         logger.debug('Spec collection finished.')
         # collect metadata
@@ -182,12 +182,64 @@ class DataCollector(object):
         self._write_branch_info(conf, branch_info)
         logger.debug('Metadata collection finished.')
 
+    def _load_external_env(self):
+        '''
+        Load environment variables for special systems
+        '''
+        env_set = {}
+        env_set.update(self._load_oracle_vars())
+        return env_set
+
+    def _load_oracle_vars(self):
+        '''
+        Load Oracle environment variables
+        '''
+        oracle_home = os.getenv('ORACLE_HOME')
+        oracle_base = os.getenv('ORACLE_BASE')
+        orainst_loc = '/etc/oraInst.loc'
+        # root does not necessarily have access to these vars,
+        #   so we might need to get creative
+        if not oracle_home:
+            logger.debug('Could not read $ORACLE_HOME, trying to read from %s', orainst_loc)
+            if os.path.exists(orainst_loc):
+                with open(orainst_loc) as orainst:
+                    _vars = dict(line.split('=') for line in orainst.readlines())
+                try:
+                    inventory_loc = _vars['inventory_loc']
+                except LookupError:
+                    logger.debug('inventory_loc not found in %s', orainst_loc)
+                    return {}
+            else:
+                logger.debug('%s not found.', orainst_loc)
+                return {}
+
+            xml_file = os.path.join(inventory_loc, 'ContentsXML', 'inventory.xml')
+            if os.path.exists(xml_file):
+                import xml.etree.ElementTree as ET
+                tree = ET.parse(xml_file)
+                root = tree.getroot()
+                try:
+                    oracle_home = root.find('HOME_LIST').find('HOME').attrib['LOC']
+                    # hazard a guess here
+                    oracle_base = oracle_home.split('/product')[0]
+                except LookupError:
+                    logger.debug('Could not parse location from %s.', xml_file)
+                    return {}
+            else:
+                logger.debug('%s not found.', xml_file)
+                return {}
+
+        return {'ORACLE_HOME': oracle_home,
+                'ORACLE_BASE': oracle_base}
+
     def run_collection(self, conf, rm_conf, branch_info):
         '''
         Run specs and collect all the data
         '''
         logger.debug('Beginning to run collection spec...')
         exclude = None
+        env = self._load_external_env()
+
         if rm_conf:
             try:
                 exclude = rm_conf['patterns']
@@ -214,7 +266,7 @@ class DataCollector(object):
                         else:
                             file_specs = self._parse_file_spec(spec)
                             for s in file_specs:
-                                file_spec = InsightsFile(s, exclude, self.mountpoint, self.target_name)
+                                file_spec = InsightsFile(s, exclude, self.mountpoint, self.target_name, env)
                                 self.archive.add_to_archive(file_spec)
                     elif 'glob' in spec:
                         glob_specs = self._parse_glob_spec(spec)
@@ -223,7 +275,7 @@ class DataCollector(object):
                                 logger.warn("WARNING: Skipping file %s", g)
                                 continue
                             else:
-                                glob_spec = InsightsFile(g, exclude, self.mountpoint, self.target_name)
+                                glob_spec = InsightsFile(g, exclude, self.mountpoint, self.target_name, env)
                                 self.archive.add_to_archive(glob_spec)
                     elif 'command' in spec:
                         if rm_conf and 'commands' in rm_conf and spec['command'] in rm_conf['commands']:
@@ -232,7 +284,7 @@ class DataCollector(object):
                         else:
                             cmd_specs = self._parse_command_spec(spec, conf['pre_commands'])
                             for s in cmd_specs:
-                                cmd_spec = InsightsCommand(s, exclude, self.mountpoint, self.target_name)
+                                cmd_spec = InsightsCommand(s, exclude, self.mountpoint, self.target_name, env)
                                 self.archive.add_to_archive(cmd_spec)
             except LookupError:
                 logger.debug('Target type %s not found in spec %s. Skipping...', self.target_type, specname)

@@ -29,8 +29,14 @@ class InsightsCommand(InsightsSpec):
     '''
     A command spec
     '''
-    def __init__(self, spec, exclude, mountpoint, target_name):
+    def __init__(self, spec, exclude, mountpoint, target_name, env):
         InsightsSpec.__init__(self, spec, exclude)
+
+        # WARNING: incoming grease
+        if 'ORACLE_HOME' in env:
+            self.real_path = self.real_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
+            self.relative_path = self.relative_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
+
         # substitute mountpoint for collection
         # have to use .replace instead of .format because there are other
         #  braced keys in the collection spec not used here
@@ -132,8 +138,14 @@ class InsightsFile(InsightsSpec):
     '''
     A file spec
     '''
-    def __init__(self, spec, exclude, mountpoint, target_name):
+    def __init__(self, spec, exclude, mountpoint, target_name, env):
         InsightsSpec.__init__(self, spec, exclude)
+        
+        # WARNING: incoming grease
+        if 'ORACLE_HOME' in env:
+            self.real_path = self.real_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
+            self.relative_path = self.relative_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
+
         # substitute mountpoint for collection
         self.real_path = spec['file'].replace(
             '{CONTAINER_MOUNT_POINT}', mountpoint).replace(
