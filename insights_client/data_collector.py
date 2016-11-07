@@ -219,8 +219,10 @@ class DataCollector(object):
                 tree = ET.parse(xml_file)
                 root = tree.getroot()
                 try:
-                    oracle_home = root.find('HOME_LIST').find('HOME').attrib['LOC']
-                    # hazard a guess here
+                    all_oracle_homes = list(root.find('HOME_LIST'))
+                    all_oracle_grids = [ grid.attrib['NAME'].replace('OraGI','') for grid in all_oracle_homes if 'OraGI' in grid.attrib['NAME'] ]
+                    valid_oracle_homes = [ home.attrib['LOC'] for home in all_oracle_homes if home.attrib['NAME'].replace('OraGI','').replace('OraDB','') not in all_oracle_grids ]
+                    oracle_home = valid_oracle_homes[0]
                     oracle_base = oracle_home.split('/product')[0]
                 except LookupError:
                     logger.debug('Could not parse location from %s.', xml_file)
