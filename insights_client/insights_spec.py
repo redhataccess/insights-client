@@ -32,11 +32,6 @@ class InsightsCommand(InsightsSpec):
     def __init__(self, spec, exclude, mountpoint, target_name, env):
         InsightsSpec.__init__(self, spec, exclude)
 
-        # WARNING: incoming grease
-        if 'ORACLE_HOME' in env:
-            self.real_path = self.real_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
-            self.relative_path = self.relative_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
-
         # substitute mountpoint for collection
         # have to use .replace instead of .format because there are other
         #  braced keys in the collection spec not used here
@@ -44,6 +39,9 @@ class InsightsCommand(InsightsSpec):
             '{CONTAINER_MOUNT_POINT}', mountpoint).replace(
             '{DOCKER_IMAGE_NAME}', target_name).replace(
             '{DOCKER_CONTAINER_NAME}', target_name)
+        # WARNING: incoming grease
+        if 'ORACLE_HOME' in env:
+            self.command = self.command.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
         self.mangled_command = self._mangle_command(self.command)
         # have to re-mangle archive path in case there's a pre-command arg
         self.archive_path = os.path.join(
@@ -140,11 +138,6 @@ class InsightsFile(InsightsSpec):
     '''
     def __init__(self, spec, exclude, mountpoint, target_name, env):
         InsightsSpec.__init__(self, spec, exclude)
-        
-        # WARNING: incoming grease
-        if 'ORACLE_HOME' in env:
-            self.real_path = self.real_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
-            self.relative_path = self.relative_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
 
         # substitute mountpoint for collection
         self.real_path = spec['file'].replace(
@@ -155,6 +148,10 @@ class InsightsFile(InsightsSpec):
             '{CONTAINER_MOUNT_POINT}', '').replace(
             '{DOCKER_IMAGE_NAME}', target_name).replace(
             '{DOCKER_CONTAINER_NAME}', target_name)
+        # WARNING: incoming grease
+        if 'ORACLE_HOME' in env:
+            self.real_path = self.real_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
+            self.relative_path = self.relative_path.replace('{ORACLE_HOME}', env['ORACLE_HOME'])
         self.archive_path = self.archive_path.replace('{EXPANDED_FILE_NAME}', self.real_path)
 
     def get_output(self):

@@ -205,7 +205,7 @@ class DataCollector(object):
                 with open(orainst_loc) as orainst:
                     _vars = dict(line.split('=') for line in orainst.readlines())
                 try:
-                    inventory_loc = _vars['inventory_loc']
+                    inventory_loc = _vars['inventory_loc'].strip()
                 except LookupError:
                     logger.debug('inventory_loc not found in %s', orainst_loc)
                     return {}
@@ -220,8 +220,8 @@ class DataCollector(object):
                 root = tree.getroot()
                 try:
                     all_oracle_homes = list(root.find('HOME_LIST'))
-                    all_oracle_grids = [ grid.attrib['NAME'].replace('OraGI','') for grid in all_oracle_homes if 'OraGI' in grid.attrib['NAME'] ]
-                    valid_oracle_homes = [ home.attrib['LOC'] for home in all_oracle_homes if home.attrib['NAME'].replace('OraGI','').replace('OraDB','') not in all_oracle_grids ]
+                    all_oracle_grids = [grid.attrib['NAME'].replace('OraGI', '') for grid in all_oracle_homes if 'OraGI' in grid.attrib['NAME']]
+                    valid_oracle_homes = [home.attrib['LOC'] for home in all_oracle_homes if home.attrib['NAME'].replace('OraGI', '').replace('OraDB', '') not in all_oracle_grids]
                     oracle_home = valid_oracle_homes[0]
                     oracle_base = oracle_home.split('/product')[0]
                 except LookupError:
