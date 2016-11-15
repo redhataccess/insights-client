@@ -439,7 +439,8 @@ class InsightsConnection(object):
                 # Insights disabled in satellite
                 from urlparse import urlparse
                 rhsm_hostname = urlparse(self.base_url).hostname
-                if rhsm_hostname != 'subscription.rhn.redhat.com':
+                if (rhsm_hostname != 'subscription.rhn.redhat.com' and
+                   rhsm_hostname != 'subscription.rhsm.redhat.com'):
                     logger.error('Please enable Insights on Satellite server '
                                  '%s to continue.', rhsm_hostname)
             if req.status_code == 412:
