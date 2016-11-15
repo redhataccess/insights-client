@@ -4,7 +4,7 @@
 Name:                   insights-client
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                2.0.4
-Release:                0%{?dist}
+Release:                1%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/insights-client-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+

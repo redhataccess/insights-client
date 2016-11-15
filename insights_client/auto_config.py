@@ -113,7 +113,8 @@ def _try_satellite6_configuration():
         InsightsClient.config.set(APP_NAME, 'authmethod', 'CERT')
 
         # Directly connected to Red Hat, use cert auth directly with the api
-        if rhsm_hostname == 'subscription.rhn.redhat.com':
+        if (rhsm_hostname == 'subscription.rhn.redhat.com' or
+           rhsm_hostname == 'subscription.rhsm.redhat.com'):
             logger.debug("Connected to Red Hat Directly, using cert-api")
             rhsm_hostname = 'cert-api.access.redhat.com'
             rhsm_ca = None
