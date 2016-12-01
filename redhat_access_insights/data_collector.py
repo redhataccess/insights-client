@@ -32,9 +32,10 @@ class DataCollector(object):
     Run commands and collect files
     """
 
-    def __init__(self, archive_=None):
+    def __init__(self, archive_=None, config=None):
         self._set_black_list()
         self.archive = archive_ if archive_ else archive.InsightsArchive()
+        self.config = config
 
     def _set_black_list(self):
         """
@@ -61,6 +62,12 @@ class DataCollector(object):
         Execute a command through the system shell. First checks to see if the
         requested command is executable. Returns (returncode, stdout, 0)
         """
+        # all commands should timeout after a long interval so the client does not hang
+        if self.config and self.config.has_option(APP_NAME, 'cmd_timeout'):
+            timeout_interval = self.config.getint(APP_NAME, 'cmd_timeout')
+        else:
+            timeout_interval = constants.default_cmd_timeout
+        command = 'timeout %s %s' % (timeout_interval, command)
         # ensure consistent locale for collected command output
         cmd_env = {'LC_ALL': 'C'}
         if not six.PY3:
