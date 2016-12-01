@@ -62,17 +62,17 @@ class DataCollector(object):
         Execute a command through the system shell. First checks to see if the
         requested command is executable. Returns (returncode, stdout, 0)
         """
+        if not six.PY3:
+            command = command.encode('utf-8', 'ignore')
         # all commands should timeout after a long interval so the client does not hang
         if self.config and self.config.has_option(APP_NAME, 'cmd_timeout'):
             timeout_interval = self.config.getint(APP_NAME, 'cmd_timeout')
         else:
             timeout_interval = constants.default_cmd_timeout
-        command = 'timeout %s %s' % (timeout_interval, command)
+        timeout_command = 'timeout %s %s' % (timeout_interval, command)
         # ensure consistent locale for collected command output
         cmd_env = {'LC_ALL': 'C'}
-        if not six.PY3:
-            command = command.encode('utf-8', 'ignore')
-        args = shlex.split(command)
+        args = shlex.split(timeout_command)
         if set.intersection(set(args), set(self.black_list)):
             raise RuntimeError("Command Blacklist")
         try:
