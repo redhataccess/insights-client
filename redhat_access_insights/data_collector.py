@@ -135,6 +135,10 @@ class DataCollector(object):
         logger.debug("Status: %s", proc0.returncode)
         logger.debug("stderr: %s", stderr)
 
+        # debug when some commands timeout
+        if proc0.returncode is None:
+            logger.debug('Process return code is None. Timeout indicated.')
+
         return {
             'cmd': self._mangle_command(command),
             'status': proc0.returncode,
