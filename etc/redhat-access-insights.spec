@@ -6,7 +6,7 @@ Summary:                Uploads Insights information to Red Hat on a periodic ba
 Version:                1.0.13
 Release:                1%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
-Epoch:                  0
+Epoch:                  2
 License:                GPLv2+
 URL:                    http://access.redhat.com/insights
 Group:                  Applications/System
@@ -83,6 +83,10 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Thu Dec 1 2016 Richard Brantley <rbrantle@redhat.com> - 1.0.13-1
+- Fixes subscription manager host-name issues
+- Resolves: bz1393901
+
 * Tue Nov 1 2016 Richard Brantley <rbrantle@redhat.com> - 1.0.12-0
 - Respects NO_PROXY, HTTPS_PROXY environment variables
 - Fixes remove.conf configuration issues
