@@ -32,9 +32,10 @@ class DataCollector(object):
     Run commands and collect files
     """
 
-    def __init__(self, archive_=None):
+    def __init__(self, archive_=None, config=None):
         self._set_black_list()
         self.archive = archive_ if archive_ else archive.InsightsArchive()
+        self.config = config
 
     def _set_black_list(self):
         """
@@ -61,11 +62,22 @@ class DataCollector(object):
         Execute a command through the system shell. First checks to see if the
         requested command is executable. Returns (returncode, stdout, 0)
         """
-        # ensure consistent locale for collected command output
-        cmd_env = {'LC_ALL': 'C'}
         if not six.PY3:
             command = command.encode('utf-8', 'ignore')
-        args = shlex.split(command)
+
+        # all commands should timeout after a long interval so the client does not hang
+        # get the command timeout interval
+        if self.config and self.config.has_option(APP_NAME, 'cmd_timeout'):
+            timeout_interval = self.config.getint(APP_NAME, 'cmd_timeout')
+        else:
+            timeout_interval = constants.default_cmd_timeout
+
+        # prepend native nix 'timeout' implementation
+        timeout_command = 'timeout %s %s' % (timeout_interval, command)
+
+        # ensure consistent locale for collected command output
+        cmd_env = {'LC_ALL': 'C'}
+        args = shlex.split(timeout_command)
         if set.intersection(set(args), set(self.black_list)):
             raise RuntimeError("Command Blacklist")
         try:
@@ -100,9 +112,25 @@ class DataCollector(object):
                           stdin=proc0.stdout,
                           stdout=PIPE)
             proc0.stdout.close()
+            stderr = None
             if filters is None or len(filters) == 0:
                 stdout, stderr = proc1.communicate()
+
+            # always log return codes for debug
+            logger.debug('Proc1 Status: %s', proc1.returncode)
+            logger.debug('Proc1 stderr: %s', stderr)
             proc0 = proc1
+
+            # if the return code was not zero
+            # indicates timeout or absence
+            if proc1.returncode > 0:
+                logger.debug('Process return code indicates timeout or absence.')
+                # no command indicates timeout
+                if not self.cmd_exists(command):
+                    logger.debug('Command %s not found.', command)
+                else:
+                    logger.debug('Command %s found. Timeout occurred.', command)
+
             dirty = True
 
         if filters is not None and len(filters):
@@ -115,6 +143,20 @@ class DataCollector(object):
                           stdout=PIPE)
             proc0.stdout.close()
             stdout, stderr = proc2.communicate()
+
+            # always log return codes for debug
+            logger.debug('Proc2 Status: %s', proc2.returncode)
+            logger.debug('Proc2 stderr: %s', stderr)
+
+            # if the return code was not zero
+            # indicates timeout or absence
+            if proc2.returncode > 0:
+                logger.debug('Process return code indicates timeout or absence.')
+                # no command indicates timeout
+                if not self.cmd_exists(command):
+                    logger.debug('Command %s not found.', command)
+                else:
+                    logger.debug('Command %s found. Timeout occurred.', command)
             dirty = True
 
         if not dirty:
@@ -125,14 +167,31 @@ class DataCollector(object):
         if proc0.returncode == 126 or proc0.returncode == 127:
             stdout = "Could not find cmd: %s" % command
 
-        logger.debug("Status: %s", proc0.returncode)
-        logger.debug("stderr: %s", stderr)
+        logger.debug("Proc0 Status: %s", proc0.returncode)
+        logger.debug("Proc0 stderr: %s", stderr)
 
         return {
             'cmd': self._mangle_command(command),
             'status': proc0.returncode,
             'output': stdout.decode('utf-8', 'ignore')
         }
+
+    def cmd_exists(self, command):
+        """
+        Check if a command exists using native which
+        Returns False if 'which' does not find the command path
+        Otherwise returns True
+        """
+        args = shlex.split("which %s" % (command))
+        logger.debug('Checking %s command exists.', args[1])
+        proc_check = Popen([args[0], args[1]], shell=False, stdout=PIPE, stderr=STDOUT,
+                           bufsize=-1, close_fds=True)
+        stdout, stderr = proc_check.communicate()
+        logger.debug('Which returns %s for %s.', proc_check.returncode, args[1])
+        if proc_check.returncode > 0:
+            return False
+        else:
+            return True
 
     def _handle_commands(self, command, exclude):
         """
