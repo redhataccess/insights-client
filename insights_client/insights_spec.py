@@ -29,7 +29,7 @@ class InsightsCommand(InsightsSpec):
     '''
     A command spec
     '''
-    def __init__(self, spec, exclude, mountpoint, target_name):
+    def __init__(self, spec, exclude, mountpoint, target_name, config=None):
         InsightsSpec.__init__(self, spec, exclude)
         # substitute mountpoint for collection
         # have to use .replace instead of .format because there are other
@@ -45,6 +45,7 @@ class InsightsCommand(InsightsSpec):
         if not six.PY3:
             self.command = self.command.encode('utf-8', 'ignore')
         self.black_list = ['rm', 'kill', 'reboot', 'shutdown']
+        self.config = config
 
     def _mangle_command(self, command, name_max=255):
         """
@@ -61,9 +62,19 @@ class InsightsCommand(InsightsSpec):
         Execute a command through system shell. First checks to see if
         the requested command is executable. Returns (returncode, stdout, 0)
         '''
+        # all commands should timeout after a long interval so the client does not hang
+        # get the command timeout interval
+        if self.config and self.config.has_option(constants.app_name, 'cmd_timeout'):
+            timeout_interval = self.config.getint(constants.app_name, 'cmd_timeout')
+        else:
+            timeout_interval = constants.default_cmd_timeout
+
+        # prepend native nix 'timeout' implementation
+        timeout_command = 'timeout %s %s' % (timeout_interval, self.command)
+
         # ensure consistent locale for collected command output
         cmd_env = {'LC_ALL': 'C'}
-        args = shlex.split(self.command)
+        args = shlex.split(timeout_command)
 
         # never execute this stuff
         if set.intersection(set(args), set(self.black_list)):
@@ -98,9 +109,25 @@ class InsightsCommand(InsightsSpec):
                           stdin=proc0.stdout,
                           stdout=PIPE)
             proc0.stdout.close()
+            stderr = None
             if self.pattern is None or len(self.pattern) == 0:
                 stdout, stderr = proc1.communicate()
+
+            # always log return codes for debug
+            logger.debug('Proc1 Status: %s', proc1.returncode)
+            logger.debug('Proc1 stderr: %s', stderr)
             proc0 = proc1
+
+            # if the return code was not zero
+            # indicates timeout or absence
+            if proc1.returncode > 0:
+                logger.debug('Process return code indicates timeout or absence.')
+                # no command indicates timeout
+                if not self.cmd_exists(self.command):
+                    logger.debug('Command %s not found.', self.command)
+                else:
+                    logger.debug('Command %s found. Timeout occurred.', self.command)
+
             dirty = True
 
         if self.pattern is not None and len(self.pattern):
@@ -113,6 +140,21 @@ class InsightsCommand(InsightsSpec):
                           stdout=PIPE)
             proc0.stdout.close()
             stdout, stderr = proc2.communicate()
+
+            # always log return codes for debug
+            logger.debug('Proc2 Status: %s', proc2.returncode)
+            logger.debug('Proc2 stderr: %s', stderr)
+
+            # if the return code was not zero
+            # indicates timeout or absence
+            if proc2.returncode > 0:
+                logger.debug('Process return code indicates timeout or absence.')
+                # no command indicates timeout
+                if not self.cmd_exists(self.command):
+                    logger.debug('Command %s not found.', self.command)
+                else:
+                    logger.debug('Command %s found. Timeout occurred.', self.command)
+
             dirty = True
 
         if not dirty:
@@ -123,9 +165,26 @@ class InsightsCommand(InsightsSpec):
         if proc0.returncode == 126 or proc0.returncode == 127:
             stdout = "Could not find cmd: %s", self.command
 
-        logger.debug("Status: %s", proc0.returncode)
-        logger.debug("stderr: %s", stderr)
+        logger.debug("Proc0 Status: %s", proc0.returncode)
+        logger.debug("Proc0 stderr: %s", stderr)
         return stdout.decode('utf-8', 'ignore')
+
+    def cmd_exists(self, command):
+        """
+        Check if a command exists using native which
+        Returns False if 'which' does not find the command path
+        Otherwise returns True
+        """
+        args = shlex.split("which %s" % (command))
+        logger.debug('Checking %s command exists.', args[1])
+        proc_check = Popen([args[0], args[1]], shell=False, stdout=PIPE, stderr=STDOUT,
+                           bufsize=-1, close_fds=True)
+        stdout, stderr = proc_check.communicate()
+        logger.debug('Which returns %s for %s.', proc_check.returncode, args[1])
+        if proc_check.returncode > 0:
+            return False
+        else:
+            return True
 
 
 class InsightsFile(InsightsSpec):

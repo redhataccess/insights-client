@@ -528,6 +528,7 @@ def collect_data_and_upload(rc=0):
                                       target_name=t['name'])
             atexit.register(_delete_archive, archive)
             dc = DataCollector(archive,
+                               InsightsClient.config,
                                mountpoint=mp,
                                target_name=t['name'],
                                target_type=t['type'])
