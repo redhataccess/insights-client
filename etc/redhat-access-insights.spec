@@ -6,7 +6,7 @@ Summary:                Uploads Insights information to Red Hat on a periodic ba
 Version:                1.0.13
 Release:                2%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
-Epoch:                  1
+Epoch:                  0
 License:                GPLv2+
 URL:                    http://access.redhat.com/insights
 Group:                  Applications/System
