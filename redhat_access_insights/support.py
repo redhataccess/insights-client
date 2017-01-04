@@ -58,7 +58,9 @@ class InsightsSupport(object):
         cfg_block = []
 
         logger.info('Insights version: %s' % (constants.version))
-        cfg_block += registration_check(self.config)
+        registration_check_results = registration_check(self.config)
+        cfg_block += registration_check_results[0]
+        cfg_block.append('API Registration Status: ' + str(registration_check_results[1]))
 
         lastupload = 'never'
         if os.path.isfile(constants.lastupload_file):
@@ -86,6 +88,7 @@ class InsightsSupport(object):
                     'sestatus',
                     'subscription-manager identity']
         for cmd in commands:
+            logger.info('Executing command %s' % (cmd))
             proc = Popen(
                 shlex.split(cmd), shell=False, stdout=PIPE, stderr=STDOUT, close_fds=True)
             stdout, stderr = proc.communicate()
