@@ -181,25 +181,26 @@ class InsightsConnection(object):
                 logger.debug("ENV Proxy: %s", env_proxy)
                 proxies = {"https": env_proxy}
             if no_proxy:
-                the_env_proxy_hostname = urlparse(env_proxy).hostname
+                insights_service_host = urlparse(self.base_url).hostname
+                logger.debug('Found NO_PROXY set. Checking NO_PROXY %s against base URL %s.', no_proxy, insights_service_host)
                 for no_proxy_host in no_proxy.split(','):
+                    logger.debug('Checking %s against %s', no_proxy_host, insights_service_host)
                     if no_proxy_host == '*':
                         proxies = None
                         proxy_auth = None
                         logger.debug('Found NO_PROXY asterisk(*) wildcard, disabling all proxies.')
                         break
                     elif no_proxy_host.startswith('.') or no_proxy_host.startswith('*'):
-                        if the_env_proxy_hostname.endswith(no_proxy_host.replace('*', '')):
+                        if insights_service_host.endswith(no_proxy_host.replace('*', '')):
                             proxies = None
                             proxy_auth = None
-                            logger.debug('Found NO_PROXY range %s matching %s', no_proxy_host, the_env_proxy_hostname)
+                            logger.debug('Found NO_PROXY range %s matching %s', no_proxy_host, insights_service_host)
                             break
-                    else:
-                        if no_proxy_host == the_env_proxy_hostname:
-                            proxies = None
-                            proxy_auth = None
-                            logger.debug('Found NO_PROXY %s exactly matching %s', no_proxy_host, the_env_proxy_hostname)
-                            break
+                    elif no_proxy_host == insights_service_host:
+                        proxies = None
+                        proxy_auth = None
+                        logger.debug('Found NO_PROXY %s exactly matching %s', no_proxy_host, insights_service_host)
+                        break
 
         self.proxies = proxies
         self.proxy_auth = proxy_auth
