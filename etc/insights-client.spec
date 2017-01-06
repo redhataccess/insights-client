@@ -122,7 +122,7 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
-* Fri Jan 6 2016 Richard Brantley <rbrantle@redhat.com> - 2.0.5-3
+* Fri Jan 6 2017 Richard Brantley <rbrantle@redhat.com> - 2.0.5-3
 - Fixes subscription manager host issues
 - Adds command timeouts
 - Fixes no_proxy base url
