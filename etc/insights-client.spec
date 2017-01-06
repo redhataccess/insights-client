@@ -4,7 +4,7 @@
 Name:                   insights-client
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                2.0.5
-Release:                2%{?dist}
+Release:                3%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/insights-client-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -122,6 +122,11 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Fri Jan 6 2016 Richard Brantley <rbrantle@redhat.com> - 2.0.5-3
+- Fixes subscription manager host issues
+- Adds command timeouts
+- Fixes no_proxy base url
+
 * Fri Aug 26 2016 Jeremy Crafts <jcrafts@redhat.com> - 2.0.4-0
 - Rename to insights-client, refactor some things
 - Handle container-based collection
