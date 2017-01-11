@@ -43,7 +43,7 @@ from containers import (open_image,
                         container_image_links)
 from client_config import InsightsClient, set_up_options, parse_config_file
 
-__author__ = 'Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>'
+__author__ = 'Richard Brantley <rbrantle@redhat.com>, Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>'
 
 LOG_FORMAT = ("%(asctime)s %(levelname)s %(message)s")
 APP_NAME = constants.app_name
@@ -246,7 +246,7 @@ def _is_client_registered():
     msg_notyet = 'This machine has not yet been registered.'
     msg_unreg = 'This machine has been unregistered.'
     msg_doreg = 'Use --register to register this machine.'
-    msg_rereg = 'Use --register if you would like to re-register this machine.'
+    msg_rereg = 'Use --force-register if you would like to re-register this machine.'
     msg_exit = 'Exiting...'
     # check reg status w/ API
     reg_check = registration_check()
@@ -329,11 +329,11 @@ def try_register():
         return
     message, hostname, group, display_name = register()
     if InsightsClient.options.display_name is None and InsightsClient.options.group is None:
-        logger.info('Successfully registered %s', hostname)
+        logger.info('Successfully registered host %s', hostname)
     elif InsightsClient.options.display_name is None:
-        logger.info('Successfully registered %s in group %s', hostname, group)
+        logger.info('Successfully registered host %s in group %s', hostname, group)
     else:
-        logger.info('Successfully registered %s as %s in group %s',
+        logger.info('Successfully registered host %s as %s in group %s',
                     hostname, display_name, group)
     if message:
         logger.info(message)
@@ -599,6 +599,8 @@ def _do_upload(pconn, tar_file, logging_name, collection_duration, rc=0):
                                           docker_group=InsightsClient.options.container_mode))
         if upload.status_code == 201:
             write_lastupload_file()
+            machine_id = generate_machine_id()
+            logger.info("You successfully uploaded a report from %s to account %s." % (machine_id, InsightsClient.account_number))
             logger.info("Upload completed successfully!")
             break
         elif upload.status_code == 412:
