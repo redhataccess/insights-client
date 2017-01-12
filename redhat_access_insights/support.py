@@ -15,9 +15,6 @@ logger = logging.getLogger(APP_NAME)
 
 
 def registration_check(config):
-
-    logger.info('running registration_check()')
-
     # check local registration record
     if os.path.isfile(constants.registered_file):
         local_record = 'System is registered.'
