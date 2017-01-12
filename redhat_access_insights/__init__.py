@@ -278,7 +278,6 @@ def _do_upload(pconn, tar_file, collection_duration, options, rc=0):
         if upload.status_code == 201:
             write_lastupload_file()
             machine_id = generate_machine_id()
-            account_number = None
             logger.info("You successfully uploaded a report from %s to account %s." % (machine_id, upload_json["upload"]["account_number"]))
             logger.info("Upload completed successfully!")
             break
