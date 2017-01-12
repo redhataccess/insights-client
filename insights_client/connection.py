@@ -612,6 +612,8 @@ class InsightsConnection(object):
         try:
             # check the 'unregistered_at' key of the response
             unreg_status = json.loads(res.content).get('unregistered_at', 'undefined')
+            # set the global account number
+            InsightsClient.account_number = json.loads(res.content).get('account_number', 'undefined')
         except ValueError:
             # bad response, no json object
             return False
@@ -667,6 +669,19 @@ class InsightsConnection(object):
         # Do grouping
         if InsightsClient.options.group is not None:
             self.do_group()
+
+        # Display registration success messasge to STDOUT and logs
+        if system.status_code == 201:
+            try:
+                system_json = system.json()
+                machine_id = system_json["machine_id"]
+                account_number = system_json["account_number"]
+                logger.info("You successfully registered %s to account %s." % (machine_id, account_number))
+            except:
+                logger.debug('Received invalid JSON on system registration.')
+                logger.debug('API still indicates valid registration with 201 status code.')
+                logger.debug(system)
+                logger.debug(system.json())
 
         if InsightsClient.options.group is not None:
             return (message, client_hostname, InsightsClient.options.group, InsightsClient.options.display_name)
