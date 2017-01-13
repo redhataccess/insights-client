@@ -34,7 +34,7 @@ from support import InsightsSupport, registration_check
 
 from constants import InsightsConstants as constants
 
-__author__ = 'Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>'
+__author__ = 'Richard Brantley <rbrantle@redhat.com>, Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>'
 
 LOG_FORMAT = ("%(asctime)s %(levelname)s %(message)s")
 APP_NAME = constants.app_name
@@ -274,8 +274,11 @@ def _do_upload(pconn, tar_file, collection_duration, options, rc=0):
                 ' this may take a few minutes')
     for tries in range(options.retries):
         upload = pconn.upload_archive(tar_file, collection_duration)
+        upload_json = upload.json()
         if upload.status_code == 201:
             write_lastupload_file()
+            machine_id = generate_machine_id()
+            logger.info("You successfully uploaded a report from %s to account %s." % (machine_id, upload_json["upload"]["account_number"]))
             logger.info("Upload completed successfully!")
             break
         elif upload.status_code == 412:
@@ -564,7 +567,7 @@ def handle_startup(options, config):
             if not status:
                 message, hostname, opt_group, display_name = register(config, options)
                 display_name = options.display_name if options.display_name else config.get(APP_NAME, 'display_name')
-                reg_msg = 'Successfully registered %s' % hostname
+                reg_msg = 'Successfully registered host %s' % hostname
                 if display_name is not None:
                     reg_msg = reg_msg + ' as %s' % display_name
                 if options.group is not None:

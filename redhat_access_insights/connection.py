@@ -663,6 +663,19 @@ class InsightsConnection(object):
         if options.group is not None:
             self.do_group(options.group)
 
+        # Display registration success message to STDOUT and logs
+        if system.status_code == 201:
+            try:
+                system_json = system.json()
+                machine_id = system_json["machine_id"]
+                account_number = system_json["account_number"]
+                logger.info("You successfully registered %s to account %s." % (machine_id, account_number))
+            except:
+                logger.debug('Received invalid JSON on system registration.')
+                logger.debug('API still indicates valid registration with 201 status code.')
+                logger.debug(system)
+                logger.debug(system.json())
+
         if options.group is not None:
             return (message, client_hostname, options.group, options.display_name)
         elif options.display_name is not None:

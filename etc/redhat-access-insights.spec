@@ -4,7 +4,7 @@
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                1.0.13
-Release:                2%{?dist}
+Release:                3%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -83,6 +83,9 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Fri Jan 13 2017 Richard Brantley <rbrantle@redhat.com> - 1.0.13-3
+- Adds Machine ID and Account Numbers to STDOUT and logs
+
 * Wed Jan 4 2017 Richard Brantley <rbrantle@redhat.com> - 1.0.13-2
 - Fixes NO_PROXY checks
 - Fixes support tool
