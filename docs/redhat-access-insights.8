@@ -21,6 +21,8 @@ Unregister system from the Red Hat Access Insights Service
 .IP "--update-collection-rules"
 Refresh collection rules from Red Hat
 Set Red Hat Access Insights to collect data once per week
+.IP "--display-name"
+Display name for this system. MUST be used with --register.
 .IP "--group=GROUP"
 Group to add this system to during registration
 .IP "--retry=RETRIES"
@@ -55,6 +57,10 @@ Test connectivity to Red Hat
 Forcefully reregister this machine to Red Hat.  Use only as directed.
 .IP "--verbose"
 DEBUG output to stdout
+.IP "--support"
+Create a support logfile for Red Hat Insights
+.IP "--status"
+Check this machine's registration status with Red Hat Insights
 .IP "--no-gpg"
 Do not verify GPG signature
 .IP "--no-upload"
@@ -68,4 +74,4 @@ Do not delete archive after upload
 .BR redhat-access-insights.conf (5)
 
 .SH "AUTHOR"
-Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>\&
+Richard Brantley <rbrantle@redhat.com>, Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>\&
