@@ -4,7 +4,7 @@
 Name:                   insights-client
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                2.0.5
-Release:                4%{?dist}
+Release:                5%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/insights-client-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -122,7 +122,10 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
-* Wed Jan 11 2071 Richard Brantley <rbrantle@redhat.com> - 2.0.5-4
+* Tue Jan 17 2017 Richard Brantley <rbrantle@redhat.com> - 2.0.5-5
+- Update some man page verbiage
+
+* Wed Jan 11 2017 Richard Brantley <rbrantle@redhat.com> - 2.0.5-4
 - Adds Machine ID and Acccount Numbers to STDOUT and logs
 
 * Fri Jan 6 2017 Richard Brantley <rbrantle@redhat.com> - 2.0.5-3
