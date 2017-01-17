@@ -84,7 +84,10 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 
 %changelog
 * Tue Jan 17 2017 Richard Brantley <rbrantle@redhat.com> - 1.0.13-4
-- Update some man page verbiage
+- Updates some man page verbiage
+- Displays error messages and status codes from API
+- Fixes traceback on improper API response
+- Include build number in version output for support
 
 * Fri Jan 13 2017 Richard Brantley <rbrantle@redhat.com> - 1.0.13-3
 - Adds Machine ID and Account Numbers to STDOUT and logs
