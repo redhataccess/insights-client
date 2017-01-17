@@ -418,6 +418,23 @@ class InsightsConnection(object):
         """
         Bail out if we get a 401 and leave a message
         """
+
+        # always display HTTP response information
+        try:
+            logger.info("HTTP Status Code: %s", req.status_code)
+            logger.info("HTTP Response Text: %s", req.text)
+            logger.debug("HTTP Response Reason: %s", req.reason)
+            logger.debug("HTTP Response Content: %s", req.content)
+        except:
+            logger.error("Malformed HTTP Request.")
+
+        # attempt to read the HTTP response JSON message
+        try:
+            logger.info("HTTP Response Message: %s", req.json()["message"])
+        except:
+            logger.debug("No HTTP Response message present.")
+
+        # handle specific status codes
         if req.status_code >= 400:
             logger.error("ERROR: Upload failed!")
             logger.info("Debug Information:\nHTTP Status Code: %s",
@@ -436,6 +453,9 @@ class InsightsConnection(object):
                 except LookupError:
                     logger.error("Got 402 but no message")
                     logger.debug("HTTP Response Text: %s", req.text)
+                except:
+                    logger.error("Got 402 but no message")
+                    logger.debug("HTTP Response Text: %s", req.text)
             if req.status_code == 403 and self.auto_config:
                 # Insights disabled in satellite
                 from urlparse import urlparse
@@ -450,6 +470,9 @@ class InsightsConnection(object):
                     logger.error(req.json()["message"])
                     write_unregistered_file(unreg_date)
                 except LookupError:
+                    unreg_date = "412, but no unreg_date or message"
+                    logger.debug("HTTP Response Text: %s", req.text)
+                except:
                     unreg_date = "412, but no unreg_date or message"
                     logger.debug("HTTP Response Text: %s", req.text)
             sys.exit(1)

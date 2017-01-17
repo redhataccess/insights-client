@@ -288,7 +288,7 @@ def test_version_option():
                                stdout=subprocess.PIPE, shell=True)
     version_output, err = version.communicate()
     print version_output
-    version_regex = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")
+    version_regex = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+\-[0-9]")
     if re.search(version_regex, version_output) is not None:
         pass
     else:
