@@ -327,7 +327,7 @@ class InsightsConnection(object):
                 sys.exit(1)
             sock.send(connect_str)
             res = sock.recv(4096)
-            if 'HTTP/1.0 200 Connection established' not in res:
+            if '200 Connection established' not in res:
                 logger.error('Failed to connect to %s. Invalid hostname.' % self.base_url)
                 sys.exit(1)
         else:
