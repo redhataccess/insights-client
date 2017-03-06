@@ -118,12 +118,19 @@ if HaveDocker:
 
     def get_targets():
         targets = []
+        logger.debug('Getting targets to scan...')
         for d in _docker_all_image_ids():
+            logger.debug('Checking if %s equals %s.' % (d, InsightsClient.options.only))
             if InsightsClient.options.only is None or InsightsClient.options.only == d:
+                logger.debug('%s equals %s' % (d, InsightsClient.options.only))
                 targets.append({'type': 'docker_image', 'name': d})
         for d in _docker_all_container_ids():
+            logger.debug('Checking if %s equals %s.' % (d, InsightsClient.options.only))
             if InsightsClient.options.only is None or InsightsClient.options.only == d:
+                logger.debug('%s equals %s' % (d, InsightsClient.options.only))
                 targets.append({'type': 'docker_container', 'name': d})
+        logger.debug('Done collecting targets')
+        logger.debug(targets)
         return targets
 
     def docker_display_name(docker_name, docker_type):

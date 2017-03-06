@@ -3,6 +3,9 @@
  Gather and upload Insights data for
  Red Hat Insights
 """
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 import getpass
 import json
 import logging
@@ -118,6 +121,11 @@ def handle_startup():
             not InsightsClient.options.run_here and
             insights_client_container_is_available()):
         sys.exit(run_in_container())
+
+    if (InsightsClient.options.container_mode and
+            not InsightsClient.options.only):
+        logger.error("Client running in container mode but no image/container specified via --only.")
+        sys.exit(1)
 
     if InsightsClient.options.validate:
         validate_remove_file()
@@ -410,15 +418,22 @@ def _create_metadata_json(archives):
 def collect_data_and_upload(rc=0):
     """
     All the heavy lifting done here
-    Run through "targets" - could be just one (host, default) or many (containers+host)
+    Run through "targets" - could be just ONE (host, default) or ONE (container/image)
     """
     # initialize collection targets
     # for now we do either containers OR host -- not both at same time
     if InsightsClient.options.container_mode:
+        logger.debug("Client running in container/image mode.")
+        logger.debug("Scanning for matching container/image.")
         targets = get_targets()
-        targets = targets + constants.default_target
     else:
+        logger.debug("Host selected as scanning target.")
         targets = constants.default_target
+
+    # if there are no targets to scan then bail
+    if not len(targets):
+        logger.debug("No targets were found. Exiting.")
+        sys.exit(1)
 
     if InsightsClient.options.offline:
         logger.warning("Assuming remote branch and leaf value of -1")
