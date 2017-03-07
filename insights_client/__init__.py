@@ -206,9 +206,9 @@ def handle_startup():
         InsightsClient.options.no_tar_file = False
         InsightsClient.options.keep_archive = True
 
-    if InsightsClient.options.container_mode and InsightsClient.options.no_tar_file:
-        logger.error('Invalid combination: --container and --no-tar-file')
-        sys.exit(1)
+    # if InsightsClient.options.container_mode and InsightsClient.options.no_tar_file:
+    #    logger.error('Invalid combination: --container and --no-tar-file')
+    #    sys.exit(1)
 
     # can't use bofa
     if InsightsClient.options.from_stdin and InsightsClient.options.from_file:
@@ -454,6 +454,7 @@ def collect_data_and_upload(rc=0):
             branch_info = handle_branch_info_error(
                 "Could not determine branch information")
     pc = InsightsConfig(pconn)
+    tar_file = None
 
     if InsightsClient.options.just_upload:
         if not os.path.exists(InsightsClient.options.just_upload):
@@ -512,7 +513,7 @@ def collect_data_and_upload(rc=0):
                     mp = container_connection.get_fs()
                 else:
                     logger.error('Could not open %s for analysis', logging_name)
-                    continue
+                    sys.exit(1)
             elif t['type'] == 'docker_container':
                 container_connection = open_container(t['name'])
                 logging_name = 'Docker container ' + t['name']
@@ -525,14 +526,14 @@ def collect_data_and_upload(rc=0):
                     mp = container_connection.get_fs()
                 else:
                     logger.error('Could not open %s for analysis', logging_name)
-                    continue
+                    sys.exit(1)
             elif t['type'] == 'host':
                 logging_name = determine_hostname()
                 archive_meta['display_name'] = determine_hostname(
                     InsightsClient.options.display_name)
             else:
                 logger.error('Unexpected analysis target: %s', t['type'])
-                continue
+                sys.exit(1)
 
             archive_meta['type'] = t['type'].replace('docker_', '')
             archive_meta['product'] = 'Docker'
@@ -574,7 +575,8 @@ def collect_data_and_upload(rc=0):
                 container_connection.close()
 
     # if multiple targets (container mode), add all archives to single archive
-    if InsightsClient.options.container_mode:
+    # if InsightsClient.options.container_mode:
+    if False: # we only run single collections now (not the uber archives), bypass this
         full_archive = InsightsArchive(compressor=InsightsClient.options.compressor)
         for a in individual_archives:
             shutil.copy(a['tar_file'], full_archive.archive_dir)
