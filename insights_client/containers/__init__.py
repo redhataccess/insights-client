@@ -353,7 +353,9 @@ if HaveDocker:
 
     def _docker_all_image_ids():
         l = []
-        for each in run_command_capture_output("docker images --quiet --no-trunc").splitlines():
+        # for each in run_command_capture_output("docker images --quiet --no-trunc").splitlines():
+        # why are we running docker images here and not atomic images?
+        for each in run_command_capture_output("atomic images list --quiet --no-trunc").splitlines():
             if each not in l:
                 l.append(each)
         return l
