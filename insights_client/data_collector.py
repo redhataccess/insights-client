@@ -196,13 +196,14 @@ class DataCollector(object):
                 logger.debug('Could not parse remove.conf. Ignoring...')
 
         if 'specs' not in conf or InsightsClient.options.original_style_specs:
+        # if True:
             # old style collection
             self._run_old_collection(conf, rm_conf, exclude, branch_info)
             return
 
         for specname in conf['specs']:
             try:
-                # spec group for a symbolic name
+                # spec group for a s
                 spec_group = conf['specs'][specname]
                 # list of specs for a target
                 # there might be more than one spec (for compatability)
