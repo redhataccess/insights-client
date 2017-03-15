@@ -106,9 +106,7 @@ def set_up_options(parser):
                       dest='offline', action='store_true',
                       default=False)
     parser.add_option('--container',
-                      help='Run Insights in container mode. '
-                           'Analyze docker images and containers '
-                           'along with the host.',
+                      help=optparse.SUPPRESS_HELP,
                       action='store_true',
                       dest='container_mode')
     group = optparse.OptionGroup(parser, "Debug options")
@@ -164,17 +162,17 @@ def set_up_options(parser):
                      dest="keep_archive",
                      default=False)
     group.add_option('--original-style-specs',
-                     help="Use the original style of specs even if new style are avaliable",
+                     help=optparse.SUPPRESS_HELP,
                      action="store_true",
                      dest="original_style_specs",
                      default=False)
     group.add_option('--docker-image-name',
-                     help="Image name of insights-client",
+                     help=optparse.SUPPRESS_HELP,
                      action="store",
                      dest="docker_image_name",
                      default=None)
     group.add_option('--only',
-                     help="only upload data for the image or container whose ID matches this option",
+                     help=optparse.SUPPRESS_HELP,
                      action="store",
                      dest="only",
                      default=None)

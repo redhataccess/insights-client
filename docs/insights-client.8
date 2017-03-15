@@ -53,8 +53,6 @@ within.
  +Similar to --from-stdin, but will read a specialized JSON config from file.
 .IP "--offline"
 Collect locally only, do not connect to Insights and do not upload.
-.IP "--container"
-Run collection for images & containers on this system
 
 .SH "DEBUG OPTIONS"
 .IP "--version"
@@ -73,10 +71,6 @@ Do not upload the archive.  Implies --offline
 Build the directory, but do not tar
 .IP "--keep-archive"
 Do not delete archive after upload
-.IP "--original-style-specs"
-Use the original collection metadata spec, even if the new style is available
-.IP "--docker-image-name"
-Docker image name for the Insights client
 .IP "--support"
 Create a support logfile for Red Hat Insights
 .IP "--status"
