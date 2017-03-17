@@ -13,7 +13,7 @@ class InsightsConstants(object):
         os.path.dirname(os.path.abspath(__file__)))
     sleep_time = 300
     user_agent = os.path.join(app_name, 'version')
-    default_conf_dir = os.path.join(os.sep, 'etc', app_name)
+    default_conf_dir = '/etc/' + app_name + '/'
     log_dir = os.path.join(os.sep, 'var', 'log', app_name)
     default_log_file = os.path.join(log_dir, app_name) + '.log'
     default_conf_file_name = app_name + '.conf'
