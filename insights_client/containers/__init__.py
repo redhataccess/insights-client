@@ -11,7 +11,10 @@ import os
 import logging
 import shlex
 import subprocess
-from insights_client.constants import InsightsConstants as constants
+import sys
+parent_dir_name = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append(parent_dir_name)
+from constants import InsightsConstants as constants
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
