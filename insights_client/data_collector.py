@@ -88,6 +88,13 @@ class DataCollector(object):
                 logger.debug('Command %s not found', pre_cmd)
             return
         stdout, stderr = pre_proc.communicate()
+        the_return_code = pre_proc.poll()
+        logger.debug("Pre-command results:")
+        logger.debug("STDOUT: %s", stdout)
+        logger.debug("STDERR: %s", stderr)
+        logger.debug("Return Code: %s", the_return_code)
+        if the_return_code != 0:
+            return []
         return stdout.splitlines()
 
     def _parse_file_spec(self, spec):
