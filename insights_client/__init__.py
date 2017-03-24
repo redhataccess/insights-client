@@ -37,13 +37,6 @@ from connection import InsightsConnection
 from archive import InsightsArchive
 from support import InsightsSupport, registration_check
 from constants import InsightsConstants as constants
-from containers import (open_image,
-                        open_container,
-                        get_targets,
-                        run_in_container,
-                        insights_client_container_is_available,
-                        docker_display_name,
-                        container_image_links)
 from client_config import InsightsClient, set_up_options, parse_config_file
 
 __author__ = 'Richard Brantley <rbrantle@redhat.com>, Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>'
@@ -213,6 +206,11 @@ def handle_startup():
     # can't use bofa
     if InsightsClient.options.from_stdin and InsightsClient.options.from_file:
         logger.error('Can\'t use both --from-stdin and --from-file.')
+        sys.exit(1)
+
+    # handle some docker/atomic flags
+    if InsightsClient.options.use_docker and InsightsClient.options.use_atomic:
+        logger.error('Cant\'t use both --use-docker and --use-atomic.')
         sys.exit(1)
 
     if InsightsClient.options.to_stdout:
@@ -677,6 +675,18 @@ def _main():
     # Defer logging till it's ready
     logger.debug('invoked with args: %s', InsightsClient.options)
     logger.debug("Version: " + constants.version)
+
+    # import container stuff after options and config initialized
+    global open_image, open_container, get_targets
+    global run_in_container, insights_client_container_is_available
+    global docker_display_name, container_image_links
+    from containers import (open_image,
+                        open_container,
+                        get_targets,
+                        run_in_container,
+                        insights_client_container_is_available,
+                        docker_display_name,
+                        container_image_links)
 
     # Handle all the options
     handle_startup()

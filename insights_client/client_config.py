@@ -176,6 +176,16 @@ def set_up_options(parser):
                      action="store",
                      dest="only",
                      default=None)
+    group.add_option('--use-docker',
+                     help=optparse.SUPPRESS_HELP,
+                     action="store_true",
+                     dest="use_docker",
+                     default=None)
+    group.add_option('--use-atomic',
+                     help=optparse.SUPPRESS_HELP,
+                     action="store_true",
+                     dest="use_atomic",
+                     default=None)
     # this option is for when we run inside a container, so
     #  that another container is not spawned
     #  undocumented option

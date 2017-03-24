@@ -15,12 +15,13 @@ import sys
 parent_dir_name = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(parent_dir_name)
 from constants import InsightsConstants as constants
+from insights_client.client_config import InsightsClient
 
 APP_NAME = constants.app_name
 logger = logging.getLogger(APP_NAME)
 
 
-def run_command_very_quietly(cmdline):
+def run_command_very_quietly(cmdline): # shhhhhhhh
     # this takes a string (not an array)
     # need to redirect stdout and stderr to /dev/null
     with open(os.devnull, 'w') as devnull:
@@ -29,6 +30,10 @@ def run_command_very_quietly(cmdline):
         returncode = proc.wait()
         return returncode
 
+# only run docker commands OR atomic commands
+# defaults to atomic (if present)
+UseAtomic = True
+UseDocker = False
 
 # Check to see if we have access to docker
 HaveDocker = False
@@ -55,16 +60,30 @@ except Exception as e:
     # this happens when atomic isn't installed or is otherwise unrunable
     HaveAtomic = False
     HaveAtomicException = e
-
 HaveAtomicMount = HaveAtomic
 
 
-if HaveDocker:
+# failsafe for if atomic / docker is/isnt present
+if not HaveAtomic and HaveDocker:
+    UseDocker = True
+    UseAtomic = False
+if not HaveDocker and HaveAtomic:
+    UseAtomic = True
+    UseDocker = False
+
+# force atomic or docker
+if InsightsClient.options.use_docker == True:
+    UseAtomic = False
+    UseDocker = True
+if InsightsClient.options.use_atomic == True:
+    UseAtomic = True
+    UseDocker = False
+
+if (UseDocker and HaveDocker) or (UseAtomic and HaveAtomic):
+#if HaveDocker:
     import tempfile
     import shutil
     import json
-
-    from insights_client.client_config import InsightsClient
 
     def runcommand(cmd):
         # this takes an array (not a string)
@@ -98,10 +117,10 @@ if HaveDocker:
             return constants.docker_image_name
 
     def use_atomic_run():
-        return HaveAtomic
+        return UseAtomic and HaveAtomic
 
     def use_atomic_mount():
-        return HaveAtomicMount and not InsightsClient.options.run_here
+        return (UseAtomic and HaveAtomicMount) and not InsightsClient.options.run_here
 
     def pull_image(image):
         return runcommand(shlex.split("docker pull") + [image])
@@ -159,7 +178,11 @@ if HaveDocker:
     def container_image_links():
         from insights_client.utilities import generate_analysis_target_id
         link_dict = {}
-        ps_output = run_command_capture_output("docker ps --no-trunc --all")
+        if UseAtomic:
+            docker_atomic = "atomic"
+        else:
+            docker_atomic = "docker"
+        ps_output = run_command_capture_output(docker_atomic + " ps --no-trunc --all")
         ps_data = ps_output.splitlines()
         ps_data.pop(0)  # remove heading
         for l in ps_data:
@@ -267,7 +290,7 @@ if HaveDocker:
 
     def open_image(image_id):
         global HaveAtomicException
-        if HaveAtomicException:
+        if HaveAtomicException and UseAtomic:
             logger.debug("atomic is either not installed or not accessable %s" %
                          HaveAtomicException)
             HaveAtomicException = None
@@ -303,7 +326,7 @@ if HaveDocker:
 
     def open_container(container_id):
         global HaveAtomicException
-        if HaveAtomicException:
+        if HaveAtomicException and UseAtomic:
             logger.debug("atomic is either not installed or not accessable %s" %
                          HaveAtomicException)
             HaveAtomicException = None
@@ -349,72 +372,89 @@ if HaveDocker:
 
     def _docker_driver():
         x = "Storage Driver:"
-        for each in run_command_capture_output("docker info").splitlines():
+        if UseAtomic:
+            atomic_docker = "atomic"
+        else:
+            atomic_docker = "docker"
+        for each in run_command_capture_output(atomic_docker + " info").splitlines():
             if each.startswith(x):
                 return each[len(x):].strip()
         return ""
 
     def _docker_all_image_ids():
         l = []
-        # for each in run_command_capture_output("docker images --quiet --no-trunc").splitlines():
         # why are we running docker images here and not atomic images?
-        for each in run_command_capture_output("atomic images list --quiet --no-trunc").splitlines():
+        if UseAtomic:
+            atomic_docker = "atomic images list"
+        else:
+            atomic_docker = "docker images"
+        for each in run_command_capture_output(atomic_docker + " --quiet --no-trunc").splitlines():
             if each not in l:
                 l.append(each)
         return l
 
     def _docker_all_container_ids():
         l = []
-        for each in run_command_capture_output("docker ps --all --quiet --no-trunc").splitlines():
+        if UseAtomic:
+            atomic_docker = "atomic"
+        else:
+            atomic_docker = "docker"
+        for each in run_command_capture_output(atomic_docker + " ps --all --quiet --no-trunc").splitlines():
             if each not in l:
                 l.append(each)
         return l
 
 else:
-    # If we can't import docker then we stub out all the main functions to report errors
+    # If we can't import docker or atomic then we stub out all the main functions to report errors
+    if UseAtomic:
+        the_verbiage = "Atomic"
+        the_exception = HaveAtomicException
+    else:
+        the_verbiage = "Docker"
+        the_exception = HaveDockerException
 
     def insights_client_container_is_available():
         # Don't print error here, this is the way to tell if running in a container is possible
         # but do print debug info
         logger.debug('not transfering to insights-client image')
-        logger.debug('Docker is either not installed or not accessable: %s' %
-                     (HaveDockerException if HaveDockerException else ''))
+        logger.debug(the_verbiage + ' is either not installed or not accessable: %s' %
+                     (the_exception if the_exception else ''))
         return False
 
     def run_in_container():
-        logger.debug('Could not connect to docker to transfer into a container')
-        logger.error('Docker is either not installed or not accessable: %s' %
-                     (HaveDockerException if HaveDockerException else ''))
+        logger.debug('Could not connect to ' + the_verbiage + ' to transfer into a container')
+        logger.error(the_verbiage + ' is either not installed or not accessable: %s' %
+                     (the_exception if the_exception else ''))
         return 1
 
     def get_targets():
-        logger.debug('Could not connect to docker to collect from images and containers')
-        logger.debug('Docker is either not installed or not accessable: %s' %
-                     (HaveDockerException if HaveDockerException else ''))
+        logger.debug('Could not connect to ' + the_verbiage + ' to collect from images and containers')
+        logger.debug(the_verbiage + ' is either not installed or not accessable: %s' %
+                     (the_exception if the_exception else ''))
         return []
 
     def open_image(image_id):
-        logger.error('Could not connect to docker to examine image %s' % image_id)
-        logger.error('Docker is either not installed or not accessable: %s' %
-                     (HaveDockerException if HaveDockerException else ''))
+        logger.error('Could not connect to ' + the_verbiage + ' to examine image %s' % image_id)
+        logger.error(the_verbiage + ' is either not installed or not accessable: %s' %
+                     (the_exception if the_exception else ''))
         return None
 
     def open_container(container_id):
-        logger.error('Could not connect to docker to examine container %s' % container_id)
-        logger.error('Docker is either not installed or not accessable: %s' %
-                     (HaveDockerException if HaveDockerException else ''))
+        logger.error('Could not connect to ' + the_verbiage + ' to examine container %s' % container_id)
+        logger.error(the_verbiage + ' is either not installed or not accessable: %s' %
+                     (the_exception if the_exception else ''))
         return None
 
     def docker_display_name(image_id):
-        logger.error('Could not connect to docker to examine image %s' % image_id)
-        logger.error('Docker is either not installed or not accessable: %s' %
-                     (HaveDockerException if HaveDockerException else ''))
+        logger.error('Could not connect to ' + the_verbiage + ' to examine image %s' % image_id)
+        logger.error(the_verbiage + ' is either not installed or not accessable: %s' %
+                     (the_exception if the_exception else ''))
         return None
 
     def container_image_links():
-        logger.error('Could not connect to docker.')
-        logger.error('Docker is either not installed or not accessable: %s' %
-                     (HaveDockerException if HaveDockerException else ''))
+        logger.error('Could not connect to ' + the_verbiage + '.')
+        logger.error(the_verbiage + ' is either not installed or not accessable: %s' %
+                     (the_exception if the_exception else ''))
         return None
 #
 # JSON data has lots of nested dictionaries, that are often optional.
