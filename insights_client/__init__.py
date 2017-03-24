@@ -4,8 +4,6 @@
  Red Hat Insights
 """
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
 import getpass
 import json
 import logging
