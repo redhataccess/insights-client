@@ -144,14 +144,14 @@ if (UseDocker and HaveDocker) or (UseAtomic and HaveAtomic):
         for d in _docker_all_image_ids():
             logger.debug('Checking if %s equals %s.' % (d, InsightsClient.options.only))
             # if InsightsClient.options.only is None or InsightsClient.options.only == d:
-            if InsightsClient.options.only == d:
+            if InsightsClient.options.only == d or d.startswith(InsightsClient.options.only):
                 logger.debug('%s equals %s' % (d, InsightsClient.options.only))
                 targets.append({'type': 'docker_image', 'name': d})
                 return targets # return the first one that matches
         for d in _docker_all_container_ids():
             logger.debug('Checking if %s equals %s.' % (d, InsightsClient.options.only))
             # if InsightsClient.options.only is None or InsightsClient.options.only == d:
-            if InsightsClient.options.only == d:
+            if InsightsClient.options.only == d or d.startswith(InsightsClient.options.only):
                 logger.debug('%s equals %s' % (d, InsightsClient.options.only))
                 targets.append({'type': 'docker_container', 'name': d})
                 return targets # return the first one that matches

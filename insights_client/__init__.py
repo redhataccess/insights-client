@@ -118,6 +118,10 @@ def handle_startup():
         logger.error("Client running in container mode but no image/container specified via --only.")
         sys.exit(1)
 
+    if InsightsClient.options.only != None and len(InsightsClient.options.only) < 12:
+        logger.error("Image/Container ID must be atleast twelve characters long.")
+        sys.exit(1)
+
     if InsightsClient.options.validate:
         validate_remove_file()
         sys.exit()
