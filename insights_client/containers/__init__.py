@@ -93,7 +93,7 @@ if (UseDocker and HaveDocker) or (UseAtomic and HaveAtomic):
         return returncode
 
     def run_command_capture_output(cmdline):
-        cmd = shlex.split(cmdline)
+        cmd = shlex.split(cmdline.encode('utf8'))
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (out, err) = proc.communicate()
         return out
