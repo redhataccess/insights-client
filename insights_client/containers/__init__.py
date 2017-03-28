@@ -39,7 +39,7 @@ UseDocker = False
 HaveDocker = False
 HaveDockerException = None
 try:
-    if run_command_very_quietly("docker info") == 0:
+    if run_command_very_quietly("which docker") == 0:
         # a returncode of 0 means cmd ran correctly
         HaveDocker = True
 
@@ -50,7 +50,7 @@ except Exception as e:
 HaveAtomic = False
 HaveAtomicException = None
 try:
-    if run_command_very_quietly("atomic --version") == 0:
+    if run_command_very_quietly("which atomic") == 0:
         # a returncode of 0 means cmd ran correctly
         HaveAtomic = True
     else:
