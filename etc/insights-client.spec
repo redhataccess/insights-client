@@ -115,7 +115,6 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/insights_client*.egg-info
 %{python_sitelib}/insights_client/*.py*
 %{python_sitelib}/insights_client/containers/*.py*
-%{python_sitelib}/insights_client/containers/docker
 %{_sharedstatedir}/insights_client/insights-client-*.tar.gz
 
 %doc
