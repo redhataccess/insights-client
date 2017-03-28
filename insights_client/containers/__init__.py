@@ -88,7 +88,7 @@ except Exception as e:
     HaveDockerException = e
 
 
-if (DockerIsRunning and UseDocker and HaveDocker) or (UseAtomic and HaveAtomic):
+if (DockerIsRunning and UseDocker and HaveDocker) or (DockerIsRunning and UseAtomic and HaveAtomic):
 #if HaveDocker:
     import tempfile
     import shutil
