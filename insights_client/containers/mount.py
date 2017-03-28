@@ -7,7 +7,11 @@
 import os
 import sys
 import json
-import docker
+try
+    import docker
+except ImportError:
+    print "The docker-py Python libraries do not appear to be installed. Please install the python-docker-py RPM package."
+    sys.exit(1)
 from fnmatch import fnmatch as matches
 
 import util
