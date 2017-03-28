@@ -42,7 +42,6 @@ try:
     if run_command_very_quietly("which docker") == 0:
         # a returncode of 0 means cmd ran correctly
         HaveDocker = True
-
 except Exception as e:
     HaveDockerException = e
 
@@ -79,7 +78,17 @@ if InsightsClient.options.use_atomic == True:
     UseAtomic = True
     UseDocker = False
 
-if (UseDocker and HaveDocker) or (UseAtomic and HaveAtomic):
+# Check if docker is running
+DockerIsRunning = False
+try:
+    if run_command_very_quietly("docker info") == 0:
+        # a returncode of 0 means cmd ran correctly
+        DockerIsRunning = True
+except Exception as e:
+    HaveDockerException = e
+
+
+if (DockerIsRunning and UseDocker and HaveDocker) or (UseAtomic and HaveAtomic):
 #if HaveDocker:
     import tempfile
     import shutil
