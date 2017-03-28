@@ -73,7 +73,7 @@ class DataCollector(object):
     def _write_uploader_log(self, conf):
         logger.debug('Writing insights.log to archive...')
         with open(constants.default_log_file) as logfile:
-            self.archive.add_metadata_to_archive(logfile.read().strip().encode('utf8'),
+            self.archive.add_metadata_to_archive(logfile.read().strip().decode('utf-8'),
                                                  self._get_meta_path('uploader_log', conf))
 
     def _run_pre_command(self, pre_cmd):
