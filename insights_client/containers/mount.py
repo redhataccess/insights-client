@@ -7,7 +7,7 @@
 import os
 import sys
 import json
-try
+try:
     import docker
 except ImportError:
     print "The docker-py Python libraries do not appear to be installed. Please install the python-docker-py RPM package."
