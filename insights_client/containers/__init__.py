@@ -426,19 +426,19 @@ else:
         # Don't print error here, this is the way to tell if running in a container is possible
         # but do print debug info
         logger.debug('not transfering to insights-client image')
-        logger.debug(the_verbiage + ' is either not installed or not accessable: %s' %
+        logger.error(the_verbiage + ' is either not installed or not accessable: %s' %
                      (the_exception if the_exception else ''))
         return False
 
     def run_in_container():
-        logger.debug('Could not connect to ' + the_verbiage + ' to transfer into a container')
+        logger.error('Could not connect to ' + the_verbiage + ' to transfer into a container')
         logger.error(the_verbiage + ' is either not installed or not accessable: %s' %
                      (the_exception if the_exception else ''))
         return 1
 
     def get_targets():
-        logger.debug('Could not connect to ' + the_verbiage + ' to collect from images and containers')
-        logger.debug(the_verbiage + ' is either not installed or not accessable: %s' %
+        logger.error('Could not connect to ' + the_verbiage + ' to collect from images and containers')
+        logger.error(the_verbiage + ' is either not installed or not accessable: %s' %
                      (the_exception if the_exception else ''))
         return []
 
