@@ -600,7 +600,10 @@ def _do_upload(pconn, tar_file, logging_name, collection_duration, rc=0):
         if upload.status_code == 201:
             write_lastupload_file()
             machine_id = generate_machine_id()
-            logger.info("You successfully uploaded a report from %s to account %s." % (machine_id, InsightsClient.account_number))
+            try:
+                logger.info("You successfully uploaded a report from %s to account %s." % (machine_id, InsightsClient.account_number))
+            except:
+                pass
             logger.info("Upload completed successfully!")
             break
         elif upload.status_code == 412:

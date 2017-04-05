@@ -744,5 +744,10 @@ class InsightsConnection(object):
 
         logger.debug("Upload status: %s %s %s",
                      upload.status_code, upload.reason, upload.text)
+        the_json = json.loads(upload.text)
+        try:
+            InsightsClient.account_number = the_json["upload"]["account_number"]
+        except:
+            InsightsClient.account_number = None
         logger.debug("Upload duration: %s", upload.elapsed)
         return upload
