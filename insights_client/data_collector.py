@@ -66,7 +66,15 @@ class DataCollector(object):
     def _write_analysis_target_id(self, conf):
         # AKA machine-id
         logger.debug('Writing machine-id to archive...')
-        machine_id = generate_analysis_target_id(self.target_type, self.target_name)
+        if InsightsClient.options.from_file is not None:
+            try:
+                with open(InsightsClient.options.from_file) as f:
+                    stdin_config = json.load(f)
+                    machine_id = stdin_config['machine-id']
+            except:
+                machine_id = generate_analysis_target_id(self.target_type, self.target_name)
+        else:
+            machine_id = generate_analysis_target_id(self.target_type, self.target_name)
         self.archive.add_metadata_to_archive(machine_id,
                                              self._get_meta_path('machine-id', conf))
 
