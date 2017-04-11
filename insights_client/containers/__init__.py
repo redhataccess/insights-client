@@ -24,7 +24,7 @@ def run_command_very_quietly(cmdline):
     # this takes a string (not an array)
     # need to redirect stdout and stderr to /dev/null
     with open(os.devnull, 'w') as devnull:
-        cmd = shlex.split(cmdline)
+        cmd = shlex.split(cmdline.encode('utf8'))
         proc = subprocess.Popen(cmd, stdout=devnull, stderr=subprocess.STDOUT)
         returncode = proc.wait()
         return returncode
