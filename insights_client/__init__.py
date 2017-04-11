@@ -381,6 +381,7 @@ def _delete_archive(archive):
             InsightsClient.options.no_tar_file or
             InsightsClient.config.getboolean(APP_NAME, "obfuscate")):
         archive.delete_tmp_dir()
+        archive.delete_archive_file()
 
 
 def _create_metadata_json(archives):

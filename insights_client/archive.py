@@ -28,6 +28,7 @@ class InsightsArchive(object):
         Create temp dir, archive dir, and command dir
         """
         self.tmp_dir = tempfile.mkdtemp(prefix='/var/tmp/')
+        self.archive_tmp_dir = tempfile.mkdtemp(prefix='/var/tmp/')
         name = determine_hostname(target_name)
         self.archive_name = ("insights-%s-%s" %
                              (name,
@@ -113,7 +114,7 @@ class InsightsArchive(object):
         """
         Create tar file to be compressed
         """
-        tar_file_name = os.path.join(self.tmp_dir, self.archive_name)
+        tar_file_name = os.path.join(self.archive_tmp_dir, self.archive_name)
         ext = "" if self.compressor == "none" else ".%s" % self.compressor
         tar_file_name = tar_file_name + ".tar" + ext
         logger.debug("Tar File: " + tar_file_name)
@@ -142,6 +143,13 @@ class InsightsArchive(object):
         """
         logger.debug("Deleting: " + self.archive_dir)
         shutil.rmtree(self.archive_dir, True)
+
+    def delete_archive_file(self):
+        """
+        Delete the directory containing the constructed archive
+        """
+        logger.debug("Deleting %s", self.archive_tmp_dir)
+        shutil.rmtree(self.archive_tmp_dir, True)
 
     def add_to_archive(self, spec):
         '''
