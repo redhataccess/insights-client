@@ -186,10 +186,10 @@ def set_up_options(parser):
                      action="store_true",
                      dest="use_atomic",
                      default=None)
-    group.add_option('--run-metadata-specs',
+    group.add_option('--run-these',
                      help=optparse.SUPPRESS_HELP,
                      action="store",
-                     dest="run_metadata_specs",
+                     dest="run_specific_specs",
                      default=None)
     # this option is for when we run inside a container, so
     #  that another container is not spawned

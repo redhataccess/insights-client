@@ -198,11 +198,11 @@ class DataCollector(object):
         self._write_branch_info(conf, branch_info)
         logger.debug('Metadata collection finished.')
 
-    def run_metadata_specs(self, metadata_spec, conf, rm_conf, exclude, branch_info):
+    def run_specific_specs(self, metadata_spec, conf, rm_conf, exclude, branch_info):
         '''
         Running metadata collection for specific environment
         '''
-        logger.debug('Beginning to run metadata collection spec for %s...', metadata_spec)
+        logger.debug('Beginning to run collection spec for %s...', metadata_spec)
         if metadata_spec in conf:
             for spec in conf[metadata_spec]:
                 if 'file' in spec:
@@ -250,8 +250,12 @@ class DataCollector(object):
             except LookupError:
                 logger.debug('Could not parse remove.conf. Ignoring...')
 
-        if InsightsClient.options.run_metadata_specs != None:
-            self.run_metadata_specs(InsightsClient.options.run_metadata_specs, conf, rm_conf, exclude, branch_info)
+        if InsightsClient.options.run_specific_specs != None:
+            logger.debug('Running specific specs %s', InsightsClient.options.run_specific_specs)
+            for specific_spec in InsightsClient.options.run_specific_specs.split(','):
+                logger.debug('Running specific spec %s', specific_spec)
+                self.run_specific_specs(specific_spec, conf, rm_conf, exclude, branch_info)
+                logger.debug('Finished running specific spec %s', specific_spec)
             return
 
         if 'specs' not in conf or InsightsClient.options.original_style_specs:
