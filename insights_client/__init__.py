@@ -3,6 +3,7 @@
  Gather and upload Insights data for
  Red Hat Insights
 """
+import sys
 import getpass
 import json
 import logging
@@ -34,13 +35,6 @@ from connection import InsightsConnection
 from archive import InsightsArchive
 from support import InsightsSupport, registration_check
 from constants import InsightsConstants as constants
-from containers import (open_image,
-                        open_container,
-                        get_targets,
-                        run_in_container,
-                        insights_client_container_is_available,
-                        docker_display_name,
-                        container_image_links)
 from client_config import InsightsClient, set_up_options, parse_config_file
 
 __author__ = 'Richard Brantley <rbrantle@redhat.com>, Jeremy Crafts <jcrafts@redhat.com>, Dan Varga <dvarga@redhat.com>'
@@ -118,6 +112,15 @@ def handle_startup():
             not InsightsClient.options.run_here and
             insights_client_container_is_available()):
         sys.exit(run_in_container())
+
+    if (InsightsClient.options.container_mode and
+            not InsightsClient.options.only):
+        logger.error("Client running in container mode but no image/container specified via --only.")
+        sys.exit(1)
+
+    if InsightsClient.options.only != None and len(InsightsClient.options.only) < 12:
+        logger.error("Image/Container ID must be atleast twelve characters long.")
+        sys.exit(1)
 
     if InsightsClient.options.validate:
         validate_remove_file()
@@ -198,13 +201,18 @@ def handle_startup():
         InsightsClient.options.no_tar_file = False
         InsightsClient.options.keep_archive = True
 
-    if InsightsClient.options.container_mode and InsightsClient.options.no_tar_file:
-        logger.error('Invalid combination: --container and --no-tar-file')
-        sys.exit(1)
+    # if InsightsClient.options.container_mode and InsightsClient.options.no_tar_file:
+    #    logger.error('Invalid combination: --container and --no-tar-file')
+    #    sys.exit(1)
 
     # can't use bofa
     if InsightsClient.options.from_stdin and InsightsClient.options.from_file:
         logger.error('Can\'t use both --from-stdin and --from-file.')
+        sys.exit(1)
+
+    # handle some docker/atomic flags
+    if InsightsClient.options.use_docker and InsightsClient.options.use_atomic:
+        logger.error('Cant\'t use both --use-docker and --use-atomic.')
         sys.exit(1)
 
     if InsightsClient.options.to_stdout:
@@ -411,15 +419,22 @@ def _create_metadata_json(archives):
 def collect_data_and_upload(rc=0):
     """
     All the heavy lifting done here
-    Run through "targets" - could be just one (host, default) or many (containers+host)
+    Run through "targets" - could be just ONE (host, default) or ONE (container/image)
     """
     # initialize collection targets
     # for now we do either containers OR host -- not both at same time
     if InsightsClient.options.container_mode:
+        logger.debug("Client running in container/image mode.")
+        logger.debug("Scanning for matching container/image.")
         targets = get_targets()
-        targets = targets + constants.default_target
     else:
+        logger.debug("Host selected as scanning target.")
         targets = constants.default_target
+
+    # if there are no targets to scan then bail
+    if not len(targets):
+        logger.debug("No targets were found. Exiting.")
+        sys.exit(1)
 
     if InsightsClient.options.offline:
         logger.warning("Assuming remote branch and leaf value of -1")
@@ -440,6 +455,7 @@ def collect_data_and_upload(rc=0):
             branch_info = handle_branch_info_error(
                 "Could not determine branch information")
     pc = InsightsConfig(pconn)
+    tar_file = None
 
     if InsightsClient.options.just_upload:
         if not os.path.exists(InsightsClient.options.just_upload):
@@ -498,7 +514,7 @@ def collect_data_and_upload(rc=0):
                     mp = container_connection.get_fs()
                 else:
                     logger.error('Could not open %s for analysis', logging_name)
-                    continue
+                    sys.exit(1)
             elif t['type'] == 'docker_container':
                 container_connection = open_container(t['name'])
                 logging_name = 'Docker container ' + t['name']
@@ -511,14 +527,14 @@ def collect_data_and_upload(rc=0):
                     mp = container_connection.get_fs()
                 else:
                     logger.error('Could not open %s for analysis', logging_name)
-                    continue
+                    sys.exit(1)
             elif t['type'] == 'host':
                 logging_name = determine_hostname()
                 archive_meta['display_name'] = determine_hostname(
                     InsightsClient.options.display_name)
             else:
                 logger.error('Unexpected analysis target: %s', t['type'])
-                continue
+                sys.exit(1)
 
             archive_meta['type'] = t['type'].replace('docker_', '')
             archive_meta['product'] = 'Docker'
@@ -560,7 +576,8 @@ def collect_data_and_upload(rc=0):
                 container_connection.close()
 
     # if multiple targets (container mode), add all archives to single archive
-    if InsightsClient.options.container_mode:
+    # if InsightsClient.options.container_mode:
+    if False: # we only run single collections now (not the uber archives), bypass this
         full_archive = InsightsArchive(compressor=InsightsClient.options.compressor)
         for a in individual_archives:
             shutil.copy(a['tar_file'], full_archive.archive_dir)
@@ -664,6 +681,18 @@ def _main():
     # Defer logging till it's ready
     logger.debug('invoked with args: %s', InsightsClient.options)
     logger.debug("Version: " + constants.version)
+
+    # import container stuff after options and config initialized
+    global open_image, open_container, get_targets
+    global run_in_container, insights_client_container_is_available
+    global docker_display_name, container_image_links
+    from containers import (open_image,
+                        open_container,
+                        get_targets,
+                        run_in_container,
+                        insights_client_container_is_available,
+                        docker_display_name,
+                        container_image_links)
 
     # Handle all the options
     handle_startup()

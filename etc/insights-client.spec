@@ -4,7 +4,7 @@
 Name:                   insights-client
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                2.0.5
-Release:                6%{?dist}
+Release:                7%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/insights-client-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -55,7 +55,7 @@ fi
 #Migrate existing config
 if [ -f "/etc/redhat-access-insights/redhat-access-insights.conf" ]; then
 mv /etc/redhat-access-insights/redhat-access-insights.conf /etc/insights-client/insights-client.conf
-sed -i 's/\[redhat-access-insights\]/\[insights-client\]/' /etc/insights-client/insights-client.conf 
+sed -i 's/\[redhat-access-insights\]/\[insights-client\]/' /etc/insights-client/insights-client.conf
 fi
 #Migrate registration record
 if [ -f "/etc/redhat-access-insights/.registered" ]; then
@@ -208,4 +208,3 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 * Thu Apr 23 2015 Dan Varga <dvarga@redhat.com> - 1.0.0-0
 - Initial build
 - Resolves: bz1176237
-

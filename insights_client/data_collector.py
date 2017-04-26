@@ -198,6 +198,46 @@ class DataCollector(object):
         self._write_branch_info(conf, branch_info)
         logger.debug('Metadata collection finished.')
 
+    def run_specific_specs(self, metadata_spec, conf, rm_conf, exclude, branch_info):
+        '''
+        Running metadata collection for specific environment
+        '''
+        logger.debug('Beginning to run collection spec for %s...', metadata_spec)
+        if metadata_spec in conf:
+            for spec in conf[metadata_spec]:
+                if 'file' in spec:
+                    spec['archive_file_name'] = spec['file']
+                    if rm_conf and 'files' in rm_conf and spec['file'] in rm_conf['files']:
+                        logger.warn("WARNING: Skipping file %s", spec['file'])
+                        continue
+                    else:
+                        file_specs = self._parse_file_spec(spec)
+                        for s in file_specs:
+                            file_spec = InsightsFile(s, exclude, self.mountpoint, self.target_name)
+                            self.archive.add_to_archive(file_spec)
+                elif 'glob' in spec:
+                    glob_specs = self._parse_glob_spec(spec)
+                    for g in glob_specs:
+                        if rm_conf and 'files' in rm_conf and g['file'] in rm_conf['files']:
+                            logger.warn("WARNING: Skipping file %s", g)
+                            continue
+                        else:
+                            glob_spec = InsightsFile(g, exclude, self.mountpoint, self.target_name)
+                            self.archive.add_to_archive(glob_spec)
+                elif 'command' in spec:
+                    if rm_conf and 'commands' in rm_conf and spec['command'] in rm_conf['commands']:
+                        logger.warn("WARNING: Skipping command %s", spec['command'])
+                        continue
+                    else:
+                        cmd_specs = self._parse_command_spec(spec, conf['pre_commands'])
+                        for s in cmd_specs:
+                            cmd_spec = InsightsCommand(s, exclude, self.mountpoint, self.target_name, self.config)
+                            self.archive.add_to_archive(cmd_spec)
+        else:
+            logger.debug('Spec metadata type "%s" not found in spec.', metadata_spec)
+        logger.debug('Spec metadata collection finished.')
+
+
     def run_collection(self, conf, rm_conf, branch_info):
         '''
         Run specs and collect all the data
@@ -210,14 +250,23 @@ class DataCollector(object):
             except LookupError:
                 logger.debug('Could not parse remove.conf. Ignoring...')
 
+        if InsightsClient.options.run_specific_specs != None:
+            logger.debug('Running specific specs %s', InsightsClient.options.run_specific_specs)
+            for specific_spec in InsightsClient.options.run_specific_specs.split(','):
+                logger.debug('Running specific spec %s', specific_spec)
+                self.run_specific_specs(specific_spec, conf, rm_conf, exclude, branch_info)
+                logger.debug('Finished running specific spec %s', specific_spec)
+            return
+
         if 'specs' not in conf or InsightsClient.options.original_style_specs:
+        # if True:
             # old style collection
             self._run_old_collection(conf, rm_conf, exclude, branch_info)
             return
 
         for specname in conf['specs']:
             try:
-                # spec group for a symbolic name
+                # spec group for a s
                 spec_group = conf['specs'][specname]
                 # list of specs for a target
                 # there might be more than one spec (for compatability)

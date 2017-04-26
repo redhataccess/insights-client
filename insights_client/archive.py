@@ -28,6 +28,7 @@ class InsightsArchive(object):
         Create temp dir, archive dir, and command dir
         """
         self.tmp_dir = tempfile.mkdtemp(prefix='/var/tmp/')
+        self.archive_tmp_dir = tempfile.mkdtemp(prefix='/var/tmp/')
         name = determine_hostname(target_name)
         self.archive_name = ("insights-%s-%s" %
                              (name,

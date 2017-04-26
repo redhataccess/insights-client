@@ -40,8 +40,11 @@ class InsightsCommand(InsightsSpec):
             '{DOCKER_CONTAINER_NAME}', target_name)
         self.mangled_command = self._mangle_command(self.command)
         # have to re-mangle archive path in case there's a pre-command arg
-        self.archive_path = os.path.join(
-            os.path.dirname(self.archive_path), self.mangled_command)
+        # Only do this if there is a pre-command in the spec, this preserves
+        # the original archive_file_name setting from the spec file
+        if "pre-command" in spec:
+            self.archive_path = os.path.join(
+                os.path.dirname(self.archive_path), self.mangled_command)
         if not six.PY3:
             self.command = self.command.encode('utf-8', 'ignore')
         self.black_list = ['rm', 'kill', 'reboot', 'shutdown']
@@ -199,10 +202,11 @@ class InsightsFile(InsightsSpec):
             '{DOCKER_IMAGE_NAME}', target_name).replace(
             '{DOCKER_CONTAINER_NAME}', target_name)
         self.relative_path = spec['file'].replace(
+            mountpoint, '').replace(
             '{CONTAINER_MOUNT_POINT}', '').replace(
             '{DOCKER_IMAGE_NAME}', target_name).replace(
             '{DOCKER_CONTAINER_NAME}', target_name)
-        self.archive_path = self.archive_path.replace('{EXPANDED_FILE_NAME}', self.real_path)
+        self.archive_path = self.archive_path.replace('{EXPANDED_FILE_NAME}', self.relative_path)
 
     def get_output(self):
         '''
