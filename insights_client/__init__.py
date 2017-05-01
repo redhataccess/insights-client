@@ -686,7 +686,8 @@ def _main():
     global open_image, open_container, get_targets
     global run_in_container, insights_client_container_is_available
     global docker_display_name, container_image_links
-    from containers import (open_image,
+    if InsightsClient.options.container_mode == True:
+        from containers import (open_image,
                         open_container,
                         get_targets,
                         run_in_container,
