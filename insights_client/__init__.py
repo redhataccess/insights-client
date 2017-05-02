@@ -645,6 +645,8 @@ def handle_file_output(tar_file, archive):
     if InsightsClient.options.to_stdout:
         shutil.copyfileobj(open(tar_file, 'rb'), sys.stdout)
         archive.delete_tmp_dir()
+        archive.delete_archive_dir()
+        archive.delete_archive_file()
     else:
         logger.info('See Insights data in %s', tar_file)
 
