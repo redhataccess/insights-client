@@ -622,7 +622,7 @@ class InsightsConnection(object):
         Do grouping on register
         """
         group_id = InsightsClient.options.group
-        systems = json.dumps({'machine_id': generate_machine_id()})
+        systems = {'machine_id': generate_machine_id()}
         self.group_systems(group_id, systems)
 
     def api_registration_check(self):
