@@ -576,15 +576,18 @@ class InsightsConnection(object):
             self.test_connection(1)
         return system
 
-    def do_group(self):
+    def group_systems(self, group_name, systems):
         """
-        Do grouping on register
+        Adds an array of systems to specified group
+
+        Args:
+            group_name: Display name of group
+            systems: Array of {'machine_id': machine_id}
         """
-        group_id = InsightsClient.options.group
         api_group_id = None
         headers = {'Content-Type': 'application/json'}
         group_path = self.api_url + '/v1/groups'
-        group_get_path = group_path + ('?display_name=%s' % group_id)
+        group_get_path = group_path + ('?display_name=%s' % group_name)
 
         logger.debug("GET group: %s", group_get_path)
         get_group = self.session.get(group_get_path)
@@ -595,7 +598,7 @@ class InsightsConnection(object):
         if get_group.status_code == 404:
             # Group does not exist, POST to create
             logger.debug("POST group")
-            data = json.dumps({'display_name': group_id})
+            data = json.dumps({'display_name': group_name})
             post_group = self.session.post(group_path,
                                            headers=headers,
                                            data=data)
@@ -605,13 +608,22 @@ class InsightsConnection(object):
             api_group_id = post_group.json()['id']
 
         logger.debug("PUT group")
-        data = json.dumps({'machine_id': generate_machine_id()})
+        data = json.dumps(systems)
         put_group = self.session.put(group_path +
                                      ('/%s/systems' % api_group_id),
                                      headers=headers,
                                      data=data)
         logger.debug("PUT group status: %d", put_group.status_code)
         logger.debug("PUT Group: %s", put_group.json())
+
+    # Keeping this function around because it's not private and I don't know if anything else uses it
+    def do_group(self):
+        """
+        Do grouping on register
+        """
+        group_id = InsightsClient.options.group
+        systems = {'machine_id': generate_machine_id()}
+        self.group_systems(group_id, systems)
 
     def api_registration_check(self):
         '''
