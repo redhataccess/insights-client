@@ -413,6 +413,17 @@ def _create_metadata_json(archives):
         system['system_id'] = a['system_id']
         system['type'] = a['type']
         metadata['systems'].append(system)
+
+    # merge additional metadata that can be passed in from the config file, --from-file
+    if InsightsClient.options.from_file:
+        stdin_config = {}
+        with open(InsightsClient.options.from_file, 'r') as f:
+            stdin_config = json.load(f)
+        if 'metadata' in stdin_config:
+            new_metadata = metadata.copy()
+            new_metadata.update(stdin_config['metadata'])
+            metadata = new_metadata
+
     return metadata
 
 
@@ -589,6 +600,13 @@ def collect_data_and_upload(rc=0):
     # if only one target (regular mode), just upload one
     else:
         full_archive = archive
+        # add custom metadata about a host if provided by from_file
+        # use in the OSE case
+        if InsightsClient.options.from_file:
+            with open(InsightsClient.options.from_file, 'r') as f:
+                stdin_config = json.load(f)
+                if 'metadata' in stdin_config:
+                full_archive.add_metadata_to_archive(json.dumps(stdin_config['metadata']), 'metadata.json')
         full_tar_file = tar_file
 
     if InsightsClient.options.offline or InsightsClient.options.no_upload:
