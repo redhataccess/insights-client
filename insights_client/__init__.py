@@ -606,7 +606,7 @@ def collect_data_and_upload(rc=0):
             with open(InsightsClient.options.from_file, 'r') as f:
                 stdin_config = json.load(f)
                 if 'metadata' in stdin_config:
-                full_archive.add_metadata_to_archive(json.dumps(stdin_config['metadata']), 'metadata.json')
+                    full_archive.add_metadata_to_archive(json.dumps(stdin_config['metadata']), 'metadata.json')
         full_tar_file = tar_file
 
     if InsightsClient.options.offline or InsightsClient.options.no_upload:
