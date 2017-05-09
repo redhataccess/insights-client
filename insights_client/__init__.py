@@ -438,6 +438,9 @@ def collect_data_and_upload(rc=0):
         logger.debug("Client running in container/image mode.")
         logger.debug("Scanning for matching container/image.")
         targets = get_targets()
+    elif InsightsClient.options.analyze_compressed_file is not None:
+        logger.debug("Client analyzing a compress filesystem.")
+        targets = [{'type': 'compressed_file', 'name': InsightsClient.options.analyze_compressed_file }]
     else:
         logger.debug("Host selected as scanning target.")
         targets = constants.default_target
@@ -508,6 +511,7 @@ def collect_data_and_upload(rc=0):
         archive = None
         container_connection = None
         mp = None
+        compressed_filesystem = None
         obfuscate = None
         # archive metadata
         archive_meta = {}
@@ -539,6 +543,14 @@ def collect_data_and_upload(rc=0):
                 else:
                     logger.error('Could not open %s for analysis', logging_name)
                     sys.exit(1)
+            elif t['type'] == 'compressed_file':
+                logging_name = 'Compressed file ' + t['name']
+                from compressed_file import InsightsCompressedFile
+                compressed_filesystem = InsightsCompressedFile(t['name'])
+                if compressed_filesystem.is_tarfile is False:
+                    logger.debug("Could not access compressed tar filesystem.")
+                    sys.exit(1)
+                mp = compressed_filesystem.get_filesystem_path()
             elif t['type'] == 'host':
                 logging_name = determine_hostname()
                 archive_meta['display_name'] = determine_hostname(
@@ -624,6 +636,8 @@ def collect_data_and_upload(rc=0):
         logger.info('Obfuscated Insights data retained in %s',
                     os.path.dirname(full_tar_file))
     full_archive.delete_archive_dir()
+    if InsightsClient.options.analyze_compressed_file is not None:
+        compressed_filesytem.cleanup_temp_filesystem()
     return rc
 
 

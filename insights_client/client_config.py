@@ -191,6 +191,11 @@ def set_up_options(parser):
                      action="store",
                      dest="run_specific_specs",
                      default=None)
+    group.add_option('--analyze-compressed-file',
+                     help=optparse.SUPPRESS_HELP,
+                     action="store",
+                     dest="analyze_compressed_file",
+                     default=None)
     # this option is for when we run inside a container, so
     #  that another container is not spawned
     #  undocumented option
