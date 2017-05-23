@@ -6,6 +6,7 @@ import logging
 import tempfile
 import tarfile
 import os
+import shutil
 from constants import InsightsConstants as constants
 
 logger = logging.getLogger(constants.app_name)
@@ -27,6 +28,7 @@ class InsightsCompressedFile(object):
                 tar = tarfile.open(self.compressed_file_location)
                 tar.extractall(path=self.tmp_dir)
                 tar.close()
+                logger.debug("Compressed filesystem %s extracted to %s", self.compressed_file_location, self.tmp_dir)
             except:
                 logger.debug("Invalid compressed tar filesystem provided. Could not extract contents.")
         else:

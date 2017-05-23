@@ -114,7 +114,8 @@ class DataCollector(object):
             expanded_paths = _expand_paths(spec['file'].replace(
                 '{CONTAINER_MOUNT_POINT}', self.mountpoint).replace(
                 '{DOCKER_IMAGE_NAME}', self.target_name).replace(
-                '{DOCKER_CONTAINER_NAME}', self.target_name))
+                '{DOCKER_CONTAINER_NAME}', self.target_name).replace(
+                '{FS_ROOT}', self.mountpoint))
             if not expanded_paths:
                 return []
 

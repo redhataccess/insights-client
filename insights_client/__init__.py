@@ -440,7 +440,7 @@ def collect_data_and_upload(rc=0):
         targets = get_targets()
     elif InsightsClient.options.analyze_compressed_file is not None:
         logger.debug("Client analyzing a compress filesystem.")
-        targets = [{'type': 'compressed_file', 'name': InsightsClient.options.analyze_compressed_file }]
+        targets = [{'type': 'compressed_file', 'name': os.path.splitext(os.path.basename(InsightsClient.options.analyze_compressed_file))[0], 'location': InsightsClient.options.analyze_compressed_file }]
     else:
         logger.debug("Host selected as scanning target.")
         targets = constants.default_target
@@ -544,9 +544,9 @@ def collect_data_and_upload(rc=0):
                     logger.error('Could not open %s for analysis', logging_name)
                     sys.exit(1)
             elif t['type'] == 'compressed_file':
-                logging_name = 'Compressed file ' + t['name']
+                logging_name = 'Compressed file ' + t['name'] + ' at location ' + t['location']
                 from compressed_file import InsightsCompressedFile
-                compressed_filesystem = InsightsCompressedFile(t['name'])
+                compressed_filesystem = InsightsCompressedFile(t['location'])
                 if compressed_filesystem.is_tarfile is False:
                     logger.debug("Could not access compressed tar filesystem.")
                     sys.exit(1)
@@ -637,7 +637,7 @@ def collect_data_and_upload(rc=0):
                     os.path.dirname(full_tar_file))
     full_archive.delete_archive_dir()
     if InsightsClient.options.analyze_compressed_file is not None:
-        compressed_filesytem.cleanup_temp_filesystem()
+        compressed_filesystem.cleanup_temp_filesystem()
     return rc
 
 
