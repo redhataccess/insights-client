@@ -386,7 +386,11 @@ class InsightsConnection(object):
         logger.info("Certificate Verification: %s", self.cert_verify)
         try:
             logger.info("=== Begin Certificate Chain Test ===")
-            cert_success = self._test_openssl()
+            if self.cert_verify:
+                cert_success = self._test_openssl()
+            else:
+                logger.info('cert_verify is False, bypassing test, assuming cert_success True.')
+                cert_success = True
             logger.info("=== End Certificate Chain Test: %s ===\n",
                         "SUCCESS" if cert_success else "FAILURE")
             logger.info("=== Begin Upload URL Connection Test ===")

@@ -4,7 +4,7 @@
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                1.0.13
-Release:                4%{?dist}
+Release:                5%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -83,6 +83,9 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Mon Jun 26 2017 Richard Brantley <rbrantle@redhat.com> - 1.0.13-5
+- Fixes cert_verify and --test-connection
+
 * Tue Jan 17 2017 Richard Brantley <rbrantle@redhat.com> - 1.0.13-4
 - Updates some man page verbiage
 - Displays error messages and status codes from API
