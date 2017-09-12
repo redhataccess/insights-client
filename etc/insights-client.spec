@@ -4,7 +4,7 @@
 Name:                   insights-client
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                2.0.5
-Release:                12%{?dist}
+Release:                13%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/insights-client-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -122,6 +122,10 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Tue Sep 12 2017 Richard Brantley <rbrantle@redhat.com> - 2.0.5-13
+- Resolves: bz1490450
+- Fixes proxy hostname validation issues
+
 * Tue Jan 17 2017 Richard Brantley <rbrantle@redhat.com> - 2.0.5-5
 - Updates some man page verbiage
 - Displays error messages and status codes from API
