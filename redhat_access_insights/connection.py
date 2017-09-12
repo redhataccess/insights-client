@@ -211,25 +211,53 @@ class InsightsConnection(object):
         """
         from urlparse import urlparse
         import socket
+
+        # setup socket object
+        sock = socket.socket()
+        sock.setblocking(1)
+
+        # get endpoint/hostname URLs
         endpoint_url = urlparse(self.upload_url)
-        try:
-            # Ensure we have something in the scheme and netloc
-            if endpoint_url.scheme == "" or endpoint_url.netloc == "":
-                logger.error("Invalid upload_url: " + self.upload_url + "\n"
-                             "Be sure to include a protocol "
-                             "(e.g. https://) and a "
-                             "fully qualified domain name in " +
-                             constants.default_conf_file)
-                sys.exit()
-            endpoint_addr = socket.gethostbyname(
-                endpoint_url.netloc.split(':')[0])
-            logger.debug(
-                "hostname: %s ip: %s", endpoint_url.netloc, endpoint_addr)
-        except socket.gaierror as e:
-            logger.debug(e)
-            logger.error(
-                "Could not resolve hostname: %s", endpoint_url.geturl())
-            sys.exit(1)
+        hostname = urlparse(self.upload_url).netloc.split(':')
+
+        # Ensure we have something in the scheme and netloc
+        if endpoint_url.scheme == "" or endpoint_url.netloc == "":
+            logger.error("Invalid upload_url: " + self.upload_url + "\n"
+                         "Be sure to include a protocol "
+                         "(e.g. https://) and a "
+                         "fully qualified domain name in " +
+                         constants.default_conf_file)
+            sys.exit()
+
+        # handle endpoint validation
+        if self.proxies:
+            connect_str = 'CONNECT {0} HTTP/1.0\r\n'.format(hostname[0])
+            if self.proxy_auth:
+                connect_str += 'Proxy-Authorization: {0}\r\n'.format(self.proxy_auth)
+            connect_str += '\r\n'
+            proxy = urlparse(self.proxies['https']).netloc.split(':')
+            try:
+                sock.connect((proxy[0], int(proxy[1])))
+            except Exception as e:
+                logger.debug(e)
+                logger.error('Failed to connect to proxy %s. Connection refused.' % self.proxies['https'])
+                sys.exit(1)
+            sock.send(connect_str)
+            res = sock.recv(4096)
+            if '200 Connection established' not in res:
+                logger.error('Failed to connect to %s. Invalid hostname.' % self.base_url)
+                sys.exit(1)
+            else:
+                logger.debug("Resolved hostname: %s", endpoint_url.geturl())
+        else:
+            try:
+                sock.connect((hostname[0], 443))
+            except socket.gaierror as e:
+                logger.debug(e)
+                logger.error("Could not resolve hostname: %s", endpoint_url.geturl())
+                sys.exit(1)
+
+        # handle proxy validation
         if self.proxies is not None:
             proxy_url = urlparse(self.proxies['https'])
             try:
