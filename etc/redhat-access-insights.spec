@@ -4,7 +4,7 @@
 Name:                   redhat-access-insights
 Summary:                Uploads Insights information to Red Hat on a periodic basis
 Version:                1.0.13
-Release:                6%{?dist}
+Release:                7%{?dist}
 Source0:                https://github.com/redhataccess/insights-client/archive/redhat-access-insights-%{version}.tar.gz
 Epoch:                  0
 License:                GPLv2+
@@ -83,6 +83,9 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 /usr/share/man/man5/*.5.gz
 
 %changelog
+* Wed Dec 6 2017 Jeremy Crafts <jcrafts@redhat.com> - 1.0.13-7
+- Fix compatibility issue with newer versions of python-requests
+
 * Tue Sep 12 2017 Richard Brantley <rbrantle@redhat.com> - 1.0.13-6
 - Resolves: bz1490450
 - Fixes proxy hostname validation issues
