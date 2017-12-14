@@ -763,7 +763,7 @@ class InsightsConnection(object):
             upload_url = self.upload_url + '/' + generate_machine_id()
         logger.debug("Uploading %s to %s", data_collected, upload_url)
 
-        headers = {'x-rh-collection-time': duration}
+        headers = {'x-rh-collection-time': str(duration)}
         upload = self.session.post(upload_url, files=files, headers=headers)
 
         logger.debug("Upload status: %s %s %s",
